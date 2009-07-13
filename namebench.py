@@ -56,6 +56,8 @@ if __name__ == '__main__':
                     help='Use graphical user interface (EXPERIMENTAL)')
   parser.add_option('-r', '--runs', dest='run_count', default=2, type='int',
                     help='Number of test runs to perform on each nameserver.')
+  parser.add_option('-c', '--config', dest='config', default='namebench.cfg', 
+                    help='Config file to use.')
   parser.add_option('-o', '--output', dest='output_file', default=False,
                     help='Filename to write query results to (CSV format).')
   parser.add_option('-i', '--input', dest='input_file',
@@ -66,8 +68,8 @@ if __name__ == '__main__':
   (opt, args) = parser.parse_args()
   
   config = ConfigParser.ConfigParser()
-  config.read('namebench.cfg')
-  
+  config.read(opt.config)
+
   nsl = nslookup.NSLookup()
   if nsl.AreDNSPacketsIntercepted():
     print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
@@ -92,7 +94,7 @@ if __name__ == '__main__':
     print "Secondary cache not found, trying all nameservers"
     
     
-  print "Looking for best secondary NS out of %s nameservers" % len(secondary)
+  print "- Looking for best secondary NS out of %s nameservers" % len(secondary)
   secondary_servers = nsl.FindUsableNameServers(secondary)
   best = sorted(secondary_servers, key=operator.attrgetter('check_duration'))[0:SECONDARY_COUNT]  
   nameservers.extend(best)  
@@ -106,6 +108,7 @@ if __name__ == '__main__':
   print "* Checking for servers which share a cache."
   nameservers = nsl.CheckCacheCollusion(nameservers)
   # TODO(tstromberg): Do not filter out local servers!
+  print "- Ignoring nameservers which share cache with faster nameservers."
   nameservers = [ x for x in nameservers if not x.shares_with_faster ]
   
   if opt.gui:

@@ -72,7 +72,7 @@ class NameServerData(object):
     self.shares_with_faster = False
  
   def __str__(self):
-    return "%s[%s:%s]" % (self.name, self.ip, self.check_duration)
+    return "%s [%s]" % (self.name, self.ip)
   
 class NSLookup(object):
 
@@ -175,7 +175,6 @@ class NSLookup(object):
         
         response = self.TimedDNSRequest(ns.ip, 'A', cache_id, 10)[0]
         if not response or not response.answer:
-          print "%s ignored shared_with check (%s)" % (ns, ns.is_healthy)
           continue
         
         if not other_response or not other_response.answer:
@@ -183,13 +182,13 @@ class NSLookup(object):
         
         # Some nameservers may override the TTL. Look for a TTL within 30 seconds
         delta = other_response.answer[0].ttl - response.answer[0].ttl        
-        if delta >= 2 and delta < 60:
+        if delta > 1 and delta < 60:
           other_ns.shared_with.append(ns)
           ns.shared_with.append(other_ns)
           dur_delta = ns.check_duration - other_ns.check_duration
           if dur_delta > 0:
             ns.shares_with_faster = True
-            print "Ignoring %s - shares cache [%s] with %s (%sms slower)" % (ns, response.answer[0].ttl, other_ns, delta)
+            print "* %s shares cache with %s (%sms slower)" % (ns, other_ns, dur_delta)
         
     return nameservers
     
@@ -204,9 +203,9 @@ class NSLookup(object):
     """
     if internal:
       for (index, ip) in enumerate(self.InternalNameServers()):
+        print "- Including system nameserver: %s" % ip
         nameservers.append((ip, 'SYS-%s' % ip))
   
-    print 'Found %s DNS servers, testing health...' % len(nameservers)
     chunks = split_seq(nameservers, MAX_THREADS)
     threads = []
     for chunk in chunks:
