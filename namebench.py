@@ -60,6 +60,8 @@ if __name__ == '__main__':
                     help='Config file to use.')
   parser.add_option('-o', '--output', dest='output_file', default=False,
                     help='Filename to write query results to (CSV format).')
+  parser.add_option('-T', '--threads', dest='thread_count', default=False,
+                    help='# of threads to use')
   parser.add_option('-i', '--input', dest='input_file',
                     default='data/top-10000.txt',
                     help='File containing a list of domain names to query.')
@@ -82,6 +84,13 @@ if __name__ == '__main__':
   # And the best 5 otherwise. We should test these for sanity.
   general = dict(config.items('general'))
   primary = config.items('primary')
+  for arg in args:
+    if '.' in arg:
+      print "- Adding %s from command-line" % arg
+      primary.append((arg, arg))
+    else:
+      print '* Ignoring %s - does not look like an IP' % arg
+  
   secondary = config.items('secondary')
   secondary_ips = [ x[0] for x in secondary ]
   cache_path = "%s.%s" % (SECONDARY_NS_CACHE, hash(str(secondary_ips)))
@@ -94,7 +103,10 @@ if __name__ == '__main__':
     print "- Secondary cache not found, trying all %s nameservers" % len(secondary)
     
   # Include internal & global first
-  thread_count = int(general['max_thread_count'])
+  if opt.thread_count:
+    thread_count = int(opt.thread_count)
+  else:
+    thread_count = int(general['max_thread_count'])
   print "- Checking the health of %s primary servers (%s threads)" % (len(primary), thread_count)
   try_nameservers = nsl.FindUsableNameServers(primary, internal=True,
                                               timeout=int(general['primary_health_timeout']),
