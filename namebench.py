@@ -32,7 +32,7 @@ SECONDARY_NS_CACHE = tempfile.gettempdir() + '/namebench_cache'
 
 TEXT_WEB_BROWSERS = ('links', 'elinks', 'w3m', 'lynx')
 DEFAULT_URL = 'http://127.0.0.1:8080'
-SECONDARY_COUNT = 3
+
 
 class WebServerThread (threading.Thread):
   def run(self):
@@ -79,10 +79,9 @@ if __name__ == '__main__':
     print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print ''
   
-  # Include internal & global first
-  nameservers = nsl.FindUsableNameServers(config.items('primary'),
-                                         internal=True, timeout=3)  
   # And the best 5 otherwise. We should test these for sanity.
+  general = dict(config.items('general'))
+  primary = config.items('primary')
   secondary = config.items('secondary')
   secondary_ips = [ x[0] for x in secondary ]
   cache_path = "%s.%s" % (SECONDARY_NS_CACHE, hash(str(secondary_ips)))
@@ -90,26 +89,40 @@ if __name__ == '__main__':
     cache = ConfigParser.ConfigParser()
     cache.read(cache_path)
     secondary = cache.items('best')
+    print "- Read the best Secondary DNS servers read from cache: %s" % cache_path
   except (IOError, ConfigParser.NoSectionError):
-    print "Secondary cache not found, trying all nameservers"
+    print "- Secondary cache not found, trying all %s nameservers" % len(secondary)
     
-    
-  print "- Looking for best secondary NS out of %s nameservers" % len(secondary)
-  secondary_servers = nsl.FindUsableNameServers(secondary)
-  best = sorted(secondary_servers, key=operator.attrgetter('check_duration'))[0:SECONDARY_COUNT]  
-  nameservers.extend(best)  
+  # Include internal & global first
+  thread_count = int(general['max_thread_count'])
+  print "- Checking the health of %s primary servers (%s threads)" % (len(primary), thread_count)
+  try_nameservers = nsl.FindUsableNameServers(primary, internal=True,
+                                              timeout=int(general['primary_health_timeout']),
+                                              max_threads=thread_count) 
+  print ''
+  print "- Checking the health of %s secondary servers (%s threads)" % (len(secondary), thread_count)
+  secondary_servers = nsl.FindUsableNameServers(secondary,
+                                                timeout=int(general['secondary_health_timeout']),
+                                                max_threads=thread_count)
+  best_secondary = sorted(secondary_servers, key=operator.attrgetter('check_duration'))[0:int(general['secondary_count'])]  
+  try_nameservers.extend(best_secondary)
+
   cache = ConfigParser.RawConfigParser()
   cache.add_section('best')
-  for ns in best:
+  for ns in best_secondary:
     cache.set('best', ns.ip, ns.name)
   cache.write(open(cache_path, 'wb'))
-  
+
+  checked_for_collusion = nsl.CheckCacheCollusion(try_nameservers)
   # Check for cache-collusion
-  print "* Checking for servers which share a cache."
-  nameservers = nsl.CheckCacheCollusion(nameservers)
-  # TODO(tstromberg): Do not filter out local servers!
-  print "- Ignoring nameservers which share cache with faster nameservers."
-  nameservers = [ x for x in nameservers if not x.shares_with_faster ]
+  print ""
+  print "Final list of nameservers to test (ignoring slower-shared cache):"
+  nameservers = []
+  for ns in checked_for_collusion:
+    if ns.is_healthy and not ns.shares_with_faster:
+      nameservers.append(ns)
+      print "  > %s with an initial test of %sms" % (ns, ns.check_duration)
+  print ""
   
   if opt.gui:
     WebServerThread().start()
@@ -128,7 +141,7 @@ if __name__ == '__main__':
     print ''
     print "Recommended Configuration (fastest + nearest):"
     print "----------------------------------------------"
-    print "nameserver %s\t# %s %s" % (best.ip, best.name, best.notes)
-    print "nameserver %s\t# %s %s" % (nearest.ip, nearest.name, nearest.notes)
+    print "nameserver %s\t# %s %s" % (best.ip, best.name, ', '.join(best.notes))
+    print "nameserver %s\t# %s %s" % (nearest.ip, nearest.name, ', '.join(nearest.notes))
     
     

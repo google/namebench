@@ -23,7 +23,6 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 
-MAX_THREADS = 10
 DEFAULT_TIMEOUT = 10
 GOOGLE_CLASS_B = '74.125'
 WILDCARD_DOMAIN = 'laterooms.com.'
@@ -145,12 +144,18 @@ class NSLookup(object):
     
     for test in tests:
       (note, duration, response) = test(ip, timeout)
+      # Turn this into an attribute!
+      if note:
+        ns.notes.append(note)
       ns.checks.append((test.__name__, note, duration, response))
       if note in ('timeout', 'unusable'):
         ns.is_healthy = False
         return ns
 
     ns.is_healthy = True
+    if ns.notes:
+      print "  * %s: %s" % (ns, ', '.join(ns.notes))
+    
     ns.check_duration = sum([ x[2] for x in ns.checks ]) 
     return ns
   
@@ -183,16 +188,18 @@ class NSLookup(object):
         # Some nameservers may override the TTL. Look for a TTL within 30 seconds
         delta = other_response.answer[0].ttl - response.answer[0].ttl        
         if delta > 1 and delta < 60:
+          ns.notes.append('shares cache with %s' % ns.ip)
+          other_ns.notes.append('shares cache with %s' % ns.ip)
           other_ns.shared_with.append(ns)
           ns.shared_with.append(other_ns)
           dur_delta = ns.check_duration - other_ns.check_duration
           if dur_delta > 0:
             ns.shares_with_faster = True
-            print "* %s shares cache with %s (%sms slower)" % (ns, other_ns, dur_delta)
+            print "  * %s shares cache with %s (%sms slower)" % (ns, other_ns, dur_delta)
         
     return nameservers
     
-  def FindUsableNameServers(self, nameservers, internal=False, timeout=1.5):
+  def FindUsableNameServers(self, nameservers, internal=False, timeout=1.5, max_threads=1):
     """Discover what nameservers are available.
     
     Args:
@@ -203,10 +210,10 @@ class NSLookup(object):
     """
     if internal:
       for (index, ip) in enumerate(self.InternalNameServers()):
-        print "- Including system nameserver: %s" % ip
+        print "  o Including system nameserver: %s" % ip
         nameservers.append((ip, 'SYS-%s' % ip))
   
-    chunks = split_seq(nameservers, MAX_THREADS)
+    chunks = split_seq(nameservers, max_threads)
     threads = []
     for chunk in chunks:
       thread = TestNameServersThread(timeout, chunk)
