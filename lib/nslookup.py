@@ -249,9 +249,9 @@ class NameServerTests(NSLookup):
       A list of NameServerData objects with healthy nameservers.
     """
     if internal:
-      for ip in self.InternalNameServers():
-        print '  o Including system nameserver: %s' % ip
-        nameservers.append((ip, 'SYS-%s' % ip))
+      for (index, ip) in enumerate(self.InternalNameServers()):
+        print '  o Including system nameserver #%s: %s' % (index+1, ip)
+        nameservers.append((ip, 'SYSTEM-%s' % (index+1)))
 
     chunks = split_seq(nameservers, self.thread_count)
     threads = []
