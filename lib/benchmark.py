@@ -49,7 +49,7 @@ def WeightedDistribution(elements, count):
   desired_mean = max * 0.10
   lambd = 1.0 / desired_mean
   picks = []
-  
+
   while len(picks) < max:
     index = int(random.expovariate(lambd))
     if index < max:
@@ -121,13 +121,13 @@ class NameBench(object):
       results: list of tuples, including data for each request made.
     """
     results = []
-    lookup = nslookup.NSLookup()
+    lookup = nslookup.NSLookup(timeout=DEFAULT_TIMEOUT)
     print "   %s" % nameserver
     for (req_type, record) in tests:
       # test records can include a (RANDOM) in the string for cache busting.
       if '(RANDOM)' in record:
         record = record.replace('(RANDOM)', str(random.random() * 10))
-      (response, duration) = lookup.TimedDNSRequest(nameserver.ip, req_type, record, DEFAULT_TIMEOUT)
+      (response, duration) = lookup.TimedDNSRequest(nameserver.ip, req_type, record)
       if response:
         answer_count = len(response.answer)
         if answer_count:
@@ -142,7 +142,7 @@ class NameBench(object):
     return results
 
   def Run(self):
-    """Manage all attempts."""   
+    """Manage all attempts."""
     global_tests = self.GenerateTestRecords(self.domains, self.test_count)
     for attempt in range(self.run_count):
       print('* Benchmarking %s nameservers with %s records each (%s of %s)' %
@@ -150,8 +150,8 @@ class NameBench(object):
       for ns in self.nameservers:
         if ns not in self.results:
           self.results[ns] = []
-        
-        # TODO(tstromberg): Handle shared caches better!  
+
+        # TODO(tstromberg): Handle shared caches better!
         # Which is more evil? We want the domains requested
         # to be consistent between nameservers, but we have
         # to beware of cache sharing between IP's. We now
@@ -178,11 +178,11 @@ class NameBench(object):
   def FastestNameServerResult(self):
     """Process all runs for all hosts, yielding an average for each host."""
     return [(x[0], min(x[1])) for x in self.DigestedResults()]
-  
+
   def BestOverallNameServer(self):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     return sorted_averages[0][0]
-        
+
   def NearestNameServer(self):
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
