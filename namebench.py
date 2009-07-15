@@ -28,6 +28,7 @@ def RetrieveSecondaryDNSCache(path):
   try:
     cache = ConfigParser.ConfigParser()
     cache.read(path)
+    print "- Read cached secondary servers from %s" % path
     return cache.items('best')
   except (IOError, ConfigParser.NoSectionError):
     return None
