@@ -200,6 +200,8 @@ class NameServerTests(NSLookup):
 
   def CheckCacheCollusion(self, nameservers):
     """Mark if any nameservers share cache, especially if they are slower."""
+    # TODO(tstromberg): Rework algorithm so that nameserver combinations are
+    # tested only once rather than twice.    
     for ns in nameservers:
       cache_id = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
       response = self.TimedDNSRequest(ns.ip, 'A', cache_id)[0]
@@ -226,7 +228,7 @@ class NameServerTests(NSLookup):
         # Some nameservers play games with TTL's, be specific.
         delta = other_response.answer[0].ttl - response.answer[0].ttl
         if delta > 1 and delta < 60:
-          ns.notes.append('shares cache with %s' % ns.ip)
+          ns.notes.append('shares cache with %s' % other_ns.ip)
           other_ns.notes.append('shares cache with %s' % ns.ip)
           other_ns.shared_with.append(ns)
           ns.shared_with.append(other_ns)
@@ -235,7 +237,9 @@ class NameServerTests(NSLookup):
             ns.shares_with_faster = True
             print ('  * %s shares cache with %s (%sms slower)' %
                    (ns, other_ns, dur_delta))
-
+        elif delta != 0 and abs(delta) < 1500:
+          print ('  * %s [%s] has a different TTL than %s [%s], delta=%s' % (ns, response.answer[0].ttl, other_ns,  other_response.answer[0].ttl, delta))
+          
     return nameservers
 
   def FindUsableNameServers(self, nameservers, internal=False):
@@ -251,7 +255,7 @@ class NameServerTests(NSLookup):
     if internal:
       for (index, ip) in enumerate(self.InternalNameServers()):
         print '  o Including system nameserver #%s: %s' % (index+1, ip)
-        nameservers.append((ip, 'SYSTEM-%s' % (index+1)))
+        nameservers.append((ip, 'SYS%s-%s' % ((index+1), ip)))
 
     chunks = split_seq(nameservers, self.thread_count)
     threads = []
