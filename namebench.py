@@ -81,6 +81,7 @@ def PickAwesomeNameServers(primary, secondary, timeout, max_threads,
     UpdateSecondaryDNSCache(cache_path, best_secondary)
 
   try_nameservers.extend(best_secondary)
+  print "- Excluding slowest nameservers that share a cache..."
   return ExcludeSharedCacheServers(try_nameservers)
 
 

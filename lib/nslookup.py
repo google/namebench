@@ -200,8 +200,7 @@ class NameServerTests(NSLookup):
 
   def CheckCacheCollusion(self, nameservers):
     """Mark if any nameservers share cache, especially if they are slower."""
-    # TODO(tstromberg): Rework algorithm so that nameserver combinations are
-    # tested only once rather than twice.    
+        
     for ns in nameservers:
       cache_id = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
       response = self.TimedDNSRequest(ns.ip, 'A', cache_id)[0]
@@ -209,6 +208,8 @@ class NameServerTests(NSLookup):
 
     # Give the TTL a chance to decrement
     time.sleep(3)
+    tested = []
+
     for other_ns in self.SortByFastest(nameservers):
       (cache_id, other_response) = other_ns.cache_check
       for ns in nameservers:
@@ -218,6 +219,11 @@ class NameServerTests(NSLookup):
         if ns in other_ns.shared_with:
           continue
 
+        # TODO(tstromberg): Make this testable.
+        if (ns.ip, other_ns.ip) in tested or (other_ns.ip, ns.ip) in tested:
+          continue
+
+        tested.append((ns.ip, other_ns.ip))
         response = self.TimedDNSRequest(ns.ip, 'A', cache_id)[0]
         if not response or not response.answer:
           continue
@@ -227,7 +233,7 @@ class NameServerTests(NSLookup):
 
         # Some nameservers play games with TTL's, be specific.
         delta = other_response.answer[0].ttl - response.answer[0].ttl
-        if delta > 1 and delta < 60:
+        if delta > 1 and delta < 120:
           ns.notes.append('shares cache with %s' % other_ns.ip)
           other_ns.notes.append('shares cache with %s' % ns.ip)
           other_ns.shared_with.append(ns)
@@ -235,8 +241,8 @@ class NameServerTests(NSLookup):
           dur_delta = ns.check_duration - other_ns.check_duration
           if dur_delta > 0:
             ns.shares_with_faster = True
-            print ('  * %s shares cache with %s (%sms slower)' %
-                   (ns, other_ns, dur_delta))
+            print ('  * %s shares cache with %s (delta=%s, %sms slower)' %
+                   (ns, other_ns, delta, dur_delta))
         elif delta != 0 and abs(delta) < 1500:
           print ('  * %s [%s] has a different TTL than %s [%s], delta=%s' % (ns, response.answer[0].ttl, other_ns,  other_response.answer[0].ttl, delta))
           
