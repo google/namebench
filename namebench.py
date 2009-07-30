@@ -47,7 +47,7 @@ def ExcludeSharedCacheServers(try_nameservers):
   """Filter out servers if they are simply slower replicas."""
   nst = nslookup.NameServerTests()
   checked = nst.CheckCacheCollusion(try_nameservers)
-  return [x for x in checked if x.is_healthy and not x.shares_with_faster]
+  return [x for x in checked if (x.is_healthy or x.is_system) and not x.shares_with_faster]
 
 
 def PickAwesomeNameServers(primary, secondary, timeout, max_threads,
@@ -102,7 +102,7 @@ if __name__ == '__main__':
   parser.add_option('-i', '--input', dest='input_file',
                     default='data/top-10000.txt',
                     help='File containing a list of domain names to query.')
-  parser.add_option('-t', '--tests', dest='test_count', default=50, type='int',
+  parser.add_option('-t', '--tests', dest='test_count', default=35, type='int',
                     help='Number of queries per run.')
   (opt, args) = parser.parse_args()
 
@@ -144,6 +144,10 @@ if __name__ == '__main__':
     web.WebServerThread().start()
     web.OpenBrowserWindow()
   else:
+    print "= Testing nameservers:"
+    for ns in nameservers:
+      print "    %s [%s]" % (ns.name, ns.ip)
+
     bmark = benchmark.NameBench(opt.input_file, run_count=opt.run_count,
                                 test_count=opt.test_count,
                                 nameservers=nameservers)

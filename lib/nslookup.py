@@ -50,6 +50,9 @@ class TestNameServersThread(threading.Thread):
   def run(self):
     for (ip, desc) in self.nameservers:
       ns = NameServerData(ip, desc)
+      # TODO(tstromberg): Remove hardcoded text string
+      if 'SYS' in desc:
+        ns.is_system = True
       self.results.append(self.test.QualifyNameServer(ns))
 
 
@@ -64,12 +67,16 @@ class NameServerData(object):
     self.cache_check = None
     self.shared_with = []
     self.is_healthy = False
+    self.is_system = False
     self.checks = []
     self.check_duration = 0
     self.shares_with_faster = False
 
   def __str__(self):
     return '%s [%s]' % (self.name, self.ip)
+
+  def __repr__(self):
+    return self.__str__()
 
 
 class NSLookup(object):
@@ -109,9 +116,14 @@ class NSLookup(object):
       response = self.DNSQuery(request, nameserver)
     except dns.exception.Timeout:
       response = None
+    except dns.query.BadResponse:
+      print "%s returned a bad DNS response" % nameserver
+      response = None
     except dns.message.TrailingJunk:
       print '%s is returning invalid DNS responses (trailing junk)' % nameserver
       response = None
+    except dns.query.UnexpectedSource, message:
+      print message
     duration = TimeDeltaToMilliseconds(datetime.datetime.now() - start_time)
     return (response, duration)
 
@@ -185,6 +197,8 @@ class NameServerTests(NSLookup):
         ns.notes.append(note)
       ns.checks.append((test.__name__, note, duration, response))
       if note in ('timeout', 'unusable'):
+        if ns.is_system:
+          print "* System nameserver %s failed %s: %s" % (ns, test.__name__, note)
         ns.is_healthy = False
         return ns
 
@@ -275,7 +289,7 @@ class NameServerTests(NSLookup):
       thread.join()
       results.extend(thread.results)
 
-    return self.SortByFastest([x for x in results if x.is_healthy])
+    return self.SortByFastest([x for x in results if x.is_healthy or x.is_system])
 
   def AreDNSPacketsIntercepted(self):
     """Check if our packets are actually getting to the correct servers."""
