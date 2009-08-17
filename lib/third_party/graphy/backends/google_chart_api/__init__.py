@@ -38,7 +38,7 @@ def _GetChartFactory(chart_class, display_class):
 #   chart = google_chart_api.LineChart()
 # is equivalent to:
 #   chart = line_chart.LineChart()
-#   chart.display = google_chart_api.LineChartEncoder()
+#   chart.display = google_chart_api.encoders.LineChartEncoder(chart)
 #
 # (If there's some chart type for which a helper method isn't available, you
 # can always just instantiate the correct encoder manually, like in the 2nd

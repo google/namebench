@@ -132,8 +132,24 @@ class DataSeries(object):
                   'DataSeries.style.color instead.', DeprecationWarning,
                   stacklevel=2)
     self.style.color = color
-
-  color = property(_GetColor, _SetColor)
+  
+  color = property(_GetColor, _SetColor)    
+    
+  def _GetStyle(self):
+    return self._style;
+  
+  def _SetStyle(self, style):
+    if style is not None and callable(style):
+      warnings.warn('Your code may be broken ! LineStyle.solid and similar '
+                    'are no longer constants, but class methods that '
+                    'create LineStyle instances. Change your code to call '
+                    'LineStyle.solid() instead of passing it as a value.',
+                    DeprecationWarning, stacklevel=2)
+      self._style = style()
+    else:  
+      self._style = style   
+  
+  style = property(_GetStyle, _SetStyle)    
 
 
 class AxisPosition(object):

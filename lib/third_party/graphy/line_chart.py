@@ -21,7 +21,6 @@ import warnings
 
 from graphy import common
 
-
 class LineStyle(object):
 
   """Represents the style for a line on a line chart.  Also provides some
@@ -36,12 +35,12 @@ class LineStyle(object):
            AutoColor will fill this in for you automatically if empty.
 
   Some common styles, such as LineStyle.dashed, are available:
-    solid
-    dashed
-    dotted
-    thick_solid
-    thick_dashed
-    thick_dotted
+    LineStyle.solid()
+    LineStyle.dashed()
+    LineStyle.dotted()
+    LineStyle.thick_solid()
+    LineStyle.thick_dashed()
+    LineStyle.thick_dotted()
   """
 
   # Widths
@@ -61,13 +60,29 @@ class LineStyle(object):
     self.off = off
     self.color = color
 
+  @classmethod
+  def solid(cls):
+    return LineStyle(1, 1, 0)
+    
+  @classmethod
+  def dashed(cls):
+    return LineStyle(1, 8, 4)
+   
+  @classmethod
+  def dotted(cls):
+    return LineStyle(1, 2, 4)
+      
+  @classmethod
+  def thick_solid(cls):
+    return LineStyle(2, 1, 0)   
 
-LineStyle.solid  = LineStyle(1, 1, 0)
-LineStyle.dashed = LineStyle(1, 8, 4)
-LineStyle.dotted = LineStyle(1, 2, 4)
-LineStyle.thick_solid  = LineStyle(2, 1, 0)
-LineStyle.thick_dashed = LineStyle(2, 8, 4)
-LineStyle.thick_dotted = LineStyle(2, 2, 4)
+  @classmethod
+  def thick_dashed(cls):
+    return LineStyle(2, 8, 4)   
+
+  @classmethod
+  def thick_dotted(cls):
+    return LineStyle(2, 2, 4)  
 
 
 class LineChart(common.BaseChart):
@@ -110,7 +125,7 @@ class LineChart(common.BaseChart):
                 label=None):
     """DEPRECATED"""
     warnings.warn('LineChart.AddSeries is deprecated.  Call AddLine instead. ',
-                  DeprecationWarning, stacklevel=2)
+                  DeprecationWarning, stacklevel=2)    
     return self.AddLine(points, color=color, width=style.width,
                         pattern=(style.on, style.off), markers=markers,
                         label=label)
