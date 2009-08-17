@@ -16,7 +16,6 @@ import optparse
 import random
 
 import charts
-import nslookup
 
 VERSION = '1.0b4'
 
@@ -121,13 +120,12 @@ class NameBench(object):
       results: list of tuples, including data for each request made.
     """
     results = []
-    lookup = nslookup.NSLookup(timeout=DEFAULT_TIMEOUT)
     print "   %s" % nameserver
     for (req_type, record) in tests:
       # test records can include a (RANDOM) in the string for cache busting.
       if '(RANDOM)' in record:
         record = record.replace('(RANDOM)', str(random.random() * 10))
-      (response, duration) = lookup.TimedDNSRequest(nameserver.ip, req_type, record)
+      (response, duration, exc) = nameserver.TimedRequest(req_type, record)
       if response:
         answer_count = len(response.answer)
         if answer_count:
