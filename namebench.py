@@ -17,76 +17,13 @@ import tempfile
 sys.path.append('lib/third_party')
 
 from lib import benchmark
-from lib import nslookup
+from lib import nameserver_list
+from lib import util
 from lib import web
 
 VERSION = '0.5'
 
-
-def RetrieveSecondaryDNSCache(path):
-  """Try to get the best secondary servers out of the cache."""
-  try:
-    cache = ConfigParser.ConfigParser()
-    cache.read(path)
-    print "- Read cached secondary servers from %s" % path
-    return cache.items('best')
-  except (IOError, ConfigParser.NoSectionError):
-    return None
-
-
-def UpdateSecondaryDNSCache(path, best_secondary):
-  """Update the secondary DNS cache file."""
-  cache = ConfigParser.RawConfigParser()
-  cache.add_section('best')
-  for ns in best_secondary:
-    cache.set('best', ns.ip, ns.name)
-  cache.write(open(path, 'wb'))
-
-
-def ExcludeSharedCacheServers(try_nameservers):
-  """Filter out servers if they are simply slower replicas."""
-  nst = nslookup.NameServerTests()
-  checked = nst.CheckCacheCollusion(try_nameservers)
-  return [x for x in checked if (x.is_healthy or x.is_system) and not x.shares_with_faster]
-
-
-def PickAwesomeNameServers(primary, secondary, timeout, max_threads,
-                           secondary_count):
-  """Return a list of good working nameservers to test against.
-
-  Args:
-    primary: A list of (ip, name) tuples
-    secondary: A list of (ip, name) tuples
-    timeout: # of seconds to timeout.
-    max_threads: # of threads to use (int)
-    secondary_count: # of secondary servers to select from.
-
-  Returns:
-    A list of NameServerData objects with healthy servers.
-  """
-  print '- Checking the health of %s primary servers' % (len(primary))
-  nst = nslookup.NameServerTests(thread_count=max_threads, timeout=timeout)
-  try_nameservers = nst.FindUsableNameServers(primary, internal=True)
-  secondary_hash = hash(str([x[0] for x in secondary]))
-  cache_path = '%s/namebench_cache.%s' % (tempfile.gettempdir(),
-                                          secondary_hash)
-  cached_secondary = RetrieveSecondaryDNSCache(cache_path)
-  if cached_secondary:
-    secondary = cached_secondary
-
-  print '- Checking the health of %s secondary servers' % (len(secondary))
-  secondary_servers = nst.FindUsableNameServers(secondary)
-  best_secondary = secondary_servers[0:secondary_count]
-  if not cached_secondary:
-    UpdateSecondaryDNSCache(cache_path, best_secondary)
-
-  try_nameservers.extend(best_secondary)
-  print "- Excluding slowest nameservers that share a cache..."
-  return ExcludeSharedCacheServers(try_nameservers)
-
-
 if __name__ == '__main__':
-
   parser = optparse.OptionParser()
   parser.add_option('-g', '--gui', dest='gui', default=False,
                     action='store_true',
@@ -127,8 +64,7 @@ if __name__ == '__main__':
       print '- Adding %s from command-line' % arg
       primary_ns.append((arg, arg))
 
-  test = nslookup.NameServerTests()
-  if test.AreDNSPacketsIntercepted():
+  if util.AreDNSPacketsIntercepted():
     print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print 'XX Someone upstream of this machine is doing evil things and  XX'
     print 'XX intercepting all outgoing nameserver requests. The results XX'
@@ -136,18 +72,15 @@ if __name__ == '__main__':
     print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print ''
 
-  nameservers = PickAwesomeNameServers(primary_ns, secondary_ns,
-                                       int(general['health_timeout']),
-                                       thread_count,
-                                       int(general['secondary_count']))
+  nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
+                                        include_internal=True,
+                                        threads=thread_count,
+                                        timeout=int(general['health_timeout']))
+  nameservers.FilterBadorSlowServers(count=12)
   if opt.gui:
     web.WebServerThread().start()
     web.OpenBrowserWindow()
   else:
-    print "= Testing nameservers:"
-    for ns in nameservers:
-      print "    %s [%s]" % (ns.name, ns.ip)
-
     bmark = benchmark.NameBench(opt.input_file, run_count=opt.run_count,
                                 test_count=opt.test_count,
                                 nameservers=nameservers)
@@ -163,7 +96,7 @@ if __name__ == '__main__':
     print 'Recommended Configuration (fastest + nearest):'
     print '----------------------------------------------'
     print 'nameserver %s \t# %s %s' % (best.ip, best.name,
-                                      ', '.join(best.notes))
+                                      ', '.join(best.warnings))
     print 'nameserver %s \t# %s %s' % (nearest.ip, nearest.name,
-                                      ', '.join(nearest.notes))
+                                      ', '.join(nearest.warnings))
 
