@@ -78,9 +78,9 @@ class NameServer(object):
     exc = None
     try:
       response = self.Query(request)
-    except dns.exception.Timeout as exc:
+    except (dns.exception.Timeout), exc:
       response = None
-    except (dns.query.BadResponse, dns.message.TrailingJunk, dns.query.UnexpectedSource) as exc:
+    except (dns.query.BadResponse, dns.message.TrailingJunk, dns.query.UnexpectedSource), exc:
       response = None
     duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() - start_time)
     return (response, duration, exc)
