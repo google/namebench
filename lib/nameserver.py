@@ -27,11 +27,11 @@ class NameServer(object):
   """Hold information about a particular nameserver."""
 
 
-  def __init__(self, ip, name=None, internal=False, secondary=False):
+  def __init__(self, ip, name=None, internal=False, primary=False):
     self.name = name
     self.ip = ip
     self.is_internal = internal
-    self.is_secondary = secondary
+    self.is_primary = primary
 
     self.warnings = []
     self.results = []
@@ -53,10 +53,10 @@ class NameServer(object):
   def __repr__(self):
     return self.__str__()
 
-  def Query(self, request, timeout=DEFAULT_TIMEOUT):
+  def Query(self, request, timeout):
     return dns.query.udp(request, self.ip, timeout, 53)
 
-  def TimedRequest(self, type_string, record_string):
+  def TimedRequest(self, type_string, record_string, timeout=DEFAULT_TIMEOUT):
     """Make a DNS request, returning the reply and duration it took.
 
     Args:
@@ -77,7 +77,7 @@ class NameServer(object):
     start_time = datetime.datetime.now()
     exc = None
     try:
-      response = self.Query(request)
+      response = self.Query(request, timeout)
     except (dns.exception.Timeout), exc:
       response = None
     except (dns.query.BadResponse, dns.message.TrailingJunk, dns.query.UnexpectedSource), exc:
@@ -87,7 +87,7 @@ class NameServer(object):
 
   def TestAnswers(self, record_type, record, expected):
     """Test to see that an answer returns correct IP's.
-    
+
     Returns:
       (is_broken, warning, duration)
     """
@@ -104,7 +104,8 @@ class NameServer(object):
     else:
       for a in response.answer:
         if expected not in str(a):
-          warning = '%s may be hijacked (%s)' % (record, str(a))
+#          warning = '%s may be hijacked (%s)' % (record, str(a))
+          warning = '%s may be hijacked' % record
     return (is_broken, warning, duration)
 
   def TestGoogleComResponse(self):
@@ -130,21 +131,23 @@ class NameServer(object):
     tests = [self.TestWwwGoogleComResponse,
              self.TestGoogleComResponse,
              self.TestNegativeResponse]
+    self.checks = []
+    self.warnings = []
 
     for test in tests:
       (is_broken, warning, duration) = test()
       if is_broken:
         self.is_healthy = False
-        if not self.is_secondary:
-          print '%s: %s %s: %s' % (self, test.__name__, warning, duration)
+        if self.is_primary:
+          print '  * %s is unhealthy: %s %s' % (self, test.__name__, warning)
         break
-        
+
       if warning:
         self.warnings.append(warning)
       self.checks.append((test.__name__, is_broken, warning, duration))
 
     if self.warnings:
-      print '  * %s: %s' % (self.name, ', '.join(self.warnings))
+      print '  o %s: %s' % (self.name, ', '.join(self.warnings))
 
     return self.is_healthy
 

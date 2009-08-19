@@ -41,6 +41,8 @@ if __name__ == '__main__':
                     help='File containing a list of domain names to query.')
   parser.add_option('-t', '--tests', dest='test_count', default=35, type='int',
                     help='Number of queries per run.')
+  parser.add_option('-x', '--num_servers', dest='num_servers', default=12,
+                    type='int', help='Number of nameservers to test')
   (opt, args) = parser.parse_args()
 
   config = ConfigParser.ConfigParser()
@@ -75,8 +77,10 @@ if __name__ == '__main__':
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
                                         include_internal=True,
                                         threads=thread_count,
-                                        timeout=int(general['health_timeout']))
-  nameservers.FilterBadorSlowServers(count=12)
+                                        timeout=int(general['health_timeout']),
+                                        cache_dir=tempfile.gettempdir())
+
+  nameservers.FilterUnwantedServers(count=int(opt.num_servers))
   if opt.gui:
     web.WebServerThread().start()
     web.OpenBrowserWindow()
