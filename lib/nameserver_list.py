@@ -53,14 +53,14 @@ class NameServers(list):
         self.AddServer(ip, 'SYS-%s' % ip, internal=True, primary=True)
 
   def AddServer(self, ip, name, primary=False, internal=False):
-
+    """Add a server to the list given an IP and name."""
     ns = nameserver.NameServer(ip, name=name, primary=primary,
                                internal=internal)
     self.append(ns)
 
   def append(self, ns):
+    """Add a nameserver to the list, guaranteeing uniqueness."""
     if ns.ip in self.seen_ips:
-      print 'I have already seen %s' % ns.ip
       return None
 
     # Add an identifier to the name if necessary.
