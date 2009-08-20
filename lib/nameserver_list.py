@@ -116,14 +116,14 @@ class NameServers(list):
     self.CheckHealth()
     keep = [ x for x in self if x.is_primary and x.is_healthy ]
     for ns in self.SortByFastest():
-      if ns.is_healthy and not ns.is_primary and len(keep) < count:
+      if not ns.is_primary and len(keep) < count:
         keep.append(ns)
 
     self._Reset(keep)
 
   def _FilterSlowerReplicas(self, count):
     self.CheckCacheCollusion()
-    usable = [x for x in self.SortByFastest() if x.is_healthy and not x.is_slower_replica]
+    usable = [x for x in self.SortByFastest() if not x.is_slower_replica]
     keep = [x for x in usable if x.is_primary]
     shortfall = count - len(keep)
     if shortfall > 0:
@@ -137,33 +137,19 @@ class NameServers(list):
     return dns.resolver.Resolver().nameservers
 
   def SortByFastest(self):
-    return sorted(self, key=operator.attrgetter('check_duration'))
+    fastest = sorted(self, key=operator.attrgetter('check_duration'))
+    return [ x for x  in fastest if x.is_healthy ]
 
   def CheckCacheCollusion(self):
     """Mark if any nameservers share cache, especially if they are slower."""
-
-    for ns in self:
-      cache_id = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
-      response = ns.TimedRequest('A', cache_id, 4)[0]
-      if not response or not response.answer:
-        print "  * No response from %s -- marking as unhealthy" % ns
-        ns.is_healthy = False
-        continue
-      ns.cache_check = (cache_id, response)
 
     # Give the TTL a chance to decrement
     time.sleep(3)
     tested = []
 
     for other_ns in self.SortByFastest():
-      if not other_ns.is_healthy:
-        continue
-
       (cache_id, other_response) = other_ns.cache_check
-      for ns in self:
-        if not ns.is_healthy:
-          continue
-
+      for ns in self.SortByFastest():
         if ns.ip == other_ns.ip:
           continue
 
@@ -173,16 +159,10 @@ class NameServers(list):
         # TODO(tstromberg): Make this testable.
         if (ns.ip, other_ns.ip) in tested or (other_ns.ip, ns.ip) in tested:
           continue
-
+        
+        (response, is_broken, warning, duration) = ns.QueryWildcardCache(cache_id)
         tested.append((ns.ip, other_ns.ip))
-        response = ns.TimedRequest('A', cache_id, 4)[0]
-        if not response or not response.answer:
-          print "  * No response from %s -- marking as unhealthy" % ns
-          ns.is_healthy = False
-          continue
-
-        if not other_response or not other_response.answer:
-          print "  * No response from %s -- marking as unhealthy" % ns
+        if is_broken:
           ns.is_healthy = False
           continue
 

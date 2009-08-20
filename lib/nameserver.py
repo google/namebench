@@ -16,7 +16,8 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 
-DEFAULT_TIMEOUT = 2
+DEFAULT_TIMEOUT = 4
+HEALTH_TIMEOUT = 2
 GOOGLE_CLASS_B = '74.125'
 WILDCARD_DOMAIN = 'laterooms.com.'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
@@ -93,7 +94,7 @@ class NameServer(object):
     """
     is_broken = False
     warning = None
-    (response, duration, exc) = self.TimedRequest(record_type, record)
+    (response, duration, exc) = self.TimedRequest(record_type, record, timeout=HEALTH_TIMEOUT)
     if not response:
       is_broken = True
       warning = exc.__class__
@@ -118,19 +119,43 @@ class NameServer(object):
     is_broken = False
     warning = None
     poison_test = 'nb.%s.google.com.' % random.random()
-    (response, duration, exc) = self.TimedRequest('A', poison_test)
+    (response, duration, exc) = self.TimedRequest('A', poison_test, timeout=HEALTH_TIMEOUT)
     if not response:
       is_broken = True
       warning = exc.__class__
     elif response.answer:
       warning = 'NXDOMAIN Hijacking'
     return (is_broken, warning, duration)
+  
+  def QueryWildcardCache(self, hostname=None):
+    is_broken = False
+    warning = None
+    if not hostname:
+      hostname = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
+        
+    (response, duration, exc) = self.TimedRequest('A', hostname, timeout=HEALTH_TIMEOUT)
+    if not response:
+      is_broken = True
+      warning = exc.__class__
+    elif not response.answer:
+      is_broken = True
+      warning = 'No response'
+
+    if not self.cache_check:
+      self.cache_check = (hostname, response)
+    
+    return (response, is_broken, warning, duration)
+  
+  def TestWildcardCaching(self, hostname=None):
+    (response, is_broken, warning, duration) = self.QueryWildcardCache()
+    return (is_broken, warning, duration)
 
   def CheckHealth(self):
     """Qualify a nameserver to see if it is any good."""
     tests = [self.TestWwwGoogleComResponse,
              self.TestGoogleComResponse,
-             self.TestNegativeResponse]
+             self.TestNegativeResponse,
+             self.TestWildcardCaching]
     self.checks = []
     self.warnings = []
 
