@@ -28,7 +28,7 @@ def AreDNSPacketsIntercepted():
 
   opendns = nameserver.NameServer(OPENDNS_NS)
   response = opendns.TimedRequest('TXT', 'which.opendns.com.')[0]
-  if response.answer:
+  if response and response.answer:
     for answer in response.answer:
       if 'I am not an OpenDNS resolver' in answer.to_text():
         return True
