@@ -75,7 +75,13 @@ class NameServers(list):
     if self.timeout:
       ns.timeout = self.timeout
     if self.health_timeout:
-      ns.health_timeout = self.health_timeout
+      # Spend a little extra time on primary/internal servers.
+      if primary or internal and (self.timeout > self.health_timeout):
+        ns.health_timeout = self.timeout
+      else:
+        ns.health_timeout = self.health_timeout
+      
+      
     self.append(ns)
 
   def append(self, ns):
@@ -105,7 +111,7 @@ class NameServers(list):
         self.CheckHealth()
 
     if not cached:
-      print '- Checking health of %s nameservers (%s threads)' % (len(self),
+      print '- Checking health of %s nameservers (%s threads), will cache.' % (len(self),
                                                                   self.thread_count)
       self._FilterUnhealthyServers(count * NS_CACHE_SLACK)
       print '- Saving health status of %s best servers to cache' % len(self)
@@ -123,11 +129,10 @@ class NameServers(list):
   def _CheckServerCache(self, cpath):
     """Check if our health cache has any good data."""
     if os.path.exists(cpath) and os.path.isfile(cpath):
-      print '- Loading data from local server health cache.'
+      print '- Loading local server health cache: %s' % cpath
       cf = open(cpath, 'r')
       try:
         data = pickle.load(cf)
-        print '- %s nameservers found in cache' % len(data)
         self._Reset(data)
         return True
       except EOFError:

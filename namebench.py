@@ -37,6 +37,10 @@ from lib import web
 
 VERSION = '0.6.5'
 
+# Detect congestion problems early!
+EXPECTED_DURATION = 50.0
+SEVERE_CONGESTION_MULTIPLIER = 6.0
+
 def processConfiguration(opt):
   # Read the config file, set variables
   config = ConfigParser.ConfigParser()
@@ -96,12 +100,21 @@ if __name__ == '__main__':
     if '.' in arg:
       primary_ns.append((arg, arg))
 
-  if util.AreDNSPacketsIntercepted():
+
+  (intercepted, duration) = util.AreDNSPacketsIntercepted()
+  congestion = duration / EXPECTED_DURATION
+  
+  if intercepted:
     print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print 'XX Someone upstream of this machine is doing evil things and  XX'
     print 'XX intercepting all outgoing nameserver requests. The results XX'
-    print 'XX of this program may be useless. Continuing anyway...       XX'
+    print 'XX of this program will be useless. Get your ISP to fix it.   XX'
     print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    print ''
+    sys.exit(1)
+  elif congestion > SEVERE_CONGESTION_MULTIPLIER:
+    print '* WOAH! Intercept check completed in %sms (%.1fX slower than normal)' % (duration, congestion)
+    print '* NOTE: results may be inconsistent if your connection is saturated!'
     print ''
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,

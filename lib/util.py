@@ -19,7 +19,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import nameserver
 
 OPENDNS_NS = '208.67.220.220'
-
+TOO_SLOW = 400
 
 def TimeDeltaToMilliseconds(td):
   """Convert timedelta object to milliseconds."""
@@ -39,12 +39,12 @@ def AreDNSPacketsIntercepted():
   """Check if our packets are actually getting to the correct servers."""
 
   opendns = nameserver.NameServer(OPENDNS_NS)
-  response = opendns.TimedRequest('TXT', 'which.opendns.com.')[0]
+  (response, duration) = opendns.TimedRequest('TXT', 'which.opendns.com.')[0:2]
   if response and response.answer:
     for answer in response.answer:
       if 'I am not an OpenDNS resolver' in answer.to_text():
-        return True
+        return (True, duration)
   else:
     print '- Failed to detect if DNS packets are being intercepted (no response)'
-
-  return False
+  
+  return (False, duration)
