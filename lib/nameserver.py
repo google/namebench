@@ -16,7 +16,7 @@ import dns.reversename
 import util
 
 DEFAULT_TIMEOUT = 4
-HEALTH_TIMEOUT = 2
+HEALTH_TIMEOUT = 2.5
 GOOGLE_CLASS_B = '74.125'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
 OPENDNS_NS = '208.67.220.220'
