@@ -39,9 +39,9 @@ if __name__ == '__main__':
   parser.add_option('-i', '--input', dest='input_file',
                     default='data/top-10000.txt',
                     help='File containing a list of domain names to query.')
-  parser.add_option('-t', '--tests', dest='test_count', default=35, type='int',
+  parser.add_option('-t', '--tests', dest='test_count', default=40, type='int',
                     help='Number of queries per run.')
-  parser.add_option('-x', '--num_servers', dest='num_servers', default=12,
+  parser.add_option('-x', '--num_servers', dest='num_servers', default=13,
                     type='int', help='Number of nameservers to test')
   (opt, args) = parser.parse_args()
 
