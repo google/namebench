@@ -22,7 +22,7 @@ from lib import nameserver_list
 from lib import util
 from lib import web
 
-VERSION = '0.6.3'
+VERSION = '0.6.4'
 
 def processConfiguration(opt):
   # Read the config file, set variables

@@ -247,7 +247,7 @@ class NameBench(object):
     for ns in self.results:
       for (test_run, test_results) in enumerate(self.results[ns]):
         for result in test_results:
-          row = [ns.ip, ns.name, ns.notes, ns.check_duration, test_run]
+          row = [ns.ip, ns.name, ns.warnings, ns.check_duration, test_run]
           row.extend(result)
           output.writerow(row)
     csv_file.close()

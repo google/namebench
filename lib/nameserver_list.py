@@ -156,7 +156,7 @@ class NameServers(list):
   def _FilterSlowerReplicas(self, count):
     self.CheckCacheCollusion()
     usable = [x for x in self.SortByFastest() if not x.is_slower_replica]
-    keep = [x for x in usable if x.is_primary]
+    keep = [x for x in usable if x.is_primary][0:count]
     shortfall = count - len(keep)
     if shortfall > 0:
       for ns in [x for x in usable if not x.is_primary][0:shortfall]:

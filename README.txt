@@ -162,3 +162,12 @@ nameserver 193.121.171.135 # SYS-193.121.171.135
 
   The same as above, but it is a rarer condition as it breaks http://google.com/
 
+4) What does 'thread.error: can't start new thread' mean?
+
+  It means you are using too many threads. Try restarting namebench.py with -j8
+
+5) What does 'unhealthy: TestWwwGoogleComResponse <class 'dns.exception.Timeout'>' mean?
+
+  It means the specified nameserver was too slow to answer you. If all of your
+  nameservers are timing out, try restarting namebench.py with -Y 4
+
