@@ -39,7 +39,7 @@ VERSION = '0.6.5'
 
 # Detect congestion problems early!
 EXPECTED_DURATION = 50.0
-SEVERE_CONGESTION_MULTIPLIER = 6.0
+SEVERE_CONGESTION_MULTIPLIER = 5.0
 
 def processConfiguration(opt):
   # Read the config file, set variables
