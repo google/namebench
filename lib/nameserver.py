@@ -5,10 +5,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
-import operator
 import random
-import time
-import util
 
 import dns.name
 import dns.rdataclass
@@ -16,17 +13,18 @@ import dns.rdatatype
 import dns.resolver
 import dns.reversename
 
+import util
+
 DEFAULT_TIMEOUT = 4
 HEALTH_TIMEOUT = 2
 GOOGLE_CLASS_B = '74.125'
-WILDCARD_DOMAIN = 'laterooms.com.'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
 OPENDNS_NS = '208.67.220.220'
+WILDCARD_DOMAIN = 'blogspot.com.'
 
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
-
 
   def __init__(self, ip, name=None, internal=False, primary=False):
     self.name = name
@@ -42,9 +40,8 @@ class NameServer(object):
     self.cache_check = None
     self.is_slower_replica = False
 
-
   def _get_check_duration(self):
-    return sum([ x[3] for x in self.checks])
+    return sum([x[3] for x in self.checks])
 
   check_duration = property(_get_check_duration, None)
 
@@ -89,18 +86,23 @@ class NameServer(object):
   def TestAnswers(self, record_type, record, expected):
     """Test to see that an answer returns correct IP's.
 
+    Args:
+      record_type: text record type for NS query (A, CNAME, etc)
+      record: string to query for
+      expected: string expected in all answers
+
     Returns:
       (is_broken, warning, duration)
     """
     is_broken = False
     warning = None
-    (response, duration, exc) = self.TimedRequest(record_type, record, timeout=HEALTH_TIMEOUT)
+    (response, duration, exc) = self.TimedRequest(record_type, record,
+                                                  timeout=HEALTH_TIMEOUT)
     if not response:
       is_broken = True
       warning = exc.__class__
     elif not response.answer:
       is_broken = True
-      result = False
       warning = 'No answer'
     else:
       for a in response.answer:
@@ -119,21 +121,23 @@ class NameServer(object):
     is_broken = False
     warning = None
     poison_test = 'nb.%s.google.com.' % random.random()
-    (response, duration, exc) = self.TimedRequest('A', poison_test, timeout=HEALTH_TIMEOUT)
+    (response, duration, exc) = self.TimedRequest('A', poison_test,
+                                                  timeout=HEALTH_TIMEOUT)
     if not response:
       is_broken = True
       warning = exc.__class__
     elif response.answer:
       warning = 'NXDOMAIN Hijacking'
     return (is_broken, warning, duration)
-  
+
   def QueryWildcardCache(self, hostname=None):
     is_broken = False
     warning = None
     if not hostname:
       hostname = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
-        
-    (response, duration, exc) = self.TimedRequest('A', hostname, timeout=HEALTH_TIMEOUT)
+
+    (response, duration, exc) = self.TimedRequest('A', hostname,
+                                                  timeout=HEALTH_TIMEOUT)
     if not response:
       is_broken = True
       warning = exc.__class__
@@ -143,12 +147,11 @@ class NameServer(object):
 
     if not self.cache_check:
       self.cache_check = (hostname, response)
-    
+
     return (response, is_broken, warning, duration)
-  
-  def TestWildcardCaching(self, hostname=None):
-    (response, is_broken, warning, duration) = self.QueryWildcardCache()
-    return (is_broken, warning, duration)
+
+  def TestWildcardCaching(self):
+    return self.QueryWildcardCache()[1:]
 
   def CheckHealth(self):
     """Qualify a nameserver to see if it is any good."""

@@ -8,6 +8,7 @@ import nameserver
 
 OPENDNS_NS = '208.67.220.220'
 
+
 def TimeDeltaToMilliseconds(td):
   """Convert timedelta object to milliseconds."""
   return (td.days*86400000) + (td.seconds*1000) + (td.microseconds/1000.0)
@@ -24,7 +25,7 @@ def split_seq(seq, size):
 
 def AreDNSPacketsIntercepted():
   """Check if our packets are actually getting to the correct servers."""
-  
+
   opendns = nameserver.NameServer(OPENDNS_NS)
   response = opendns.TimedRequest('TXT', 'which.opendns.com.')[0]
   for answer in response.answer:

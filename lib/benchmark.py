@@ -9,20 +9,19 @@ Designed to assist system administrators in selection and prioritization.
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import csv
-import datetime
 import math
 import operator
-import optparse
 import random
 import sys
 import charts
+
 
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
   return sum(values) / float(len(values))
 
 
-def DrawTextBar(value, max_value, note=None, max_width=54):
+def DrawTextBar(value, max_value, max_width=54):
   """Return a simple ASCII bar graph, making sure it fits within max_width.
 
   Args:
@@ -38,16 +37,16 @@ def DrawTextBar(value, max_value, note=None, max_width=54):
   return int(math.ceil(value/hash_width)) * '#'
 
 
-def WeightedDistribution(elements, count):
+def WeightedDistribution(elements):
   """Simple exponential distribution with a mean of 10%."""
-  max = len(elements) - 1
-  desired_mean = max * 0.10
+  maximum = len(elements) - 1
+  desired_mean = maximum * 0.10
   lambd = 1.0 / desired_mean
   picks = []
 
-  while len(picks) < max:
+  while len(picks) < maximum:
     index = int(random.expovariate(lambd))
-    if index < max:
+    if index < maximum:
       picks.append(elements[index])
   return picks
 
@@ -55,12 +54,12 @@ def WeightedDistribution(elements, count):
 class NameBench(object):
   """The main benchmarking class."""
 
-  def __init__(self, test_domains_path, nameservers={}, run_count=2, test_count=30):
+  def __init__(self, nameservers, test_domains_path, run_count=2, test_count=30):
     """Constructor.
 
     Args:
-      test_domains_path: Path to the list of domains to use (str)
       nameservers: a list of NameServerData objects
+      test_domains_path: Path to the list of domains to use (str)
       run_count: How many test-runs to perform on each nameserver (int)
       test_count: How many DNS lookups to test in each test-run (int)
     """
@@ -85,7 +84,7 @@ class NameBench(object):
       list of tuples in the format of (query type, query_name)
     """
     tests = []
-    domains = WeightedDistribution(domains, count)
+    domains = WeightedDistribution(domains)
     random.shuffle(domains)
 
     # Previously, we used a for loop with random.randomint() to create records,
@@ -120,7 +119,7 @@ class NameBench(object):
       # test records can include a (RANDOM) in the string for cache busting.
       if '(RANDOM)' in record:
         record = record.replace('(RANDOM)', str(random.random() * 10))
-      (response, duration, exc) = nameserver.TimedRequest(req_type, record)
+      (response, duration) = nameserver.TimedRequest(req_type, record)[0:2]
       if response:
         answer_count = len(response.answer)
         if answer_count:
@@ -139,7 +138,7 @@ class NameBench(object):
     global_tests = self.GenerateTestRecords(self.domains, self.test_count)
     for attempt in range(self.run_count):
       sys.stdout.write('\n* Benchmarking %s nameservers with %s records each (%s of %s).' %
-            (len(self.nameservers), self.test_count, attempt+1, self.run_count))
+                       (len(self.nameservers), self.test_count, attempt+1, self.run_count))
       for ns in self.nameservers:
         if ns not in self.results:
           self.results[ns] = []
@@ -177,7 +176,7 @@ class NameBench(object):
   def NearestNameServers(self, count=2):
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
-    return [ x[0] for x in min_responses ][0:count]
+    return [x[0] for x in min_responses][0:count]
 
   def DisplayResults(self):
     """Display all of the results in an ASCII-graph format."""
@@ -197,7 +196,7 @@ class NameBench(object):
         note = ' (%sT)' % failure_count
       else:
         note = ''
-      
+
       textbar = DrawTextBar(overall_mean, max_result)
       print '%-15.15s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
     if timeout_seen:

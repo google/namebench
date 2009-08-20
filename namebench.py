@@ -75,19 +75,18 @@ if __name__ == '__main__':
     print ''
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
-                                        include_internal=True,
-                                        threads=thread_count,
-                                        timeout=int(general['health_timeout']),
-                                        cache_dir=tempfile.gettempdir())
+                                            include_internal=True,
+                                            threads=thread_count,
+                                            cache_dir=tempfile.gettempdir())
 
   nameservers.FilterUnwantedServers(count=int(opt.num_servers))
   if opt.gui:
     web.WebServerThread().start()
     web.OpenBrowserWindow()
   else:
-    bmark = benchmark.NameBench(opt.input_file, run_count=opt.run_count,
-                                test_count=opt.test_count,
-                                nameservers=nameservers)
+    bmark = benchmark.NameBench(nameservers, opt.input_file,
+                                run_count=opt.run_count,
+                                test_count=opt.test_count)
     bmark.Run()
     bmark.DisplayResults()
     if opt.output_file:
@@ -95,8 +94,8 @@ if __name__ == '__main__':
       bmark.SaveResultsToCsv(opt.output_file)
 
     best = bmark.BestOverallNameServer()
-    nearest = [ x for x in bmark.NearestNameServers(3) if x.ip != best.ip ][0:2]
-    
+    nearest = [x for x in bmark.NearestNameServers(3) if x.ip != best.ip][0:2]
+
     print ''
     print 'Recommended Configuration (fastest + nearest):'
     print '----------------------------------------------'
