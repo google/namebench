@@ -15,8 +15,6 @@ import dns.reversename
 
 import util
 
-DEFAULT_TIMEOUT = 4
-HEALTH_TIMEOUT = 2.5
 GOOGLE_CLASS_B = '74.125'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
 OPENDNS_NS = '208.67.220.220'
@@ -31,6 +29,8 @@ class NameServer(object):
     self.ip = ip
     self.is_internal = internal
     self.is_primary = primary
+    self.timeout = 4
+    self.health_timeout = 2.5
 
     self.warnings = []
     self.shared_with = []
@@ -53,7 +53,7 @@ class NameServer(object):
   def Query(self, request, timeout):
     return dns.query.udp(request, self.ip, timeout, 53)
 
-  def TimedRequest(self, type_string, record_string, timeout=DEFAULT_TIMEOUT):
+  def TimedRequest(self, type_string, record_string, timeout=None):
     """Make a DNS request, returning the reply and duration it took.
 
     Args:
@@ -70,6 +70,8 @@ class NameServer(object):
     record = dns.name.from_text(record_string, None)
     return_type = dns.rdataclass.IN
     request = dns.message.make_query(record, request_type, return_type)
+    if not timeout:
+      timeout = self.timeout
 
     start_time = datetime.datetime.now()
     exc = None
@@ -96,7 +98,7 @@ class NameServer(object):
     is_broken = False
     warning = None
     (response, duration, exc) = self.TimedRequest(record_type, record,
-                                                  timeout=HEALTH_TIMEOUT)
+                                                  timeout=self.health_timeout)
     if not response:
       is_broken = True
       warning = exc.__class__
@@ -121,7 +123,7 @@ class NameServer(object):
     warning = None
     poison_test = 'nb.%s.google.com.' % random.random()
     (response, duration, exc) = self.TimedRequest('A', poison_test,
-                                                  timeout=HEALTH_TIMEOUT)
+                                                  timeout=self.health_timeout)
     if not response:
       is_broken = True
       warning = exc.__class__
@@ -136,7 +138,7 @@ class NameServer(object):
       hostname = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
 
     (response, duration, exc) = self.TimedRequest('A', hostname,
-                                                  timeout=HEALTH_TIMEOUT)
+                                                  timeout=self.health_timeout)
     ttl = None
     if not response:
       is_broken = True

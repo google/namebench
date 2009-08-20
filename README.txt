@@ -35,15 +35,18 @@ Options:
                         Config file to use.
   -o OUTPUT_FILE, --output=OUTPUT_FILE
                         Filename to write query results to (CSV format).
-  -T THREAD_COUNT, --threads=THREAD_COUNT
+  -j THREAD_COUNT, --threads=THREAD_COUNT
                         # of threads to use
+  -y TIMEOUT, --timeout=TIMEOUT
+                        # of seconds general requests timeout in.
+  -Y HEALTH_TIMEOUT, --health_timeout=HEALTH_TIMEOUT
+                        # of seconds health checks timeout in.
   -i INPUT_FILE, --input=INPUT_FILE
                         File containing a list of domain names to query.
   -t TEST_COUNT, --tests=TEST_COUNT
                         Number of queries per run.
-  -x NUM_SERVERS, --num_servers=NUM_SERVERS
+  -s NUM_SERVERS, --num_servers=NUM_SERVERS
                         Number of nameservers to test
-
 
 --[ sample output ]-------------------------------------------------------------
 
@@ -126,3 +129,36 @@ Recommended Configuration (fastest + nearest):
 nameserver 156.154.70.1    # UltraDNS
 nameserver 194.119.228.67  # Scarlet-1
 nameserver 193.121.171.135 # SYS-193.121.171.135
+
+
+
+--[ FAQ ]-----------------------------------------------------------------------
+1) What does 'NXDOMAIN Hijacking' mean?
+
+  This means that the specific DNS server returns a false entry when a
+  non-existent record is requested. This entry likely points to a website
+  serving a 'Host not found' page with banner ads.
+
+2) What does 'www.google.com. may be hijacked' mean?
+
+  This means that when a user requests 'www.google.com', they are being
+  silently redirected to another server. The page may look like it's run by
+  Google, but it is instead being proxied through another server. For details,
+  try using the host command. In this case, this particular IP server is
+  redirecting all traffic to http://google.navigation.opendns.com/
+
+  % host www.google.com. 208.67.220.220                                                            [+0109] tstromberg@coelacanth:~/namebench
+  Using domain server:
+  Name: 208.67.220.220
+  Address: 208.67.220.220#53
+  Aliases:
+
+  www.google.com is an alias for google.navigation.opendns.com.
+  google.navigation.opendns.com has address 208.67.217.230
+  google.navigation.opendns.com has address 208.67.217.231
+
+
+3) What does 'google.com. may be hijacked' mean?
+
+  The same as above, but it is a rarer condition as it breaks http://google.com/
+

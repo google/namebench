@@ -34,10 +34,13 @@ class TestNameServersThread(threading.Thread):
 class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, include_internal=False,
-               threads=1, cache_dir=None, version='0'):
+               threads=20, cache_dir=None, timeout=None, health_timeout=None,
+               version='0'):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
+    self.timeout = timeout
+    self.health_timeout = health_timeout
     self.cache_dir = cache_dir
     self.version = version
 
@@ -57,6 +60,10 @@ class NameServers(list):
     """Add a server to the list given an IP and name."""
     ns = nameserver.NameServer(ip, name=name, primary=primary,
                                internal=internal)
+    if self.timeout:
+      ns.timeout = self.timeout
+    if self.health_timeout:
+      ns.health_timeout = self.health_timeout
     self.append(ns)
 
   def append(self, ns):
@@ -98,7 +105,8 @@ class NameServers(list):
   def _CachePath(self):
     """Find a usable and unique location to store health results."""
     checksum = hash(str(sorted([ns.ip for ns in self])))
-    return '%s/namebench.%s.%s' % (self.cache_dir, self.version, checksum)
+    return '%s/namebench.%s.%s.%s' % (self.cache_dir, self.version,
+                                      self.health_timeout, checksum)
 
   def _CheckServerCache(self, cpath):
     """Check if our health cache has any good data."""
@@ -121,6 +129,9 @@ class NameServers(list):
     self.seen_names = set()
     super(NameServers, self).__init__()
     for ns in keepers:
+      # Respect configuration over anything previously stored.
+      ns.health_timeout = self.health_timeout
+      ns.timeout = self.timeout
       self.append(ns)
 
   def _UpdateServerCache(self, cpath):
