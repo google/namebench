@@ -133,8 +133,10 @@ class NameServers(list):
   def _FilterUnhealthyServers(self, count):
     """Only keep the best count servers."""
     self.CheckHealth()
-    keep = [x for x in self if x.is_primary and x.is_healthy]
-    for ns in self.SortByFastest():
+    fastest = self.SortByFastest()
+
+    keep = [x for x in fastest if x.is_primary]
+    for ns in fastest:
       if not ns.is_primary and len(keep) < count:
         keep.append(ns)
     self._Reset(keep)
