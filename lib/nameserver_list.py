@@ -110,9 +110,8 @@ class NameServers(list):
         self._Reset(data)
         return True
       except EOFError:
+        print '- No usable data in %s' % cpath
         pass
-
-    print '- No server health cache found in %s' % cpath
     return False
 
   def _Reset(self, keepers):
@@ -196,13 +195,14 @@ class NameServers(list):
       slower_nameserver
     """
 
-    (cache_id, response_a) = ns_a.cache_check
+    (cache_id, ttl_a) = ns_a.cache_check
     (response_b, is_broken) = ns_b.QueryWildcardCache(cache_id)[0:2]
+    ttl_b = response_b.answer[0].ttl
 
     if is_broken:
       ns_b.is_healthy = False
     else:
-      delta = abs(response_a.answer[0].ttl - response_b.answer[0].ttl)
+      delta = abs(ttl_a - ttl_b)
       if delta > 0:
         dur_delta = abs(ns_a.check_duration - ns_b.check_duration)
 

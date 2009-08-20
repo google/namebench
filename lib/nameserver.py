@@ -33,7 +33,6 @@ class NameServer(object):
     self.is_primary = primary
 
     self.warnings = []
-    self.results = []
     self.shared_with = []
     self.is_healthy = True
     self.checks = []
@@ -130,7 +129,7 @@ class NameServer(object):
       warning = 'NXDOMAIN Hijacking'
     return (is_broken, warning, duration)
 
-  def QueryWildcardCache(self, hostname=None):
+  def QueryWildcardCache(self, hostname=None, save=True):
     is_broken = False
     warning = None
     if not hostname:
@@ -138,20 +137,23 @@ class NameServer(object):
 
     (response, duration, exc) = self.TimedRequest('A', hostname,
                                                   timeout=HEALTH_TIMEOUT)
+    ttl = None
     if not response:
       is_broken = True
       warning = exc.__class__
     elif not response.answer:
       is_broken = True
       warning = 'No response'
+    else:
+      ttl = response.answer[0].ttl
 
-    if not self.cache_check:
-      self.cache_check = (hostname, response)
+    if save:
+      self.cache_check = (hostname, ttl)
 
     return (response, is_broken, warning, duration)
 
   def TestWildcardCaching(self):
-    return self.QueryWildcardCache()[1:]
+    return self.QueryWildcardCache(save=True)[1:]
 
   def CheckHealth(self):
     """Qualify a nameserver to see if it is any good."""
