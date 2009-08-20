@@ -194,15 +194,12 @@ class NameServers(list):
       is_shared (boolean)
       slower_nameserver
     """
-
     (cache_id, ttl_a) = ns_a.cache_check
     (response_b, is_broken) = ns_b.QueryWildcardCache(cache_id)[0:2]
-    ttl_b = response_b.answer[0].ttl
-
     if is_broken:
       ns_b.is_healthy = False
     else:
-      delta = abs(ttl_a - ttl_b)
+      delta = abs(ttl_a - response_b.answer[0].ttl)
       if delta > 0:
         dur_delta = abs(ns_a.check_duration - ns_b.check_duration)
 
@@ -213,7 +210,7 @@ class NameServers(list):
           slower = ns_b
           faster = ns_a
 
-        if delta > 1 and delta < 240:
+        if delta > 2 and delta < 240:
           print ('  * %s shares cache with %s (delta=%s, %sms slower)' %
                (slower, faster, delta, dur_delta))
           return (True, slower)

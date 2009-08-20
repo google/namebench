@@ -63,7 +63,6 @@ if __name__ == '__main__':
 
   for arg in args:
     if '.' in arg:
-      print '- Adding %s from command-line' % arg
       primary_ns.append((arg, arg))
 
   if util.AreDNSPacketsIntercepted():
@@ -80,6 +79,13 @@ if __name__ == '__main__':
                                             cache_dir=tempfile.gettempdir())
 
   nameservers.FilterUnwantedServers(count=int(opt.num_servers))
+  print ''
+  print 'Final list of nameservers to benchmark:'
+  print '---------------------------------------'
+  for ns in nameservers:
+    print '  %s [%s], health tests took %sms' % (ns.ip, ns.name,
+                                                 ns.check_duration)
+
   if opt.gui:
     web.WebServerThread().start()
     web.OpenBrowserWindow()
