@@ -22,7 +22,7 @@ def CalculateListAverage(values):
   return sum(values) / float(len(values))
 
 
-def DrawTextBar(value, max_value, note=None, max_width=57):
+def DrawTextBar(value, max_value, note=None, max_width=54):
   """Return a simple ASCII bar graph, making sure it fits within max_width.
 
   Args:
