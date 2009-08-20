@@ -21,7 +21,7 @@ from lib import nameserver_list
 from lib import util
 from lib import web
 
-VERSION = '0.6.2'
+VERSION = '0.6.3'
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
