@@ -203,7 +203,7 @@ class NameServers(list):
       ns_b.is_healthy = False
     else:
       delta = abs(response_a.answer[0].ttl - response_b.answer[0].ttl)
-      if delta > 1 and delta < 120:
+      if delta > 0:
         dur_delta = abs(ns_a.check_duration - ns_b.check_duration)
 
         if ns_a.check_duration > ns_b.check_duration:
@@ -213,9 +213,11 @@ class NameServers(list):
           slower = ns_b
           faster = ns_a
 
-        print ('  * %s shares cache with %s (delta=%s, %sms slower)' %
+        if delta > 1 and delta < 240:
+          print ('  * %s shares cache with %s (delta=%s, %sms slower)' %
                (slower, faster, delta, dur_delta))
-        return (True, slower)
+          return (True, slower)
+
     return (False, None)
 
   def CheckHealth(self):
