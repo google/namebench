@@ -14,19 +14,15 @@ import math
 import operator
 import optparse
 import random
-
+import sys
 import charts
-
-VERSION = '1.0b4'
-
-DEFAULT_TIMEOUT = 8
 
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
   return sum(values) / float(len(values))
 
 
-def DrawTextBar(value, max_value, max_width=61.0):
+def DrawTextBar(value, max_value, note=None, max_width=57):
   """Return a simple ASCII bar graph, making sure it fits within max_width.
 
   Args:
@@ -120,7 +116,6 @@ class NameBench(object):
       results: list of tuples, including data for each request made.
     """
     results = []
-    print "   %s" % nameserver
     for (req_type, record) in tests:
       # test records can include a (RANDOM) in the string for cache busting.
       if '(RANDOM)' in record:
@@ -143,18 +138,16 @@ class NameBench(object):
     """Manage all attempts."""
     global_tests = self.GenerateTestRecords(self.domains, self.test_count)
     for attempt in range(self.run_count):
-      print('* Benchmarking %s nameservers with %s records each (%s of %s)' %
+      sys.stdout.write('\n* Benchmarking %s nameservers with %s records each (%s of %s).' %
             (len(self.nameservers), self.test_count, attempt+1, self.run_count))
       for ns in self.nameservers:
         if ns not in self.results:
           self.results[ns] = []
-
-        # TODO(tstromberg): Handle shared caches better!
-        # Which is more evil? We want the domains requested
-        # to be consistent between nameservers, but we have
-        # to beware of cache sharing between IP's. We now
-        # drop slower nameservers that share a cache,
+        sys.stdout.write('.')
+        sys.stdout.flush()
         self.results[ns].append(self.BenchmarkNameServer(ns, global_tests))
+    sys.stdout.write('\n')
+    sys.stdout.flush()
 
   def ComputeAverages(self):
     """Process all runs for all hosts, yielding an average for each host."""
@@ -181,39 +174,44 @@ class NameBench(object):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     return sorted_averages[0][0]
 
-  def NearestNameServer(self):
+  def NearestNameServers(self, count=2):
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
-    return min_responses[0][0]
+    return [ x[0] for x in min_responses ][0:count]
 
   def DisplayResults(self):
     """Display all of the results in an ASCII-graph format."""
     print ''
-    print 'Mean Request Duration (in milliseconds):'
+    print 'Overall Mean Request Duration (in milliseconds):'
     print '-'* 78
 
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
 
     # Figure out the largest result early on, as we use it to scale the graph.
     max_result = sorted_averages[-1][1]
+    timeout_seen = False
     for result in sorted_averages:
       (ns, overall_mean, unused_run_means, failure_count) = result
-      textbar = DrawTextBar(overall_mean, max_result, max_width=60)
-      print '%-13.13s %s %2.0f' % (ns.name, textbar, overall_mean)
       if failure_count:
-        print '%-13.13s NOTE: %s had %s timeout(s)' % (ns.name,
-                                                       ns.ip, failure_count)
+        timeout_seen = True
+        note = ' (%sT)' % failure_count
+      else:
+        note = ''
+      
+      textbar = DrawTextBar(overall_mean, max_result)
+      print '%-15.15s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
+    if timeout_seen:
+      print '* (#T) represents the number of timeouts experienced during testing.'
     print ''
-
-    print 'Fastest Response Time for all queries (in milliseconds):'
+    print 'Lowest latency for an individual query (in milliseconds):'
     print '-'* 78
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
     slowest_result = min_responses[-1][1]
     for result in min_responses:
       (ns, duration) = result
-      textbar = DrawTextBar(duration, slowest_result, max_width=57)
-      print '%-13.13s %s %2.2f' % (ns.name, textbar, duration)
+      textbar = DrawTextBar(duration, slowest_result)
+      print '%-15.15s %s %2.2f' % (ns.name, textbar, duration)
     print ''
 
     print 'Detailed Mean Request Duration Chart URL'

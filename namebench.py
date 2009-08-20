@@ -21,7 +21,7 @@ from lib import nameserver_list
 from lib import util
 from lib import web
 
-VERSION = '0.5'
+VERSION = '0.6'
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
@@ -95,12 +95,14 @@ if __name__ == '__main__':
       bmark.SaveResultsToCsv(opt.output_file)
 
     best = bmark.BestOverallNameServer()
-    nearest = bmark.NearestNameServer()
+    nearest = [ x for x in bmark.NearestNameServers(3) if x.ip != best.ip ][0:2]
+    
     print ''
     print 'Recommended Configuration (fastest + nearest):'
     print '----------------------------------------------'
-    print 'nameserver %s \t# %s %s' % (best.ip, best.name,
-                                      ', '.join(best.warnings))
-    print 'nameserver %s \t# %s %s' % (nearest.ip, nearest.name,
-                                      ', '.join(nearest.warnings))
-
+    for ns in [best] + nearest:
+      if ns.warnings:
+        warning = '(%s)' % ', '.join(ns.warnings)
+      else:
+        warning = ''
+      print 'nameserver %-15.15s # %s %s' % (ns.ip, ns.name, warning)
