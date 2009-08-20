@@ -9,6 +9,7 @@ mv namebench-$$ namebench-$version
 cd namebench-$version
 ./namebench.py -t2 -r1
 find . -name "*.pyc" -delete
+find . -name ".svn" -exec rm -Rf {} \; 2>/dev/null
 cd ..
 tar -zcvf namebench-${version}.tgz namebench-${version}/
 rm -Rf namebench-${version}
