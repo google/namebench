@@ -34,11 +34,12 @@ class TestNameServersThread(threading.Thread):
 class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, include_internal=False,
-               threads=1, cache_dir=None):
+               threads=1, cache_dir=None, version='0'):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
     self.cache_dir = cache_dir
+    self.version = version
 
     super(NameServers, self).__init__()
     for (ip, name) in nameservers:
@@ -97,12 +98,12 @@ class NameServers(list):
   def _CachePath(self):
     """Find a usable and unique location to store health results."""
     checksum = hash(str(sorted([ns.ip for ns in self])))
-    return '%s/namebench_cache.%s' % (self.cache_dir, checksum)
+    return '%s/namebench.%s.%s' % (self.cache_dir, self.version, checksum)
 
   def _CheckServerCache(self, cpath):
     """Check if our health cache has any good data."""
-    if os.path.exists(cpath):
-      print '- Loading health cache from %s' % cpath
+    if os.path.exists(cpath) and os.path.isfile(cpath):
+      print '- Loading data from local server health cache.'
       cf = open(cpath, 'r')
       try:
         data = pickle.load(cf)
