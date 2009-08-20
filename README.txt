@@ -147,7 +147,7 @@ nameserver 193.121.171.135 # SYS-193.121.171.135
   try using the host command. In this case, this particular IP server is
   redirecting all traffic to http://google.navigation.opendns.com/
 
-  % host www.google.com. 208.67.220.220                                                            [+0109] tstromberg@coelacanth:~/namebench
+  % host www.google.com. 208.67.220.220
   Using domain server:
   Name: 208.67.220.220
   Address: 208.67.220.220#53
@@ -170,4 +170,6 @@ nameserver 193.121.171.135 # SYS-193.121.171.135
 
   It means the specified nameserver was too slow to answer you. If all of your
   nameservers are timing out, try restarting namebench.py with -Y 4
+
+
 
