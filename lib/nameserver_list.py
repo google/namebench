@@ -28,7 +28,7 @@ import nameserver
 import util
 
 NS_CACHE_SLACK = 1.25
-
+CACHE_VERSION = 1
 
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
@@ -50,15 +50,13 @@ class TestNameServersThread(threading.Thread):
 class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, include_internal=False,
-               threads=20, cache_dir=None, timeout=None, health_timeout=None,
-               version='0'):
+               threads=20, cache_dir=None, timeout=None, health_timeout=None):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
     self.timeout = timeout
     self.health_timeout = health_timeout
     self.cache_dir = cache_dir
-    self.version = version
 
     super(NameServers, self).__init__()
     for (ip, name) in nameservers:
@@ -127,7 +125,7 @@ class NameServers(list):
   def _CachePath(self):
     """Find a usable and unique location to store health results."""
     checksum = hash(str(sorted([ns.ip for ns in self])))
-    return '%s/namebench.%s.%.0f.%s' % (self.cache_dir, self.version,
+    return '%s/namebench.%s.%.0f.%s' % (self.cache_dir, CACHE_VERSION,
                                       self.health_timeout, checksum)
 
   def _CheckServerCache(self, cpath):

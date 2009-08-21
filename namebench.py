@@ -126,8 +126,7 @@ if __name__ == '__main__':
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
                                             include_internal=True,
                                             timeout=opt.timeout,
-                                            health_timeout=opt.health_timeout,
-                                            version=VERSION)
+                                            health_timeout=opt.health_timeout)
   nameservers.thread_count = int(opt.thread_count)
   nameservers.cache_dir = tempfile.gettempdir()
   nameservers.FilterUnwantedServers(count=int(opt.num_servers))
