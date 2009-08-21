@@ -33,14 +33,18 @@ NS_CACHE_SLACK = 1.25
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
-  def __init__(self, nameservers):
+  def __init__(self, nameservers, compare_cache=None):
     threading.Thread.__init__(self)
+    self.compare_cache = compare_cache
     self.nameservers = nameservers
     self.results = []
 
   def run(self):
     for ns in self.nameservers:
-      self.results.append(ns.CheckHealth())
+      if self.compare_cache:
+        self.results.append(ns.TestSharedCache(self.compare_cache))
+      else:
+        self.results.append(ns.CheckHealth())
 
 
 class NameServers(list):
@@ -108,7 +112,7 @@ class NameServers(list):
       cpath = self._CachePath()
       cached = self._CheckServerCache(cpath)
       if cached:
-        self.CheckHealth()
+        self.RunHealthCheckThreads()
 
     if not cached:
       print '- Checking health of %s nameservers (%s threads), will cache.' % (len(self),
@@ -123,7 +127,7 @@ class NameServers(list):
   def _CachePath(self):
     """Find a usable and unique location to store health results."""
     checksum = hash(str(sorted([ns.ip for ns in self])))
-    return '%s/namebench.%s.%s.%s' % (self.cache_dir, self.version,
+    return '%s/namebench.%s.%.0f.%s' % (self.cache_dir, self.version,
                                       self.health_timeout, checksum)
 
   def _CheckServerCache(self, cpath):
@@ -161,7 +165,7 @@ class NameServers(list):
 
   def _FilterUnhealthyServers(self, count):
     """Only keep the best count servers."""
-    self.CheckHealth()
+    self.RunHealthCheckThreads()
     fastest = self.SortByFastest()
 
     keep = [x for x in fastest if x.is_primary]
@@ -195,60 +199,46 @@ class NameServers(list):
     # Give the TTL a chance to decrement
     time.sleep(3)
     tested = []
-
-    for other_ns in self.SortByFastest():
-      for ns in self.SortByFastest():
-        if (ns.ip, other_ns.ip) in tested or (other_ns.ip, ns.ip) in tested:
-          continue
-
+    ns_by_fastest = self.SortByFastest()
+    
+    for other_ns in ns_by_fastest:
+      test_servers = []  
+      for ns in ns_by_fastest:
         if ns.ip == other_ns.ip or ns in other_ns.shared_with:
           continue
-
-        (is_shared, slower_ns) = self.AreServersSharingCache(ns, other_ns)
+        elif (ns.ip, other_ns.ip) in tested or (other_ns.ip, ns.ip) in tested:
+          continue
+        test_servers.append(ns)
         tested.append((ns.ip, other_ns.ip))
+        
+      self.RunCacheCollusionThreads(other_ns, test_servers)
+      
+  def RunCacheCollusionThreads(self, other_ns, test_servers):
+    threads = []
+    for chunk in util.split_seq(test_servers, self.thread_count):
+      thread = TestNameServersThread(chunk, compare_cache=other_ns)
+      thread.start()
+      threads.append(thread)
 
-        if is_shared:
-          ns.warnings.append('shares cache with %s' % other_ns.ip)
-          other_ns.warnings.append('shares cache with %s' % ns.ip)
-          other_ns.shared_with.append(ns)
-          ns.shared_with.append(other_ns)
-          slower_ns.is_slower_replica = True
+    results = []
+    for thread in threads:
+      thread.join()      
+      results.extend(thread.results)
+      
+    # To avoid concurrancy issues, we don't modify the other ns in the thread.
+    for (shared, slower, faster) in results:
+      if shared:
+        dur_delta = abs(slower.check_duration - faster.check_duration)
+        print ('  * %s shares cache with %s (%sms slower)' %
+             (slower, faster, dur_delta))        
+        slower.warnings.append('shares cache with %s' % faster.ip)
+        faster.warnings.append('shares cache with %s' % slower.ip)
+        slower.shared_with.append(faster)
+        faster.shared_with.append(slower)
+        slower.is_slower_replica = True
+        
 
-  def AreServersSharingCache(self, ns_a, ns_b):
-    """Are two servers sharing cache?
-
-    Args:
-      ns_a: first nameserver
-      ns_b: second nameserver
-
-    Returns:
-      is_shared (boolean)
-      slower_nameserver
-    """
-    (cache_id, ttl_a) = ns_a.cache_check
-    (response_b, is_broken) = ns_b.QueryWildcardCache(cache_id)[0:2]
-    if is_broken:
-      ns_b.is_healthy = False
-    else:
-      delta = abs(ttl_a - response_b.answer[0].ttl)
-      if delta > 0:
-        dur_delta = abs(ns_a.check_duration - ns_b.check_duration)
-
-        if ns_a.check_duration > ns_b.check_duration:
-          slower = ns_a
-          faster = ns_b
-        else:
-          slower = ns_b
-          faster = ns_a
-
-        if delta > 2 and delta < 240:
-          print ('  * %s shares cache with %s (delta=%s, %sms slower)' %
-               (slower, faster, delta, dur_delta))
-          return (True, slower)
-
-    return (False, None)
-
-  def CheckHealth(self):
+  def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
     for chunk in util.split_seq(self, self.thread_count):
@@ -256,9 +246,5 @@ class NameServers(list):
       thread.start()
       threads.append(thread)
 
-    results = []
     for thread in threads:
       thread.join()
-      results.extend(thread.results)
-
-    return results

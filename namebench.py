@@ -39,7 +39,7 @@ VERSION = '0.6.5'
 
 # Detect congestion problems early!
 EXPECTED_DURATION = 50.0
-SEVERE_CONGESTION_MULTIPLIER = 5.0
+SEVERE_CONGESTION_MULTIPLIER = 3.5
 
 def processConfiguration(opt):
   # Read the config file, set variables
@@ -102,6 +102,7 @@ if __name__ == '__main__':
 
 
   (intercepted, duration) = util.AreDNSPacketsIntercepted()
+  print '- DNS Intercept test completed in %sms' % duration
   congestion = duration / EXPECTED_DURATION
   
   if intercepted:
@@ -113,9 +114,14 @@ if __name__ == '__main__':
     print ''
     sys.exit(1)
   elif congestion > SEVERE_CONGESTION_MULTIPLIER:
-    print '* WOAH! Intercept check completed in %sms (%.1fX slower than normal)' % (duration, congestion)
+    print '* Health checks are running %.1fX slower than expected! Adjusting timeouts.' % (congestion)
     print '* NOTE: results may be inconsistent if your connection is saturated!'
     print ''
+    opt.timeout = opt.timeout * (congestion/2.8)
+    opt.health_timeout = opt.health_timeout * (congestion/2.8)
+    print '* General timeout is now %.1fs, Health timeout is now %.1fs' % (opt.timeout,
+                                                                       opt.health_timeout)
+    
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
                                             include_internal=True,

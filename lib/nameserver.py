@@ -31,6 +31,8 @@ GOOGLE_CLASS_B = '74.125'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
+MIN_SHARING_DELTA_MS = 2
+MAX_SHARING_DELTA_MS = 240
 
 
 class NameServer(object):
@@ -168,6 +170,28 @@ class NameServer(object):
 
   def TestWildcardCaching(self):
     return self.QueryWildcardCache(save=True)[1:]
+
+  def TestSharedCache(self, other_ns):
+    """Is this nameserver sharing a cache with another nameserver?"""
+    (cache_id, other_ttl) = other_ns.cache_check
+    (response, is_broken) = self.QueryWildcardCache(cache_id, save=False)[0:2]
+    if is_broken:
+      self.is_healthy = False
+    else:
+      delta = abs(other_ttl - response.answer[0].ttl)
+      
+      if delta > 0:
+        if other_ns.check_duration > self.check_duration:
+          slower = other_ns
+          faster = self
+        else:
+          slower = self
+          faster = other_ns
+
+        if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
+          return (True, slower, faster)
+    
+    return (False, None, None)
 
   def CheckHealth(self):
     """Qualify a nameserver to see if it is any good."""
