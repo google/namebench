@@ -134,9 +134,8 @@ if __name__ == '__main__':
   print ''
   print 'Final list of nameservers to benchmark:'
   print '---------------------------------------'
-  for ns in nameservers:
-    print '  %s [%s], health tests took %sms' % (ns.ip, ns.name,
-                                                 ns.check_duration)
+  for ns in nameservers.SortByFastest():
+    print ' %-19.19s # %s' % (ns.ip, ns.name)
 
   bmark = benchmark.NameBench(nameservers, opt.input_file,
                               run_count=opt.run_count,
