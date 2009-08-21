@@ -194,6 +194,7 @@ class NameBench(object):
   def DisplayResults(self):
     """Display all of the results in an ASCII-graph format."""
 
+    print ''
     print 'Lowest latency for an individual query (in milliseconds):'
     print '-'* 78
     min_responses = sorted(self.FastestNameServerResult(),
@@ -203,7 +204,6 @@ class NameBench(object):
       (ns, duration) = result
       textbar = DrawTextBar(duration, slowest_result)
       print '%-16.16s %s %2.2f' % (ns.name, textbar, duration)
-    print ''
     
 
     print ''
