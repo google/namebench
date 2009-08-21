@@ -34,7 +34,7 @@ def CalculateListAverage(values):
   return sum(values) / float(len(values))
 
 
-def DrawTextBar(value, max_value, max_width=54):
+def DrawTextBar(value, max_value, max_width=53):
   """Return a simple ASCII bar graph, making sure it fits within max_width.
 
   Args:
@@ -193,13 +193,23 @@ class NameBench(object):
 
   def DisplayResults(self):
     """Display all of the results in an ASCII-graph format."""
+
+    print 'Lowest latency for an individual query (in milliseconds):'
+    print '-'* 78
+    min_responses = sorted(self.FastestNameServerResult(),
+                           key=operator.itemgetter(1))
+    slowest_result = min_responses[-1][1]
+    for result in min_responses:
+      (ns, duration) = result
+      textbar = DrawTextBar(duration, slowest_result)
+      print '%-16.16s %s %2.2f' % (ns.name, textbar, duration)
+    print ''
+    
+
     print ''
     print 'Overall Mean Request Duration (in milliseconds):'
-    print '-'* 78
-
+    print '-'* 78    
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
-
-    # Figure out the largest result early on, as we use it to scale the graph.
     max_result = sorted_averages[-1][1]
     timeout_seen = False
     for result in sorted_averages:
@@ -209,22 +219,12 @@ class NameBench(object):
         note = ' (%sT)' % failure_count
       else:
         note = ''
-
       textbar = DrawTextBar(overall_mean, max_result)
-      print '%-15.15s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
+      print '%-16.16s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
     if timeout_seen:
       print '* (#T) represents the number of timeouts experienced during testing.'
     print ''
-    print 'Lowest latency for an individual query (in milliseconds):'
-    print '-'* 78
-    min_responses = sorted(self.FastestNameServerResult(),
-                           key=operator.itemgetter(1))
-    slowest_result = min_responses[-1][1]
-    for result in min_responses:
-      (ns, duration) = result
-      textbar = DrawTextBar(duration, slowest_result)
-      print '%-15.15s %s %2.2f' % (ns.name, textbar, duration)
-    print ''
+    
 
     print 'Detailed Mean Request Duration Chart URL'
     print '-' * 78
