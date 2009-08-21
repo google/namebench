@@ -197,7 +197,7 @@ class NameServers(list):
     """Mark if any nameservers share cache, especially if they are slower."""
 
     # Give the TTL a chance to decrement
-    time.sleep(3)
+    time.sleep(5)
     tested = []
     ns_by_fastest = self.SortByFastest()
     
