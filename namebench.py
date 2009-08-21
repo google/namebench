@@ -38,8 +38,8 @@ from lib import web
 VERSION = '0.6.5'
 
 # Detect congestion problems early!
-EXPECTED_DURATION = 50.0
-SEVERE_CONGESTION_MULTIPLIER = 3.5
+EXPECTED_DURATION = 100.0
+SEVERE_CONGESTION_MULTIPLIER = 3
 
 def processConfiguration(opt):
   # Read the config file, set variables
@@ -117,8 +117,8 @@ if __name__ == '__main__':
     print '* Health checks are running %.1fX slower than expected! Adjusting timeouts.' % (congestion)
     print '* NOTE: results may be inconsistent if your connection is saturated!'
     print ''
-    opt.timeout = opt.timeout * (congestion/2.8)
-    opt.health_timeout = opt.health_timeout * (congestion/2.8)
+    opt.timeout = opt.timeout * (congestion/2.5)
+    opt.health_timeout = opt.health_timeout * (congestion/2.5)
     print '* General timeout is now %.1fs, Health timeout is now %.1fs' % (opt.timeout,
                                                                        opt.health_timeout)
     
