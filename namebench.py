@@ -90,9 +90,21 @@ if __name__ == '__main__':
                     type='int', help='Number of nameservers to include in test')
   parser.add_option('-S', '--no_secondary', dest='no_secondary',
                     action="store_true", help='Disable secondary servers')
+  parser.add_option('-O', '--only', dest='only',
+                    action="store_true", help='Only test nameservers passed as arguments')
   (cli_options, args) = parser.parse_args()
   (opt, primary_ns, secondary_ns) = processConfiguration(cli_options)
-  if opt.no_secondary:
+  if opt.only:
+    include_internal = False
+    if args:
+      primary_ns = []
+    else:
+      print "If you use --only, you must provide nameservers on the command-line."
+      sys.exit(1)
+  else:
+    include_internal = True
+      
+  if opt.no_secondary or opt.only:
     secondary_ns = []
 
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
@@ -128,7 +140,7 @@ if __name__ == '__main__':
     
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
-                                            include_internal=True,
+                                            include_internal=include_internal,
                                             timeout=opt.timeout,
                                             health_timeout=opt.health_timeout)
   nameservers.thread_count = int(opt.thread_count)
