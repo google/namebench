@@ -114,7 +114,7 @@ class NameBench(object):
 
     # 2% of our tests should be left for random.
     for unused_i in range(len(tests), count):
-      tests.append(('A', 'namebench_typo(RANDOM).com.'))
+      tests.append(('A', '(RANDOM)namebench_typo.com.'))
     return tests
 
   def BenchmarkNameServer(self, nameserver, tests):
