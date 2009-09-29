@@ -27,7 +27,7 @@ import operator
 import random
 import sys
 import charts
-
+import dns.rcode
 
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
@@ -133,17 +133,7 @@ class NameBench(object):
       if '(RANDOM)' in record:
         record = record.replace('(RANDOM)', str(random.random() * 10))
       (response, duration) = nameserver.TimedRequest(req_type, record)[0:2]
-      if response:
-        answer_count = len(response.answer)
-        if answer_count:
-          ttl = response.answer[0].ttl
-        else:
-          ttl = -1
-      else:
-        answer_count = -1
-        ttl = -1
-
-      results.append((record, req_type, duration, answer_count, ttl))
+      results.append((record, req_type, duration, response))
     return results
 
   def Run(self):
@@ -256,12 +246,22 @@ class NameBench(object):
     """
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
-    output.writerow(['IP', 'Name', 'Notes', 'Check Duration', 'Test #', 'Record', 'Record Type', 'Duration', 'Answer Count', 'TTL'])
+    output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record', 'Record Type', 'Duration', 'TTL', 'Answer Count', 'Response'])
     for ns in self.results:
       for (test_run, test_results) in enumerate(self.results[ns]):
-        for result in test_results:
-          row = [ns.ip, ns.name, ns.warnings, ns.check_duration, test_run]
-          row.extend(result)
-          output.writerow(row)
+        for (record, req_type, duration, response) in test_results:
+          answer_text = ''
+          answer_count = -1
+          ttl = -1
+          if response:
+            if response.answer:
+              answer_count = len(response.answer)
+              answers = [' + '.join(map(str, x.items)) for x in response.answer]
+              answer_text = ' -> '.join(answers)
+              ttl = response.answer[0].ttl
+            else:
+              answer_text = dns.rcode.to_text(response.rcode())
+          output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record, req_type, duration, ttl, answer_count, answer_text])
+          
     csv_file.close()
 

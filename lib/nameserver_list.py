@@ -227,8 +227,8 @@ class NameServers(list):
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
-        print ('  * %s shares cache with %s (%sms slower)' %
-             (slower, faster, dur_delta))        
+        print ('  * %s is a slower replica of %s (%sms slower)' %
+             (slower, faster, dur_delta))  
         slower.warnings.append('shares cache with %s' % faster.ip)
         faster.warnings.append('shares cache with %s' % slower.ip)
         slower.shared_with.append(faster)

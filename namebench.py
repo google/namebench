@@ -49,10 +49,14 @@ def processConfiguration(opt):
   primary_ns = config.items('primary')
   secondary_ns = config.items('secondary')
 
-  # Set some important defaults.
-  for option in ('thread_count', 'timeout', 'health_timeout', 'num_servers'):
+  for option in ('thread_count', 'timeout', 'health_timeout', 'num_servers',
+                 'test_count'):
     if not getattr(opt, option):
-      setattr(opt, option, float(general[option]))
+      if 'timeout' in option:
+        value = float(general[option])
+      else:
+        value = int(general[option])
+      setattr(opt, option, value)
 
   # Include internal & global first
   if opt.thread_count:
@@ -84,7 +88,7 @@ if __name__ == '__main__':
   parser.add_option('-i', '--input', dest='input_file',
                     default='data/top-10000.txt',
                     help='File containing a list of domain names to query.')
-  parser.add_option('-t', '--tests', dest='test_count', default=40, type='int',
+  parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.')
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
@@ -143,9 +147,10 @@ if __name__ == '__main__':
                                             include_internal=include_internal,
                                             timeout=opt.timeout,
                                             health_timeout=opt.health_timeout)
-  nameservers.thread_count = int(opt.thread_count)
-  nameservers.cache_dir = tempfile.gettempdir()
-  nameservers.FilterUnwantedServers(count=int(opt.num_servers))
+  if len(nameservers) > 1:
+    nameservers.thread_count = int(opt.thread_count)
+    nameservers.cache_dir = tempfile.gettempdir()
+    nameservers.FilterUnwantedServers(count=int(opt.num_servers))
   print ''
   print 'Final list of nameservers to benchmark:'
   print '---------------------------------------'
@@ -158,6 +163,7 @@ if __name__ == '__main__':
   bmark.Run()
   bmark.DisplayResults()
   if opt.output_file:
+    print ''
     print '* Saving detailed results to %s' % opt.output_file
     bmark.SaveResultsToCsv(opt.output_file)
 

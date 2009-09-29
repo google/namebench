@@ -24,8 +24,8 @@ from graphy.backends import google_chart_api
 CHART_URI = 'http://chart.apis.google.com/chart'
 
 BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',
-               '9900ff', '8f4724', '000000', '6b8f24', '3090c0', '477248f',
-               '9f5734', 'ababab', 'ff0000')
+               '9900ff', '9f5734', '000000', '7b9f34', '3090c0', '477248f',
+               'ababab', 'ff0000')
 
 def DarkenHexColorCode(color, shade=1):
   """Given a color in hex format (for HTML), darken it X shades."""

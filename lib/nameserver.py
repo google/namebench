@@ -122,7 +122,6 @@ class NameServer(object):
     else:
       for a in response.answer:
         if expected not in str(a):
-#          warning = '%s may be hijacked (%s)' % (record, str(a))
           warning = '%s may be hijacked' % record
     return (is_broken, warning, duration)
 
@@ -156,7 +155,7 @@ class NameServer(object):
     ttl = None
     if not response:
       is_broken = True
-      warning = exc.__class__
+      warning = "%s (%sms)" % (exc.__class__, duration)
     elif not response.answer:
       is_broken = True
       warning = 'No response'
