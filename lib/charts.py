@@ -21,13 +21,11 @@ import re
 import urllib
 from graphy.backends import google_chart_api
 
-# TODO(tstromberg): Find a non-GPL Google Chart API.
 CHART_URI = 'http://chart.apis.google.com/chart'
 
-BASE_COLORS = ('ff9900', '3dbecc', 'ff3912', '303030', '4684ee', 'fae30a',
-               'cc3ebd', '76cc3e', 'bdcc3e', 'ababab', 'e5a59e', '9900ff',
-               '76dbf4', '12dea1', '00ff00')
-
+BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',
+               '9900ff', '8f4724', '000000', '6b8f24', '3090c0', '477248f',
+               '9f5734', 'ababab', 'ff0000')
 
 def DarkenHexColorCode(color, shade=1):
   """Given a color in hex format (for HTML), darken it X shades."""
@@ -145,7 +143,7 @@ def _SortDistribution(a, b):
   return cmp(a[1][-1][-1], b[1][-1][-1])
 
 
-def DistributionLineGraph(run_data, maximum_x=220):
+def DistributionLineGraph(run_data, maximum_x=350):
   """Return a Google Chart API URL showing duration distribution per ns."""
 
   # TODO(tstromberg): Rewrite this method using graphy. Graphy does not
