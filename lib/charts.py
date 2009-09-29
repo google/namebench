@@ -178,7 +178,7 @@ def DistributionLineGraph(run_data, maximum_x=350):
     datasets.append(','.join(map(str, y)))
 
   # TODO(tstromberg): See if we can get the % sign in the labels!
-  uri = (('%(uri)s?cht=lxy&chs=700x428&chxt=x,y&chg=10,20'
+  uri = (('%(uri)s?cht=lxy&chs=825x363&chxt=x,y&chg=10,20'
           '&chxr=0,0,%(max)s|1,0,100&chd=t:%(datasets)s&chco=%(colors)s'
           '&chdl=%(labels)s') %
          {'uri': CHART_URI, 'datasets': '|'.join(map(str, datasets)),
