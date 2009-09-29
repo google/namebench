@@ -88,8 +88,12 @@ if __name__ == '__main__':
                     help='Number of queries per run.')
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
+  parser.add_option('-S', '--no_secondary', dest='no_secondary',
+                    action="store_true", help='Disable secondary servers')
   (cli_options, args) = parser.parse_args()
   (opt, primary_ns, secondary_ns) = processConfiguration(cli_options)
+  if opt.no_secondary:
+    secondary_ns = []
 
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
