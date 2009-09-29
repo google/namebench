@@ -102,19 +102,19 @@ class NameBench(object):
 
     # Previously, we used a for loop with random.randomint() to create records,
     # but the types of records generated were too inconsistent.
-    for domain in domains[0:int(round(count*0.6))]:
+    for domain in domains[0:int(round(count*0.7))]:
       tests.append(('A', 'www.%s.' % domain))
 
-    for domain in domains[len(tests):len(tests)+int(round(count*0.3))]:
+    for domain in domains[len(tests):len(tests)+int(round(count*0.27))]:
       tests.append(('A', '%s.' % domain))
 
     # Round rather than truncate this one since it is so small.
-    for domain in domains[len(tests):len(tests)+int(round(count*0.05))]:
+    for domain in domains[len(tests):len(tests)+int(round(count*0.02))]:
       tests.append(('MX', '%s.' % domain))
 
-    # We should still have 3-5% left to work with. This means 1 per 30.
+    # 2% of our tests should be left for random.
     for unused_i in range(len(tests), count):
-      tests.append(('A', 'namebench_(RANDOM).com.'))
+      tests.append(('A', 'namebench_typo(RANDOM).com.'))
     return tests
 
   def BenchmarkNameServer(self, nameserver, tests):
