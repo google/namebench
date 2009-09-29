@@ -77,7 +77,7 @@ if __name__ == '__main__':
                     help='Number of test runs to perform on each nameserver.')
   parser.add_option('-c', '--config', dest='config', default='namebench.cfg',
                     help='Config file to use.')
-  parser.add_option('-o', '--output', dest='output_file',
+  parser.add_option('-o', '--output', dest='output_file', default='output.csv',
                     help='Filename to write query results to (CSV format).')
   parser.add_option('-j', '--threads', dest='thread_count',
                     help='# of threads to use')
