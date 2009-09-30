@@ -86,7 +86,11 @@ class NameBench(object):
 
   def LoadTestData(self, filename, select_mode='weighted'):
     input_data = open(filename).readlines()
-    
+
+    if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
+      print "* %s appears to be a replay, switching select_mode to random" % filename
+      select_mode = 'random'
+
     if select_mode == 'weighted':
       selected = WeightedDistribution(input_data)[0:self.test_count]
     elif select_mode == 'chunk':
@@ -103,10 +107,10 @@ class NameBench(object):
         self.test_data.append(selection.split(' ')[0:2])
       else:
         self.test_data.append(('A', self.GenerateFqdn(selection)))
-    
+
     print '- Generated %s tests from %s using %s mode' % (len(self.test_data), filename, select_mode)
     return self.test_data
-  
+
   def GenerateFqdn(self, domain):
     oracle = random.randint(0, 100)
     if oracle < 70:
@@ -192,11 +196,11 @@ class NameBench(object):
       (ns, duration) = result
       textbar = DrawTextBar(duration, slowest_result)
       print '%-16.16s %s %2.2f' % (ns.name, textbar, duration)
-    
+
 
     print ''
     print 'Overall Mean Request Duration (in milliseconds):'
-    print '-'* 78    
+    print '-'* 78
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     max_result = sorted_averages[-1][1]
     timeout_seen = False
@@ -212,7 +216,7 @@ class NameBench(object):
     if timeout_seen:
       print '* (#T) represents the number of timeouts experienced during testing.'
     print ''
-    
+
 
     print 'Detailed Mean Request Duration Chart URL'
     print '-' * 78
@@ -260,6 +264,6 @@ class NameBench(object):
             else:
               answer_text = dns.rcode.to_text(response.rcode())
           output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record, req_type, duration, ttl, answer_count, answer_text])
-          
+
     csv_file.close()
 
