@@ -29,6 +29,7 @@ import util
 
 GOOGLE_CLASS_B = '74.125'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
+WWW_PAYPAL_RESPONSE = '66.211.169.'
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
 MIN_SHARING_DELTA_MS = 2
@@ -131,6 +132,9 @@ class NameServer(object):
   def TestWwwGoogleComResponse(self):
     return self.TestAnswers('CNAME', 'www.google.com.', WWW_GOOGLE_RESPONSE)
 
+  def TestWwwPaypalComResponse(self):
+    return self.TestAnswers('A', 'www.paypal.com.', WWW_PAYPAL_RESPONSE)
+
   def TestNegativeResponse(self):
     is_broken = False
     warning = None
@@ -197,7 +201,8 @@ class NameServer(object):
     tests = [self.TestWwwGoogleComResponse,
              self.TestGoogleComResponse,
              self.TestNegativeResponse,
-             self.TestWildcardCaching]
+             self.TestWildcardCaching,
+             self.TestWwwPaypalComResponse]
     self.checks = []
     self.warnings = []
 
