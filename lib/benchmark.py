@@ -92,7 +92,7 @@ class NameBench(object):
     elif select_mode == 'chunk':
       selected = ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
-      selected = random.sample(input_data)[0:self.test_count]
+      selected = random.sample(input_data, test_count)
     else:
       raise ValueError('Invalid select_mode: %s' % select_mode)
 
