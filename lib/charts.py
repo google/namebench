@@ -143,12 +143,12 @@ def _SortDistribution(a, b):
   return cmp(a[1][-1][-1], b[1][-1][-1])
 
 
-def DistributionLineGraph(run_data, maximum_x=350):
+def DistributionLineGraph(run_data, maximum_x=300):
   """Return a Google Chart API URL showing duration distribution per ns."""
 
   # TODO(tstromberg): Rewrite this method using graphy. Graphy does not
   # support setting explicit x values for line graphs, which makes things
-  # difficult.  
+  # difficult.
   distribution = _MakeCumulativeDistribution(run_data)
   datasets = []
   labels = []
