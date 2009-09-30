@@ -16,8 +16,7 @@
 """Generate a 'replay' data file from a tcpdump capture file.
 
 This is useful to extract DNS traffic from a real-world environment
-and benchmark it against various DNS services. Ignores subsequent hits
-as they represent DNS retries.
+and benchmark it against various DNS services.
 """
 import subprocess
 import sys
@@ -31,14 +30,11 @@ if not filename:
 cmd = 'tcpdump -r %s -n port 53' % filename
 pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
 parse_re = re.compile(' ([A-Z]+)\? ([\-\w\.]+)')
-last_request = None
 for line in pipe:
   if '?' not in line:
     continue
   match = parse_re.search(line)
   if match:
-    request = ' '.join(match.groups())
-    if request != last_request:
-      print request
-      last_request = request
-
+    print ' '.join(match.groups())
+  else:
+    print line
