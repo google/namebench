@@ -35,7 +35,7 @@ from lib import nameserver_list
 from lib import util
 from lib import web
 
-VERSION = '0.6.9'
+VERSION = '0.7.0'
 
 # Detect congestion problems early!
 EXPECTED_DURATION = 120.0
