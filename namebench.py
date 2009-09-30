@@ -85,7 +85,7 @@ if __name__ == '__main__':
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='# of seconds health checks timeout in.')
   parser.add_option('-i', '--input', dest='input_file',
-                    default='data/alexa-top-10000-global.txt',
+                    default='data/top-10000.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.'),
@@ -109,11 +109,11 @@ if __name__ == '__main__':
       sys.exit(1)
   else:
     include_internal = True
-      
+
   if opt.no_secondary or opt.only:
     secondary_ns = []
 
-  print 'namebench %s, using %s (%s) on %s' % (VERSION, 
+  print 'namebench %s, using %s (%s) on %s' % (VERSION,
     opt.input_file, opt.select_mode, datetime.datetime.now())
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
@@ -128,7 +128,7 @@ if __name__ == '__main__':
   (intercepted, duration) = util.AreDNSPacketsIntercepted()
   print '- DNS Intercept test completed in %sms' % duration
   congestion = duration / EXPECTED_DURATION
-  
+
   if intercepted:
     print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print 'XX Someone upstream of this machine is doing evil things and  XX'
@@ -141,11 +141,11 @@ if __name__ == '__main__':
     print '* Health checks are running %.1fX slower than expected! Adjusting timeouts.' % (congestion)
     print '* NOTE: results may be inconsistent if your connection is saturated!'
     print ''
-    opt.timeout = opt.timeout * (congestion/2.5)
-    opt.health_timeout = opt.health_timeout * (congestion/2.5)
+    opt.timeout = int(round(opt.timeout * (congestion/2.5)))
+    opt.health_timeout = int(round(opt.health_timeout * (congestion/2.5)))
     print '* General timeout is now %.1fs, Health timeout is now %.1fs' % (opt.timeout,
                                                                        opt.health_timeout)
-    
+
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
                                             num_servers = opt.num_servers,
