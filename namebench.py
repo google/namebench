@@ -38,7 +38,7 @@ from lib import web
 VERSION = '0.6.9'
 
 # Detect congestion problems early!
-EXPECTED_DURATION = 100.0
+EXPECTED_DURATION = 120.0
 SEVERE_CONGESTION_MULTIPLIER = 3
 
 def processConfiguration(opt):
@@ -124,6 +124,12 @@ if __name__ == '__main__':
     if '.' in arg:
       primary_ns.append((arg, arg))
 
+  nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
+                                            num_servers = opt.num_servers,
+                                            include_internal=include_internal,
+                                            timeout=opt.timeout,
+                                            health_timeout=opt.health_timeout
+                                            )
 
   (intercepted, duration) = util.AreDNSPacketsIntercepted()
   print '- DNS Intercept test completed in %sms' % duration
@@ -141,18 +147,8 @@ if __name__ == '__main__':
     print '* Health checks are running %.1fX slower than expected! Adjusting timeouts.' % (congestion)
     print '* NOTE: results may be inconsistent if your connection is saturated!'
     print ''
-    opt.timeout = int(round(opt.timeout * (congestion/2.5)))
-    opt.health_timeout = int(round(opt.health_timeout * (congestion/2.5)))
-    print '* General timeout is now %.1fs, Health timeout is now %.1fs' % (opt.timeout,
-                                                                       opt.health_timeout)
+    nameservers.ApplyCongestionFactor(congestion / 2.5)
 
-
-  nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
-                                            num_servers = opt.num_servers,
-                                            include_internal=include_internal,
-                                            timeout=opt.timeout,
-                                            health_timeout=opt.health_timeout
-                                            )
   if len(nameservers) > 1:
     nameservers.thread_count = int(opt.thread_count)
     nameservers.cache_dir = tempfile.gettempdir()

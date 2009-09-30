@@ -16,7 +16,6 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-
 import operator
 import os
 import pickle
@@ -57,6 +56,7 @@ class NameServers(list):
     self.thread_count = threads
     self.timeout = timeout
     self.num_servers = num_servers
+    self.requested_health_timeout = health_timeout
     self.health_timeout = health_timeout
     self.cache_dir = cache_dir
 
@@ -84,8 +84,8 @@ class NameServers(list):
         ns.health_timeout = self.timeout
       else:
         ns.health_timeout = self.health_timeout
-      
-      
+
+
     self.append(ns)
 
   def append(self, ns):
@@ -104,6 +104,12 @@ class NameServers(list):
     super(NameServers, self).append(ns)
     self.seen_ips.add(ns.ip)
     self.seen_names.add(ns.name)
+
+  def ApplyCongestionFactor(self, multiplier):
+    self.timeout *= multiplier
+    self.health_timeout *= multiplier
+    print ('* General timeout is now %.1fs, Health timeout is now %.1fs' %
+           (opt.timeout, opt.health_timeout))
 
   def FilterUnwantedServers(self):
     """Filter out unhealthy or slow replica servers."""
@@ -129,7 +135,7 @@ class NameServers(list):
     checksum = hash(str(sorted([ns.ip for ns in self])))
     return '%s/namebench.%s.%s.%0f.%s' % (self.cache_dir, CACHE_VERSION,
                                       self.num_servers,
-                                      self.health_timeout, checksum)
+                                      self.requested_health_timeout, checksum)
 
   def _CheckServerCache(self, cpath):
     """Check if our health cache has any good data."""
@@ -201,9 +207,9 @@ class NameServers(list):
     time.sleep(5)
     tested = []
     ns_by_fastest = self.SortByFastest()
-    
+
     for other_ns in ns_by_fastest:
-      test_servers = []  
+      test_servers = []
       for ns in ns_by_fastest:
         if ns.ip == other_ns.ip or ns in other_ns.shared_with:
           continue
@@ -211,9 +217,9 @@ class NameServers(list):
           continue
         test_servers.append(ns)
         tested.append((ns.ip, other_ns.ip))
-        
+
       self.RunCacheCollusionThreads(other_ns, test_servers)
-      
+
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     threads = []
     for chunk in util.split_seq(test_servers, self.thread_count):
@@ -223,21 +229,21 @@ class NameServers(list):
 
     results = []
     for thread in threads:
-      thread.join()      
+      thread.join()
       results.extend(thread.results)
-      
+
     # To avoid concurrancy issues, we don't modify the other ns in the thread.
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
         print ('  * %s is a slower replica of %s (%sms slower)' %
-             (slower, faster, dur_delta))  
+             (slower, faster, dur_delta))
         slower.warnings.append('shares cache with %s' % faster.ip)
         faster.warnings.append('shares cache with %s' % slower.ip)
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
         slower.is_slower_replica = True
-        
+
 
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
