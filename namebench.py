@@ -69,10 +69,7 @@ def processConfiguration(opt):
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
-#  parser.add_option('-g', '--gui', dest='gui', default=False,
-#                    action='store_true',
-#                    help='Use graphical user interface (EXPERIMENTAL)')
-  parser.add_option('-r', '--runs', dest='run_count', default=2, type='int',
+  parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
                     help='Number of test runs to perform on each nameserver.')
   parser.add_option('-c', '--config', dest='config', default='namebench.cfg',
                     help='Config file to use.')
