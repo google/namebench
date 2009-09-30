@@ -49,12 +49,14 @@ class TestNameServersThread(threading.Thread):
 
 class NameServers(list):
 
-  def __init__(self, nameservers, secondary=None, include_internal=False,
-               threads=20, cache_dir=None, timeout=None, health_timeout=None):
+  def __init__(self, nameservers, secondary=None, num_servers=1,
+               include_internal=False, threads=20, cache_dir=None,
+               timeout=None, health_timeout=None):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
     self.timeout = timeout
+    self.num_servers = num_servers
     self.health_timeout = health_timeout
     self.cache_dir = cache_dir
 
@@ -103,7 +105,7 @@ class NameServers(list):
     self.seen_ips.add(ns.ip)
     self.seen_names.add(ns.name)
 
-  def FilterUnwantedServers(self, count=10):
+  def FilterUnwantedServers(self):
     """Filter out unhealthy or slow replica servers."""
     cached = False
     if self.cache_dir:
@@ -115,17 +117,18 @@ class NameServers(list):
     if not cached:
       print '- Checking health of %s nameservers (%s threads), will cache.' % (len(self),
                                                                   self.thread_count)
-      self._FilterUnhealthyServers(count * NS_CACHE_SLACK)
+      self._FilterUnhealthyServers(self.num_servers * NS_CACHE_SLACK)
       print '- Saving health status of %s best servers to cache' % len(self)
       self._UpdateServerCache(cpath)
 
     print '- Checking for slow replicas among %s nameservers' % len(self)
-    self._FilterSlowerReplicas(count)
+    self._FilterSlowerReplicas(self.num_servers)
 
   def _CachePath(self):
     """Find a usable and unique location to store health results."""
     checksum = hash(str(sorted([ns.ip for ns in self])))
-    return '%s/namebench.%s.%.0f.%s' % (self.cache_dir, CACHE_VERSION,
+    return '%s/namebench.%s.%s.%0f.%s' % (self.cache_dir, CACHE_VERSION,
+                                      self.num_servers,
                                       self.health_timeout, checksum)
 
   def _CheckServerCache(self, cpath):

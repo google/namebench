@@ -148,13 +148,15 @@ if __name__ == '__main__':
     
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
+                                            num_servers = opt.num_servers,
                                             include_internal=include_internal,
                                             timeout=opt.timeout,
-                                            health_timeout=opt.health_timeout)
+                                            health_timeout=opt.health_timeout
+                                            )
   if len(nameservers) > 1:
     nameservers.thread_count = int(opt.thread_count)
     nameservers.cache_dir = tempfile.gettempdir()
-    nameservers.FilterUnwantedServers(count=int(opt.num_servers))
+    nameservers.FilterUnwantedServers()
   print ''
   print 'Final list of nameservers to benchmark:'
   print '---------------------------------------'
