@@ -63,11 +63,14 @@ def WeightedDistribution(elements):
       picks.append(elements[index])
   return picks
 
+def ChunkSelect(elements, count):
+  start = random.randint(0, len(elements) - count)
+  return elements[start:start + count]
 
 class NameBench(object):
   """The main benchmarking class."""
 
-  def __init__(self, nameservers, test_domains_path, run_count=2, test_count=30):
+  def __init__(self, nameservers, run_count=2, test_count=30):
     """Constructor.
 
     Args:
@@ -80,42 +83,36 @@ class NameBench(object):
     self.run_count = run_count
     self.nameservers = nameservers
     self.results = {}
-    self.domains = self.LoadDomainsList(test_domains_path)
 
-  def LoadDomainsList(self, filename):
-    """Read filename with a one-per-line list of domain names."""
-    return [line.strip() for line in open(filename).readlines()]
-
-  def GenerateTestRecords(self, domains, count):
-    """Generate a set of DNS queries to test with.
-
-    Args:
-      domains: a list of domains to base the tests on.
-      count: How many tests to create:
-
-    Returns:
-      list of tuples in the format of (query type, query_name)
-    """
-    tests = []
-    domains = WeightedDistribution(domains)
-    random.shuffle(domains)
-
-    # Previously, we used a for loop with random.randomint() to create records,
-    # but the types of records generated were too inconsistent.
-    for domain in domains[0:int(round(count*0.7))]:
-      tests.append(('A', 'www.%s.' % domain))
-
-    for domain in domains[len(tests):len(tests)+int(round(count*0.27))]:
-      tests.append(('A', '%s.' % domain))
-
-    # Round rather than truncate this one since it is so small.
-    for domain in domains[len(tests):len(tests)+int(round(count*0.02))]:
-      tests.append(('MX', '%s.' % domain))
-
-    # 2% of our tests should be left for random.
-    for unused_i in range(len(tests), count):
-      tests.append(('A', '(RANDOM)namebench_typo.com.'))
-    return tests
+  def LoadTestData(self, filename, select_mode='weighted'):
+    input_data = open(filename).readlines()
+    
+    if select_mode == 'weighted':
+      selected = WeightedDistribution(input_data)[0:self.test_count]
+    elif select_mode == 'chunk':
+      selected = ChunkSelect(input_data, self.test_count)
+    elif select_mode == 'random':
+      selected = random.sample(input_data)[0:self.test_count]
+    
+    self.test_data = []
+    for line in selected:
+      selection = line.rstrip()
+      if ' ' in selection:
+        self.test_data.append(selection.split(' ')[0:2])
+      else:
+        self.test_data.append(('A', self.GenerateFqdn(selection)))
+    
+    print '- Generated %s tests from %s using %s mode' % (len(self.test_data), filename, select_mode)
+    return self.test_data
+  
+  def GenerateFqdn(self, domain):
+    oracle = random.randint(0, 100)
+    if oracle < 70:
+      return 'www.%s.' % domain
+    elif oracle < 97:
+      return '%s.' % domain
+    else:
+      return 'cache-%s.%s.' % (random.randint(0,10000), domain)
 
   def BenchmarkNameServer(self, nameserver, tests):
     """Record results for a single run on a nameserver.
@@ -138,17 +135,16 @@ class NameBench(object):
 
   def Run(self):
     """Manage all attempts."""
-    global_tests = self.GenerateTestRecords(self.domains, self.test_count)
     for attempt in range(self.run_count):
-      sys.stdout.write('\n* Benchmarking %s nameservers with %s records each (%s of %s).' %
+      sys.stdout.write('* Benchmarking %s nameservers with %s records each (%s of %s).' %
                        (len(self.nameservers), self.test_count, attempt+1, self.run_count))
       for ns in self.nameservers:
         if ns not in self.results:
           self.results[ns] = []
         sys.stdout.write('.')
         sys.stdout.flush()
-        self.results[ns].append(self.BenchmarkNameServer(ns, global_tests))
-    sys.stdout.write('\n')
+        self.results[ns].append(self.BenchmarkNameServer(ns, self.test_data))
+      sys.stdout.write('\n')
     sys.stdout.flush()
 
   def ComputeAverages(self):

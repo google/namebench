@@ -49,13 +49,14 @@ def processConfiguration(opt):
   primary_ns = config.items('primary')
   secondary_ns = config.items('secondary')
 
-  for option in ('thread_count', 'timeout', 'health_timeout', 'num_servers',
-                 'test_count'):
+  for option in general:
     if not getattr(opt, option):
       if 'timeout' in option:
         value = float(general[option])
-      else:
+      elif 'count' in option or 'num' in option:
         value = int(general[option])
+      else:
+        value = general[option]
       setattr(opt, option, value)
 
   # Include internal & global first
@@ -67,8 +68,6 @@ def processConfiguration(opt):
   return (opt, primary_ns, secondary_ns)
 
 if __name__ == '__main__':
-  print 'namebench %s - %s' % (VERSION, datetime.datetime.now())
-
   parser = optparse.OptionParser()
 #  parser.add_option('-g', '--gui', dest='gui', default=False,
 #                    action='store_true',
@@ -89,7 +88,10 @@ if __name__ == '__main__':
                     default='data/top-10000.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
-                    help='Number of queries per run.')
+                    help='Number of queries per run.'),
+  parser.add_option('-x', '--select_mode', dest='select_mode',
+                    default='weighted',
+                    help='Test selection algorithm to use (weighted, random, chunk)'),
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
   parser.add_option('-S', '--no_secondary', dest='no_secondary',
@@ -111,6 +113,8 @@ if __name__ == '__main__':
   if opt.no_secondary or opt.only:
     secondary_ns = []
 
+  print 'namebench %s, using %s (%s) on %s' % (VERSION, 
+    opt.input_file, opt.select_mode, datetime.datetime.now())
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
           opt.health_timeout, opt.num_servers))
@@ -156,10 +160,11 @@ if __name__ == '__main__':
   print '---------------------------------------'
   for ns in nameservers.SortByFastest():
     print ' %-19.19s # %s' % (ns.ip, ns.name)
-
-  bmark = benchmark.NameBench(nameservers, opt.input_file,
+  print ''
+  bmark = benchmark.NameBench(nameservers,
                               run_count=opt.run_count,
                               test_count=opt.test_count)
+  bmark.LoadTestData(opt.input_file, select_mode=opt.select_mode)
   bmark.Run()
   bmark.DisplayResults()
   if opt.output_file:
