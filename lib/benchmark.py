@@ -61,6 +61,9 @@ def WeightedDistribution(elements):
     index = int(random.expovariate(lambd))
     if index < maximum:
       picks.append(elements[index])
+
+  for pick in picks:
+    print pick
   return picks
 
 def ChunkSelect(elements, count):

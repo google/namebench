@@ -1472,7 +1472,6 @@ forumactif.com
 cnfol.com
 in.gr
 apache.org
-youku.com
 mediatakeout.com
 lefigaro.fr
 biblegateway.com
@@ -3002,7 +3001,6 @@ vuilen.com
 thehun.com
 spintop-games.com
 meta.ua
-hudong.com
 bitauto.com
 freedocast.com
 wikiquote.org
@@ -3398,7 +3396,6 @@ flashden.net
 xtremetop100.com
 adv-adserver.com
 jigzone.com
-kaixin001.com
 joomlaportal.de
 ipmart-forum.com
 ohozaa.com
@@ -3459,7 +3456,6 @@ ya.com
 turbobit.net
 perfectworld.com
 tripadvisor.co.uk
-kaixin001.com
 gamevn.com
 atomz.com
 gooya.com
@@ -6484,7 +6480,6 @@ rs6.net
 bustygf.com
 izismile.com
 superflat-vodafone.de
-kaixin001.com
 hallmark.com
 star-studio.jp
 postjung.com
@@ -6873,7 +6868,6 @@ pdfdownload.org
 myfreshnet.com
 noggin.com
 anime-eden.com
-kaixin001.com
 weblancer.net
 gozaru.jp
 zoo.gr
@@ -7416,7 +7410,6 @@ dattebayo.com
 singaporepools.com.sg
 partycity.com
 actionscript.org
-uta-net.com
 nzbmatrix.com
 twitvid.com
 bet-at-home.com
@@ -8360,7 +8353,6 @@ pingoat.com
 1shoppingcart.com
 indianchild.com
 greedland.net
-alles.or.jp
 expressionengine.com
 patoghu.com
 netmile.co.jp
@@ -8382,7 +8374,6 @@ coach.com
 dooyoo.co.uk
 fluctuat.net
 webmasterpro.de
-playlist.com
 kodiefiles.nl
 gennio.com
 shoutmix.com
@@ -8582,7 +8573,6 @@ dumbandhorny.com
 ppcwarez.org
 biggovernment.com
 moviesguy.com
-multiply.com
 virginia.gov
 kashtanka.com
 ashenden.com.au
@@ -9839,7 +9829,6 @@ lexus.com
 tickets.com
 sciencemag.org
 bligoo.com
-reliancebroadband.co.in
 ku.ac.th
 timeturk.com
 ldlc.com
@@ -9998,3 +9987,14 @@ toxel.com
 xerox.com
 kintera.org
 gaym.jp
+persiandown.com
+malianteo.com
+yenibiris.com
+ankang06.org
+speeddate.com
+sklavenzentrale.com
+centos.org
+jayisgames.com
+xreview.com
+elbrollo.com
+dienanh.net
