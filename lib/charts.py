@@ -139,8 +139,8 @@ def _MaximumRunDuration(run_data):
 
 
 def _SortDistribution(a, b):
-  """Sort distribution graph by the one that hits 100% first."""
-  return cmp(a[1][-1][-1], b[1][-1][-1])
+  """Sort distribution graph by nameserver name."""
+  return cmp(a[0].name, b[0].name)
 
 
 def DistributionLineGraph(run_data, maximum_x=300):
