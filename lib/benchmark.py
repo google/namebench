@@ -50,21 +50,29 @@ def DrawTextBar(value, max_value, max_width=53):
   return int(math.ceil(value/hash_width)) * '#'
 
 
-def WeightedDistribution(elements):
-  """Simple exponential distribution with a mean of 10%."""
-  maximum = len(elements) - 1
-  desired_mean = maximum * 0.10
-  lambd = 1.0 / desired_mean
+def NewWeightedDistribution(elements, maximum):
+
+  def find_y(x, total):
+    # The observed per-domain hit distribution over 8 hours is:
+    #  522.520776 * math.pow(x, -0.998506)-2
+    # 
+    # This however doesn't scale well to a 2-minute test.
+    return (total * math.pow(x, -0.508506))
+    
+  total = len(elements)
   picks = []
-
+  picked = {}
+  offset = find_y(total, total)
   while len(picks) < maximum:
-    index = int(random.expovariate(lambd))
-    if index < maximum:
+    x = random.random() * total
+    y = find_y(x, total) - offset
+    index = abs(int(y))
+    if index < total:
       picks.append(elements[index])
+      picked[index] = picked.get(index, 0) + 1
 
-  for pick in picks:
-    print pick
   return picks
+
 
 def ChunkSelect(elements, count):
   start = random.randint(0, len(elements) - count)
@@ -95,7 +103,7 @@ class NameBench(object):
       select_mode = 'random'
 
     if select_mode == 'weighted':
-      selected = WeightedDistribution(input_data)[0:self.test_count]
+      selected = NewWeightedDistribution(input_data, self.test_count)
     elif select_mode == 'chunk':
       selected = ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
@@ -116,12 +124,14 @@ class NameBench(object):
 
   def GenerateFqdn(self, domain):
     oracle = random.randint(0, 100)
-    if oracle < 70:
+    if oracle < 60:
       return 'www.%s.' % domain
-    elif oracle < 97:
+    elif oracle < 95:
       return '%s.' % domain
+    elif oracle < 98:
+      return 'static.%s.' % domain
     else:
-      return 'cache-%s.%s.' % (random.randint(0,10000), domain)
+      return 'cache-%s.%s.' % (random.randint(0,10), domain)
 
   def BenchmarkNameServer(self, nameserver, tests):
     """Record results for a single run on a nameserver.
