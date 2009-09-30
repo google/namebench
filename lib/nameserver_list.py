@@ -109,7 +109,7 @@ class NameServers(list):
     self.timeout *= multiplier
     self.health_timeout *= multiplier
     print ('* General timeout is now %.1fs, Health timeout is now %.1fs' %
-           (opt.timeout, opt.health_timeout))
+           (self.timeout, self.health_timeout))
 
   def FilterUnwantedServers(self):
     """Filter out unhealthy or slow replica servers."""
