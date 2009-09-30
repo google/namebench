@@ -85,7 +85,7 @@ if __name__ == '__main__':
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='# of seconds health checks timeout in.')
   parser.add_option('-i', '--input', dest='input_file',
-                    default='data/top-10000.txt',
+                    default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.'),
