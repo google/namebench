@@ -27,16 +27,15 @@ if not filename:
   print "You must provide a filename."
   sys.exit(1)
 
-parse_re = re.compile(' \w+://([\-\w\.]+)')
+parse_re = re.compile('\w+://([\-\w\.]+)')
 hits = {}
 last_host = None
-for line in open(filename).readlines():
-  match = parse_re.search(line)
-  if match:
-    host = match.groups()[0] + '.'
-    if host != last_host:
-      hits[host] = hits.get(host, 0) + 1
-      last_host = host
+
+matches = parse_re.findall(open(filename).read())
+for host in matches:
+  if host != last_host:
+    hits[host] = hits.get(host, 0) + 1
+    last_host = host
 
 top_hits = sorted(hits.items(), key=operator.itemgetter(1),reverse=True)
 for (hit, count) in top_hits:
