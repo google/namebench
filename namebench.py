@@ -82,7 +82,7 @@ if __name__ == '__main__':
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='# of seconds health checks timeout in.')
-  parser.add_option('-d', '--data', dest='data_file',
+  parser.add_option('-f', '--filename', dest='data_file',
                     default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-i', '--import', dest='import_file',
