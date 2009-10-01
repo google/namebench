@@ -25,30 +25,58 @@ class HistoryParser(object):
 
   # At 32MB, switch from replay format to sorted_unique
   MAX_REPLAY_SIZE = 33554432
+  INTERNAL_RE = re.compile('\.prod|\.corp|\.bor|internal|dmz')
   TYPES = {}
   
   def __init__(self):
     self.TYPES = {
         'google_chrome': self.GoogleChromeHistoryPath,
+        'chrome': self.GoogleChromeHistoryPath,
         'opera': self.OperaHistoryPath,
         'safari': self.SafariHistoryPath,
         'firefox': self.FirefoxHistoryPath,
         'internet_explorer': self.InternetExplorerHistoryPath,
+        'iexplorer': self.InternetExplorerHistoryPath,
+        'ie': self.InternetExplorerHistoryPath,
         'squid': self.SquidLogPath
     }
     
   def Parse(self, path_or_type):
-    if path_or_type in self.TYPES:
-      return self.ParseByType(path_or_type)
+    if path_or_type.lower() in self.TYPES:
+      return self.ParseByType(path_or_type.lower())
     else:
       return self.ParseByFilename(path_or_type)
-  
+
   def ReadHistoryFile(self, filename):
     # Only matches http://host.domain type entries (needs at least one sub)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
-    matches = parse_re.findall(open(filename).read())
-    return matches
+    return parse_re.findall(open(filename).read())
+    
+  def _HostnameMayBeInternal(self, hostname):
+    if self.INTERNAL_RE.search(hostname):
+      return True
   
+  def GenerateTestData(self, hosts, sorted_unique=False):
+    history = []
+    hits = {} 
+    last_host = None
+
+    for host in hosts:
+      if self._HostnameMayBeInternal(host):
+        continue
+      
+      if host != last_host:
+        if sorted_unique:  
+          hits[host] = hits.get(host, 0) + 1
+        else:
+          history.append('A %s.' % host)
+        last_host = host
+
+    if sorted_unique:
+      for (hit, count) in sorted(hits.items(), key=operator.itemgetter(1), reverse=True):
+        history.append('A %s. # %s hits' % (hit, count))
+    return history    
+    
   def ParseByFilename(self, filename):
     """Parse a history file, returning a history.
     
@@ -62,28 +90,13 @@ class HistoryParser(object):
     unique list of hosts, sorted by descending popularity. If there are
     multiple subsequent records for a host, only the first one is parsed.
     """
-
     if os.path.getsize(filename) > self.MAX_REPLAY_SIZE:
       sorted_unique = True
-      hits = {}
     else:
       sorted_unique = False
-      history = []
+    return self.GenerateTestData(self.ReadHistoryFile(filename),
+                                 sorted_unique=sorted_unique)
 
-    last_host = None
-    for host in self.ReadHistoryFile(filename):
-      if host != last_host:
-        if sorted_unique:  
-          hits[host] = hits.get(host, 0) + 1
-        else:
-          history.append('A %s.' % host)
-        last_host = host
-
-    if sorted_unique:
-      for (hit, count) in sorted(hits.items(), key=operator.itemgetter(1), reverse=True):
-        history.append('A %s. # %s hits' % (hit, count))
-    return history    
-    
   def ParseByType(self, type):
     history_file_path = self.TYPES[type]()
     return self.ParseByFilename(history_file_path)
