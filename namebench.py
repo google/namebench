@@ -22,19 +22,18 @@ Designed to assist system administrators in selection and prioritization.
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import ConfigParser
+import datetime
 import optparse
 import sys
 import tempfile
-import datetime
 
 # Make it easy to import 3rd party utilities without editing their imports.
 sys.path.append('lib/third_party')
 
 from lib import benchmark
-from lib import nameserver_list
 from lib import history_parser
+from lib import nameserver_list
 from lib import util
-from lib import web
 
 VERSION = '0.7.1'
 
@@ -42,31 +41,35 @@ VERSION = '0.7.1'
 EXPECTED_DURATION = 120.0
 SEVERE_CONGESTION_MULTIPLIER = 3
 
-def processConfiguration(opt):
-  # Read the config file, set variables
+
+def ProcessConfiguration(options):
+  """Process configuration file, merge configuration with OptionParser.
+
+  Args:
+    options: optparse.OptionParser() object
+
+  Returns:
+    options: optparse.OptionParser() object
+    primary: A list of primary nameservers
+    secondary: A list of secondary nameservers.
+  """
   config = ConfigParser.ConfigParser()
-  config.read(opt.config)
+  config.read(options.config)
   general = dict(config.items('general'))
-  primary_ns = config.items('primary')
-  secondary_ns = config.items('secondary')
+  primary = config.items('primary')
+  secondary = config.items('secondary')
 
   for option in general:
-    if not getattr(opt, option):
+    if not getattr(options, option):
       if 'timeout' in option:
         value = float(general[option])
       elif 'count' in option or 'num' in option:
         value = int(general[option])
       else:
         value = general[option]
-      setattr(opt, option, value)
+      setattr(options, option, value)
 
-  # Include internal & global first
-  if opt.thread_count:
-    thread_count = int(opt.thread_count)
-  else:
-    thread_count = int(general['max_thread_count'])
-
-  return (opt, primary_ns, secondary_ns)
+  return (options, primary, secondary)
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
@@ -81,31 +84,33 @@ if __name__ == '__main__':
   parser.add_option('-y', '--timeout', dest='timeout', type='float',
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
-                    type='float', help='# of seconds health checks timeout in.')
+                    type='float', help='health check timeout (in seconds)')
   parser.add_option('-f', '--filename', dest='data_file',
                     default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-i', '--import', dest='import_file',
-                    help='Import history from safari, google_chrome, internet_explorer, opera, squid, or a file path.')
+                    help=('Import history from safari, google_chrome, '
+                          'internet_explorer, opera, squid, or a file path.'))
   parser.add_option('-t', '--tests', dest='test_count', type='int',
-                    help='Number of queries per run.'),
+                    help='Number of queries per run.')
   parser.add_option('-x', '--select_mode', dest='select_mode',
                     default='weighted',
-                    help='Test selection algorithm to use (weighted, random, chunk)'),
+                    help='Selection algorithm to use (weighted, random, chunk)')
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
   parser.add_option('-S', '--no_secondary', dest='no_secondary',
-                    action="store_true", help='Disable secondary servers')
+                    action='store_true', help='Disable secondary servers')
   parser.add_option('-O', '--only', dest='only',
-                    action="store_true", help='Only test nameservers passed as arguments')
+                    action='store_true',
+                    help='Only test nameservers passed as arguments')
   (cli_options, args) = parser.parse_args()
-  (opt, primary_ns, secondary_ns) = processConfiguration(cli_options)
+  (opt, primary_ns, secondary_ns) = ProcessConfiguration(cli_options)
   if opt.only:
     include_internal = False
     if args:
       primary_ns = []
     else:
-      print "If you use --only, you must provide nameservers on the command-line."
+      print 'If you use --only, you must provide nameservers to use.'
       sys.exit(1)
   else:
     include_internal = True
@@ -113,9 +118,9 @@ if __name__ == '__main__':
   if opt.no_secondary or opt.only:
     secondary_ns = []
 
-    
-  print 'namebench %s, using %s (%s) on %s' % (VERSION,
-    opt.import_file or opt.data_file, opt.select_mode, datetime.datetime.now())
+  print('namebench %s - %s (%s) on %s' %
+        (VERSION, opt.import_file or opt.data_file, opt.select_mode,
+         datetime.datetime.now()))
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
           opt.health_timeout, opt.num_servers))
@@ -128,19 +133,18 @@ if __name__ == '__main__':
   if opt.import_file:
     importer = history_parser.HistoryParser()
     history = importer.Parse(opt.import_file)
-    print '- Imported %s history records from %s' % (len(history), opt.import_file)
-    if not history:
+    if history:
+      print '- Imported %s records from %s' % (len(history), opt.import_file)
+    else:
       sys.exit(2)
   else:
     history = None
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
-                                            num_servers = opt.num_servers,
+                                            num_servers=opt.num_servers,
                                             include_internal=include_internal,
                                             timeout=opt.timeout,
-                                            health_timeout=opt.health_timeout
-                                            )
-
+                                            health_timeout=opt.health_timeout)
   (intercepted, duration) = util.AreDNSPacketsIntercepted()
   print '- DNS Intercept test completed in %sms' % duration
   congestion = duration / EXPECTED_DURATION
@@ -154,7 +158,7 @@ if __name__ == '__main__':
     print ''
     sys.exit(1)
   elif congestion > SEVERE_CONGESTION_MULTIPLIER:
-    print '* Health checks are running %.1fX slower than expected! Adjusting timeouts.' % (congestion)
+    print '* Health checks are running %.1fX slower than expected!' % congestion
     print '* NOTE: results may be inconsistent if your connection is saturated!'
     print ''
     nameservers.ApplyCongestionFactor(congestion / 2.5)
@@ -173,9 +177,9 @@ if __name__ == '__main__':
                               run_count=opt.run_count,
                               test_count=opt.test_count)
   if history:
-    bmark.LoadTestData(history, select_mode=opt.select_mode)                  
+    bmark.CreateTests(history, select_mode=opt.select_mode)
   else:
-    bmark.LoadTestDataFromFile(opt.data_file, select_mode=opt.select_mode)
+    bmark.CreateTestsFromFile(opt.data_file, select_mode=opt.select_mode)
 
   bmark.Run()
   bmark.DisplayResults()

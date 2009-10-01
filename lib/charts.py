@@ -19,14 +19,15 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import itertools
 import re
 import urllib
-from graphy.backends import google_chart_api
 from graphy import common
+from graphy.backends import google_chart_api
 
 CHART_URI = 'http://chart.apis.google.com/chart'
 
 BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',
                '9900ff', '9f5734', '000000', '7b9f34', '3090c0', '477248f',
                'ababab', 'ff0000')
+
 
 def DarkenHexColorCode(color, shade=1):
   """Given a color in hex format (for HTML), darken it X shades."""
@@ -74,7 +75,7 @@ def PerRunDurationBarGraph(run_data):
       if run_avg > max_run_avg:
         max_run_avg = run_avg
 
-  for run_num in sorted(runs.keys()):
+  for run_num in sorted(runs):
     chart.AddBars(runs[run_num], label='Run %s' % (run_num+1),
                   color=DarkenHexColorCode('4684ee', run_num*3))
 

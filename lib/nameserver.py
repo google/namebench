@@ -56,7 +56,6 @@ class NameServer(object):
 
   def _get_check_duration(self):
     return sum([x[3] for x in self.checks])
-
   check_duration = property(_get_check_duration, None)
 
   def __str__(self):
@@ -72,9 +71,9 @@ class NameServer(object):
     """Make a DNS request, returning the reply and duration it took.
 
     Args:
-      nameserver: IP of DNS server to query (string)
       type_string: DNS record type to query (string)
       record_string: DNS record name to query (string)
+      timeout: optional timeout (float)
 
     Returns:
       A tuple of (response, duration [float], exception)
@@ -94,9 +93,11 @@ class NameServer(object):
       response = self.Query(request, timeout)
     except (dns.exception.Timeout), exc:
       response = None
-    except (dns.query.BadResponse, dns.message.TrailingJunk, dns.query.UnexpectedSource), exc:
+    except (dns.query.BadResponse, dns.message.TrailingJunk,
+            dns.query.UnexpectedSource), exc:
       response = None
-    duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() - start_time)
+    duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() -
+                                            start_time)
     return (response, duration, exc)
 
   def TestAnswers(self, record_type, record, expected):
@@ -136,6 +137,7 @@ class NameServer(object):
     return self.TestAnswers('A', 'www.paypal.com.', WWW_PAYPAL_RESPONSE)
 
   def TestNegativeResponse(self):
+    """Test for NXDOMAIN hijaaking."""
     is_broken = False
     warning = None
     poison_test = 'nb.%s.google.com.' % random.random()
@@ -149,6 +151,7 @@ class NameServer(object):
     return (is_broken, warning, duration)
 
   def QueryWildcardCache(self, hostname=None, save=True):
+    """Make a cache to a random wildcard DNS host, storing the record."""
     is_broken = False
     warning = None
     if not hostname:
@@ -159,7 +162,7 @@ class NameServer(object):
     ttl = None
     if not response:
       is_broken = True
-      warning = "%s (%sms)" % (exc.__class__, duration)
+      warning = '%s (%sms)' % (exc.__class__, duration)
     elif not response.answer:
       is_broken = True
       warning = 'No response'
@@ -182,7 +185,7 @@ class NameServer(object):
       self.is_healthy = False
     else:
       delta = abs(other_ttl - response.answer[0].ttl)
-      
+
       if delta > 0:
         if other_ns.check_duration > self.check_duration:
           slower = other_ns
@@ -193,7 +196,7 @@ class NameServer(object):
 
         if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
           return (True, slower, faster)
-    
+
     return (False, None, None)
 
   def CheckHealth(self):

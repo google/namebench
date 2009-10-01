@@ -18,6 +18,10 @@
 # This script is provided to update the data/top-10000.txt file.
 
 CSV='top-1m.csv'
+
+# TODO(tstromberg): Replace this bad hack. In real-world observations, hosts
+# only use 1-2 Google TLD's. Clean all but the real one to match reality.
+REMOVE='google\.[a-z][a-z]$|google\.co\.|google\.com\.[a-z][a-z]'
 ALEXA_URL=http://s3.amazonaws.com/alexa-static/$CSV.zip
 TOP_COUNT=10000
 UNIQ_COUNT=12000
@@ -31,7 +35,9 @@ if [ ! -f "$CSV" ]; then
   unzip -o $CSV.zip $CSV
 fi
 
-cut -d, -f2 $CSV | cut -d/ -f1 | head -$UNIQ_COUNT | ./ordered-uniq.py | head -$TOP_COUNT > $OUTPUT
+rm $OUTPUT
+cut -d, -f2 $CSV | cut -d/ -f1 | head -$UNIQ_COUNT | ./ordered-uniq.py | \
+  egrep -v $REMOVE | head -$TOP_COUNT > $OUTPUT
 ls -la $OUTPUT
 
 

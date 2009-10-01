@@ -29,6 +29,7 @@ import util
 NS_CACHE_SLACK = 1.25
 CACHE_VERSION = 1
 
+
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
@@ -84,8 +85,6 @@ class NameServers(list):
         ns.health_timeout = self.timeout
       else:
         ns.health_timeout = self.health_timeout
-
-
     self.append(ns)
 
   def append(self, ns):
@@ -121,8 +120,8 @@ class NameServers(list):
         self.RunHealthCheckThreads()
 
     if not cached:
-      print '- Checking health of %s nameservers (%s threads), will cache.' % (len(self),
-                                                                  self.thread_count)
+      print('- Checking health of %s nameservers (%s threads), will cache.' %
+            (len(self), self.thread_count))
       self._FilterUnhealthyServers(self.num_servers * NS_CACHE_SLACK)
       print '- Saving health status of %s best servers to cache' % len(self)
       self._UpdateServerCache(cpath)
@@ -134,8 +133,9 @@ class NameServers(list):
     """Find a usable and unique location to store health results."""
     checksum = hash(str(sorted([ns.ip for ns in self])))
     return '%s/namebench.%s.%s.%0f.%s' % (self.cache_dir, CACHE_VERSION,
-                                      self.num_servers,
-                                      self.requested_health_timeout, checksum)
+                                          self.num_servers,
+                                          self.requested_health_timeout,
+                                          checksum)
 
   def _CheckServerCache(self, cpath):
     """Check if our health cache has any good data."""
@@ -148,7 +148,6 @@ class NameServers(list):
         return True
       except EOFError:
         print '- No usable data in %s' % cpath
-        pass
     return False
 
   def _Reset(self, keepers):
@@ -168,7 +167,7 @@ class NameServers(list):
     try:
       pickle.dump(self, cf)
     except TypeError, exc:
-      print "* Could not save cache: %s" % exc
+      print '* Could not save cache: %s' % exc
 
   def _FilterUnhealthyServers(self, count):
     """Only keep the best count servers."""
@@ -221,8 +220,9 @@ class NameServers(list):
       self.RunCacheCollusionThreads(other_ns, test_servers)
 
   def RunCacheCollusionThreads(self, other_ns, test_servers):
+    """Schedule and manage threading for cache collusion checks."""
     threads = []
-    for chunk in util.split_seq(test_servers, self.thread_count):
+    for chunk in util.SplitSequence(test_servers, self.thread_count):
       thread = TestNameServersThread(chunk, compare_cache=other_ns)
       thread.start()
       threads.append(thread)
@@ -237,18 +237,17 @@ class NameServers(list):
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
         print ('  * %s is a slower replica of %s (%sms slower)' %
-             (slower, faster, dur_delta))
+               (slower, faster, dur_delta))
         slower.warnings.append('shares cache with %s' % faster.ip)
         faster.warnings.append('shares cache with %s' % slower.ip)
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
         slower.is_slower_replica = True
 
-
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
-    for chunk in util.split_seq(self, self.thread_count):
+    for chunk in util.SplitSequence(self, self.thread_count):
       thread = TestNameServersThread(chunk)
       thread.start()
       threads.append(thread)

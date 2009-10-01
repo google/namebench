@@ -29,6 +29,7 @@ import sys
 import charts
 import dns.rcode
 
+
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
   return sum(values) / float(len(values))
@@ -50,22 +51,33 @@ def DrawTextBar(value, max_value, max_width=53):
   return int(math.ceil(value/hash_width)) * '#'
 
 
-def NewWeightedDistribution(elements, maximum):
+def WeightedDistribution(elements, maximum):
+  """Given a set of elements, return a weighted distribution back.
 
-  def find_y(x, total):
-    # The observed per-domain hit distribution over 8 hours is:
-    #  522.520776 * math.pow(x, -0.998506)-2
-    #
-    # This however doesn't scale well to a 2-minute test.
-    return (total * math.pow(x, -0.508506))
+  Args:
+    elements: A list of elements to choose from
+    maximum: how many elements to return
+
+  Returns:
+    A random but fairly distributed list of elements of maximum count.
+
+  The distribution is designed to mimic real-world DNS usage. The observed
+  formula for request popularity was:
+
+  522.520776 * math.pow(x, -0.998506)-2
+  """
+
+  def FindY(x, total):
+    return total * math.pow(x, -0.6908506)
 
   total = len(elements)
   picks = []
   picked = {}
-  offset = find_y(total, total)
+  # TODO(tstromberg): Instead of using an offset, scale the numbers to min/max.
+  offset = FindY(total, total)
   while len(picks) < maximum:
     x = random.random() * total
-    y = find_y(x, total) - offset
+    y = FindY(x, total) - offset
     index = abs(int(y))
     if index < total:
       picks.append(elements[index])
@@ -75,8 +87,10 @@ def NewWeightedDistribution(elements, maximum):
 
 
 def ChunkSelect(elements, count):
+  """Return a random count-sized contiguous chunk of elements."""
   start = random.randint(0, len(elements) - count)
   return elements[start:start + count]
+
 
 class NameBench(object):
   """The main benchmarking class."""
@@ -86,7 +100,6 @@ class NameBench(object):
 
     Args:
       nameservers: a list of NameServerData objects
-      test_domains_path: Path to the list of domains to use (str)
       run_count: How many test-runs to perform on each nameserver (int)
       test_count: How many DNS lookups to test in each test-run (int)
     """
@@ -95,16 +108,30 @@ class NameBench(object):
     self.nameservers = nameservers
     self.results = {}
 
-  def LoadTestDataFromFile(self, filename, select_mode='weighted'):
+  def CreateTestsFromFile(self, filename, select_mode='weighted'):
+    """Open an input file, and pass the data to CreateTests."""
     input_data = open(filename).readlines()
-    return self.LoadTestData(input_data, select_mode=select_mode)
+    return self.CreateTests(input_data, select_mode=select_mode)
 
-  def LoadTestData(self, input_data, select_mode='weighted'):
+  def CreateTests(self, input_data, select_mode='weighted'):
+    """Load test input data input, and create tests from it.
+
+    Args:
+      input_data: a list of hostnames to benchmark against.
+      select_mode: how to randomly select which hostnames to use. Valid modes:
+                   weighted, random, chunk
+
+    Returns:
+      A list of tuples containing record_type (str) and hostname (str)
+
+    Raises:
+      ValueError: If select_mode is incorrect.
+    """
     if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
-      print "* input contains duplicates, switching select_mode from weighted to random"
+      print '* input contains duplicates, switching select_mode to random'
       select_mode = 'random'
     if select_mode == 'weighted':
-      selected = NewWeightedDistribution(input_data, self.test_count)
+      selected = WeightedDistribution(input_data, self.test_count)
     elif select_mode == 'chunk':
       selected = ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
@@ -131,7 +158,7 @@ class NameBench(object):
     elif oracle < 98:
       return 'static.%s.' % domain
     else:
-      return 'cache-%s.%s.' % (random.randint(0,10), domain)
+      return 'cache-%s.%s.' % (random.randint(0, 10), domain)
 
   def BenchmarkNameServer(self, nameserver, tests):
     """Record results for a single run on a nameserver.
@@ -155,8 +182,9 @@ class NameBench(object):
   def Run(self):
     """Manage all attempts."""
     for attempt in range(self.run_count):
-      sys.stdout.write('* Benchmarking %s nameservers with %s records each (%s of %s).' %
-                       (len(self.nameservers), self.test_count, attempt+1, self.run_count))
+      sys.stdout.write(('* Benchmarking %s servers with %s records (%s of %s).'
+                        % (len(self.nameservers), self.test_count, attempt+1,
+                           self.run_count)))
       for ns in self.nameservers:
         if ns not in self.results:
           self.results[ns] = []
@@ -210,7 +238,6 @@ class NameBench(object):
       textbar = DrawTextBar(duration, slowest_result)
       print '%-16.16s %s %2.2f' % (ns.name, textbar, duration)
 
-
     print ''
     print 'Overall Mean Request Duration (in milliseconds):'
     print '-'* 78
@@ -227,9 +254,8 @@ class NameBench(object):
       textbar = DrawTextBar(overall_mean, max_result)
       print '%-16.16s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
     if timeout_seen:
-      print '* (#T) represents the number of timeouts experienced during testing.'
+      print '* (#T) represents the number of timeouts encountered.'
     print ''
-
 
     print 'Per-Run Mean Request Duration Chart URL'
     print '-' * 78
@@ -261,7 +287,9 @@ class NameBench(object):
     """
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
-    output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record', 'Record Type', 'Duration', 'TTL', 'Answer Count', 'Response'])
+    output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record',
+                     'Record Type', 'Duration', 'TTL', 'Answer Count',
+                     'Response'])
     for ns in self.results:
       for (test_run, test_results) in enumerate(self.results[ns]):
         for (record, req_type, duration, response) in test_results:
@@ -276,7 +304,7 @@ class NameBench(object):
               ttl = response.answer[0].ttl
             else:
               answer_text = dns.rcode.to_text(response.rcode())
-          output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record, req_type, duration, ttl, answer_count, answer_text])
-
+          output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record,
+                           req_type, duration, ttl, answer_count, answer_text])
     csv_file.close()
 
