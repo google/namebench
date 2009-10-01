@@ -101,7 +101,7 @@ class NameBench(object):
 
   def LoadTestData(self, input_data, select_mode='weighted'):
     if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
-      print "* %s appears to be a replay, switching select_mode to random" % filename
+      print "* input contains duplicates, switching select_mode from weighted to random"
       select_mode = 'random'
 
     if select_mode == 'weighted':
@@ -121,7 +121,6 @@ class NameBench(object):
       else:
         self.test_data.append(('A', self.GenerateFqdn(selection)))
 
-    print '- Generated %s tests from %s using %s mode' % (len(self.test_data), filename, select_mode)
     return self.test_data
 
   def GenerateFqdn(self, domain):
