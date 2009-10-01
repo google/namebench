@@ -22,6 +22,8 @@ import operator
 import sys
 import re
 
+# TODO(tstromberg): Rewrite to make use of history_parser.HistoryParser
+
 def parse(filename):
   # Only matches http://host.domain type entries (needs at least one sub)
   parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')

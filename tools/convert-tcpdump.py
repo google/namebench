@@ -12,19 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# TODO(tstromberg): Rewrite to make use of history_parser.HistoryParser
 
 """Generate a 'replay' data file from a tcpdump capture file.
 
 This is useful to extract DNS traffic from a real-world environment
 and benchmark it against various DNS services.
 """
+import re
 import subprocess
 import sys
-import re
 
 filename = sys.argv[1]
 if not filename:
-  print "You must provide a filename."
+  print 'You must provide a filename.'
   sys.exit(1)
 
 cmd = 'tcpdump -r %s -n port 53' % filename
