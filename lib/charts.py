@@ -20,6 +20,7 @@ import itertools
 import re
 import urllib
 from graphy.backends import google_chart_api
+from graphy import common
 
 CHART_URI = 'http://chart.apis.google.com/chart'
 
@@ -79,6 +80,10 @@ def PerRunDurationBarGraph(run_data):
 
   tick = _GoodTicks(max_run_avg, num_ticks=15)
   labels = range(0, int(round(max_run_avg))+tick, tick)
+  chart.bottom.min = 0
+  year_axis = chart.AddAxis('x', common.Axis())
+  year_axis.labels = ['Duration in ms.']
+  year_axis.label_positions = [int((max_run_avg/2.0)*.9)]
   chart.bottom.labels = labels
   chart.bottom.max = labels[-1]
   return chart.display.Url(900, 320)

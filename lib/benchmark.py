@@ -55,10 +55,10 @@ def NewWeightedDistribution(elements, maximum):
   def find_y(x, total):
     # The observed per-domain hit distribution over 8 hours is:
     #  522.520776 * math.pow(x, -0.998506)-2
-    # 
+    #
     # This however doesn't scale well to a 2-minute test.
     return (total * math.pow(x, -0.508506))
-    
+
   total = len(elements)
   picks = []
   picked = {}
@@ -94,10 +94,10 @@ class NameBench(object):
     self.run_count = run_count
     self.nameservers = nameservers
     self.results = {}
-    
+
   def LoadTestDataFromFile(self, filename, select_mode='weighted'):
     input_data = open(filename).readlines()
-    return self.LoadTestData(input_data, select_mode=select_mode)    
+    return self.LoadTestData(input_data, select_mode=select_mode)
 
   def LoadTestData(self, input_data, select_mode='weighted'):
     if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
@@ -231,7 +231,7 @@ class NameBench(object):
     print ''
 
 
-    print 'Detailed Mean Request Duration Chart URL'
+    print 'Per-Run Mean Request Duration Chart URL'
     print '-' * 78
     runs_data = [(x[0].name, x[2]) for x in sorted_averages]
     print charts.PerRunDurationBarGraph(runs_data)
