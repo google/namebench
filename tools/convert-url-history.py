@@ -22,22 +22,26 @@ import operator
 import sys
 import re
 
-filename = sys.argv[1]
-if not filename:
-  print "You must provide a filename."
-  sys.exit(1)
+def parse(filename):
+  parse_re = re.compile('\w+://([\-\w\.]+)')
+  hits = {}
+  last_host = None
 
-parse_re = re.compile('\w+://([\-\w\.]+)')
-hits = {}
-last_host = None
+  matches = parse_re.findall(open(filename).read())
+  for host in matches:
+    if host != last_host:
+      hits[host] = hits.get(host, 0) + 1
+      last_host = host
+  return hits
 
-matches = parse_re.findall(open(filename).read())
-for host in matches:
-  if host != last_host:
-    hits[host] = hits.get(host, 0) + 1
-    last_host = host
+if __name__ == '__main__':
+  filename = sys.argv[1]
+  if not filename:
+    print "You must provide a filename."
+    sys.exit(1)
 
-top_hits = sorted(hits.items(), key=operator.itemgetter(1),reverse=True)
-for (hit, count) in top_hits:
-  print 'A %s\t# %s hits' % (hit, count)
+  hits = parse(filename)
+  top_hits = sorted(hits.items(), key=operator.itemgetter(1),reverse=True)
+  for (hit, count) in top_hits:
+    print 'A %s.\t# %s hits' % (hit, count)
 
