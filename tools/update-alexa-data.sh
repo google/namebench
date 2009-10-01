@@ -24,7 +24,7 @@ CSV='top-1m.csv'
 REMOVE='google\.[a-z][a-z]$|google\.co\.|google\.com\.[a-z][a-z]'
 ALEXA_URL=http://s3.amazonaws.com/alexa-static/$CSV.zip
 TOP_COUNT=10000
-UNIQ_COUNT=12000
+UNIQ_COUNT=14000
 OUTPUT=alexa-top-${TOP_COUNT}-global.txt
 
 if [ ! -f "$CSV" ]; then
