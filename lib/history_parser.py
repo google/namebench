@@ -51,10 +51,14 @@ class HistoryParser(object):
     return self.TYPES[type]()
     
   def ParseFirstPathHit(self, paths):
+    tried = []
     for path_elements in paths:
       path = os.path.join(*path_elements)
+      tried.append(path)
       for filename in glob.glob(path):
         return self.ParseByFilename(filename)
+        
+    print "Tried: %s" % tried
     return False
 
   def GoogleChrome(self):
@@ -98,8 +102,8 @@ class HistoryParser(object):
     
   def Squid(self):
     paths = (
-        ('/usr/local/squid/logs/access.log'),
-        ('/var/log/squid/access_log')
+        ('/usr/local/squid/logs/access.log',),
+        ('/var/log/squid/access_log',)
     )
     return self.ParseFirstPathHit(paths)
     
