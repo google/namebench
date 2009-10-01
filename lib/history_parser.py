@@ -98,7 +98,7 @@ class HistoryParser(object):
     
   def Squid(self):
     paths = (
-        ('/usr/local/squid/logs/access_log'),
+        ('/usr/local/squid/logs/access.log'),
         ('/var/log/squid/access_log')
     )
     return self.ParseFirstPathHit(paths)
