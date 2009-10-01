@@ -65,8 +65,7 @@ class HistoryParser(object):
         last_host = host
 
     if sorted_unique:
-      print hits
-      return sorted(hits.items(), key=operator.itemgetter(1), reverse=True)
+      return [x[0] for x in sorted(hits.items(), key=operator.itemgetter(1), reverse=True)]
     else:
       return history
     
