@@ -32,6 +32,7 @@ sys.path.append('lib/third_party')
 
 from lib import benchmark
 from lib import nameserver_list
+from lib import history_parser
 from lib import util
 from lib import web
 
@@ -81,9 +82,12 @@ if __name__ == '__main__':
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='# of seconds health checks timeout in.')
-  parser.add_option('-i', '--input', dest='input_file',
+  parser.add_option('-d', '--data', dest='data_file',
                     default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
+  parser.add_option('-i', '--import', dest='import_file',
+                    default='data',
+                    help='Import history from safari, google_chrome, internet_explorer, opera, squid, or a file path.')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.'),
   parser.add_option('-x', '--select_mode', dest='select_mode',
@@ -110,8 +114,9 @@ if __name__ == '__main__':
   if opt.no_secondary or opt.only:
     secondary_ns = []
 
+    
   print 'namebench %s, using %s (%s) on %s' % (VERSION,
-    opt.input_file, opt.select_mode, datetime.datetime.now())
+    opt.import_file or opt.input_file, opt.select_mode, datetime.datetime.now())
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
           opt.health_timeout, opt.num_servers))
@@ -120,6 +125,18 @@ if __name__ == '__main__':
   for arg in args:
     if '.' in arg:
       primary_ns.append((arg, arg))
+
+  if opt.import_file:
+    input_file = opt.import_file
+    importer = history_parser.HistoryParser()
+    history = importer.Parse(opt.import_file)
+    print '- Imported %s history records from %s' % (len(history), opt.import_file)
+    if not history:
+      sys.exit(2)
+  else:
+    input_file = opt.data_file
+    history = None
+
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
                                             num_servers = opt.num_servers,
@@ -159,7 +176,11 @@ if __name__ == '__main__':
   bmark = benchmark.NameBench(nameservers,
                               run_count=opt.run_count,
                               test_count=opt.test_count)
-  bmark.LoadTestData(opt.input_file, select_mode=opt.select_mode)
+  if history:
+    bmark.LoadTestData(history, select_mode=opt.select_mode)                  
+  else:
+    bmark.LoadTestDataFromFile(opt.data_file, select_mode=opt.select_mode)
+
   bmark.Run()
   bmark.DisplayResults()
   if opt.output_file:

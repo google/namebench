@@ -94,10 +94,12 @@ class NameBench(object):
     self.run_count = run_count
     self.nameservers = nameservers
     self.results = {}
-
-  def LoadTestData(self, filename, select_mode='weighted'):
+    
+  def LoadTestDataFromFile(filename):
     input_data = open(filename).readlines()
+    return self.LoadTestData(filename)    
 
+  def LoadTestData(self, input_data, select_mode='weighted'):
     if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
       print "* %s appears to be a replay, switching select_mode to random" % filename
       select_mode = 'random'

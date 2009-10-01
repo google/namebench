@@ -23,7 +23,8 @@ import sys
 import re
 
 def parse(filename):
-  parse_re = re.compile('\w+://([\-\w\.]+)')
+  # Only matches http://host.domain type entries (needs at least one sub)
+  parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
   hits = {}
   last_host = None
 
