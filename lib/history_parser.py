@@ -20,6 +20,9 @@ import os
 import re
 import sys
 
+# At 32MB, switch from replay format to sorted_unique
+MAX_REPLAY_SIZE = 33554432
+
 class HistoryParser(object):
 
   TYPES = {}
@@ -34,18 +37,38 @@ class HistoryParser(object):
         'squid': self.Squid
     }
 
-  def ParseByFilename(self, filename):
+  def ParseByFilename(self, filename, sorted_unique=False):
+    """Parse a history file, returning a history.
+    
+    Args:
+      filename: duh
+      sorted_unique: Return unique list of hosts, ordered in popularity
+    
+    Returns:
+      a list of hosts
+    """
     # Only matches http://host.domain type entries (needs at least one sub)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
-    hits = {}
+    if sorted_unique:
+      hits = {}
+    else:
+      history = []
     last_host = None
 
     matches = parse_re.findall(open(filename).read())
     for host in matches:
       if host != last_host:
-        hits[host] = hits.get(host, 0) + 1
+        if sorted_unique:  
+          hits[host] = hits.get(host, 0) + 1
+        else:
+          history.append(host)
         last_host = host
-    return hits
+
+    if sorted_unique:
+      print hits
+      return sorted(hits.items(), key=operator.itemgetter(1), reverse=True)
+    else:
+      return history
     
   def ParseByType(self, type):
     return self.TYPES[type]()
@@ -56,7 +79,11 @@ class HistoryParser(object):
       path = os.path.join(*path_elements)
       tried.append(path)
       for filename in glob.glob(path):
-        return self.ParseByFilename(filename)
+        if os.path.getsize(filename) > MAX_REPLAY_SIZE:
+          sorted_unique = True
+        else:
+          sorted_unique = False
+        return self.ParseByFilename(filename, sorted_unique=sorted_unique)
         
     print "Tried: %s" % tried
     return False
@@ -117,18 +144,17 @@ if __name__ == '__main__':
   filename = sys.argv[1]
 
   if filename in parser.TYPES:
-    hits = parser.ParseByType(filename)
-    if not hits:
+    history = parser.ParseByType(filename)
+    if not history:
       print 'Unable to find the history file for %s' % filename
       sys.exit(3)
 
   elif os.path.exists(filename):
-    hits = parser.ParseByFilename(filename)
+    history = parser.ParseByFilename(filename)
   else:
     print '%s is neither a file, nor in %s' % (filename, types_str)
     sys.exit(2)
 
-  top_hits = sorted(hits.items(), key=operator.itemgetter(1),reverse=True)
-  for (hit, count) in top_hits:
-    print 'A %s.\t# %s hits' % (hit, count)
+  for host in history:
+    print 'A %s.' % host
 
