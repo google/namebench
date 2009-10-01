@@ -36,7 +36,7 @@ from lib import history_parser
 from lib import util
 from lib import web
 
-VERSION = '0.7.0'
+VERSION = '0.7.1'
 
 # Detect congestion problems early!
 EXPECTED_DURATION = 120.0
