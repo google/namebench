@@ -86,7 +86,6 @@ if __name__ == '__main__':
                     default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-i', '--import', dest='import_file',
-                    default='data',
                     help='Import history from safari, google_chrome, internet_explorer, opera, squid, or a file path.')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.'),
@@ -116,7 +115,7 @@ if __name__ == '__main__':
 
     
   print 'namebench %s, using %s (%s) on %s' % (VERSION,
-    opt.import_file or opt.input_file, opt.select_mode, datetime.datetime.now())
+    opt.import_file or opt.data_file, opt.select_mode, datetime.datetime.now())
   print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
           opt.health_timeout, opt.num_servers))
@@ -127,16 +126,13 @@ if __name__ == '__main__':
       primary_ns.append((arg, arg))
 
   if opt.import_file:
-    input_file = opt.import_file
     importer = history_parser.HistoryParser()
     history = importer.Parse(opt.import_file)
     print '- Imported %s history records from %s' % (len(history), opt.import_file)
     if not history:
       sys.exit(2)
   else:
-    input_file = opt.data_file
     history = None
-
 
   nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
                                             num_servers = opt.num_servers,

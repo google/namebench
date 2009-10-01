@@ -95,15 +95,14 @@ class NameBench(object):
     self.nameservers = nameservers
     self.results = {}
     
-  def LoadTestDataFromFile(filename):
+  def LoadTestDataFromFile(self, filename, select_mode='weighted'):
     input_data = open(filename).readlines()
-    return self.LoadTestData(filename)    
+    return self.LoadTestData(input_data, select_mode=select_mode)    
 
   def LoadTestData(self, input_data, select_mode='weighted'):
     if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
       print "* input contains duplicates, switching select_mode from weighted to random"
       select_mode = 'random'
-
     if select_mode == 'weighted':
       selected = NewWeightedDistribution(input_data, self.test_count)
     elif select_mode == 'chunk':
