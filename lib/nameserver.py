@@ -84,7 +84,14 @@ class NameServer(object):
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)  
     return_type = dns.rdataclass.IN
-    request = dns.message.make_query(record, request_type, return_type)
+    
+    # Ocassionally we will fail
+    try:
+      request = dns.message.make_query(record, request_type, return_type)
+    except IndexError, exc:
+      print '- Error creating packet: %s (trying again)' % exc
+      request = dns.message.make_query(record, request_type, return_type)
+      
     if not timeout:
       timeout = self.timeout
 
