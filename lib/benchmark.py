@@ -70,14 +70,12 @@ def WeightedDistribution(elements, maximum):
   """
 
   def FindY(x, total):
-    return total * math.pow(x, -0.6908506)
+    return total * math.pow(x, -0.408506)
 
   total = len(elements)
   picks = []
   picked = {}
-  # TODO(tstromberg): Instead of using an offset, scale the numbers to min/max.
   offset = FindY(total, total)
-  
   while len(picks) < maximum:
     x = random.random() * total
     y = FindY(x, total) - offset
@@ -86,11 +84,14 @@ def WeightedDistribution(elements, maximum):
       if picked.get(index, 0) < MAX_WEIGHTED_REPEAT:
         picks.append(elements[index])
         picked[index] = picked.get(index, 0) + 1
+        print '%s: %s' % (index, elements[index])
   return picks
 
 
 def ChunkSelect(elements, count):
   """Return a random count-sized contiguous chunk of elements."""
+  if len(elements) <= count:
+    return elements
   start = random.randint(0, len(elements) - count)
   return elements[start:start + count]
 
@@ -138,7 +139,10 @@ class NameBench(object):
     elif select_mode == 'chunk':
       selected = ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
-      selected = random.sample(input_data, self.test_count)
+      if self.test_count > len(input_data):
+        selected = input_data
+      else:
+        selected = random.sample(input_data, self.test_count)
     else:
       raise ValueError('Invalid select_mode: %s' % select_mode)
 
