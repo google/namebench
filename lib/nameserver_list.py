@@ -28,7 +28,7 @@ import util
 
 NS_CACHE_SLACK = 1.4
 CACHE_VERSION = 1
-
+MAX_CONGESTION_MULTIPLIER = 4
 
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
@@ -105,6 +105,8 @@ class NameServers(list):
     self.seen_names.add(ns.name)
 
   def ApplyCongestionFactor(self, multiplier):
+    if multiplier > MAX_CONGESTION_MULTIPLIER:
+      multiplier = MAX_CONGESTION_MULTIPLIER
     self.timeout *= multiplier
     self.health_timeout *= multiplier
     print ('* General timeout is now %.1fs, Health timeout is now %.1fs' %
