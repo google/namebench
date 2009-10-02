@@ -80,8 +80,9 @@ class NameServer(object):
 
     In the case of a DNS response timeout, the response object will be None.
     """
+#    print '%s:%s -> %s [%s]' % (type_string, record_string, self.ip, self.name)
     request_type = dns.rdatatype.from_text(type_string)
-    record = dns.name.from_text(record_string, None)
+    record = dns.name.from_text(record_string, None)  
     return_type = dns.rdataclass.IN
     request = dns.message.make_query(record, request_type, return_type)
     if not timeout:
