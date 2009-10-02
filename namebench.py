@@ -136,6 +136,7 @@ if __name__ == '__main__':
     if history:
       print '- Imported %s records from %s' % (len(history), opt.import_file)
     else:
+      print '- Could not import anything from %s' % opt.import_file
       sys.exit(2)
   else:
     history = None
