@@ -104,6 +104,9 @@ class NameServer(object):
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
       response = None
+    except:
+      print "! Unknown error querying %s for %s:%s" % (self.ip, type_string, record_string)
+      response = None
     duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() -
                                             start_time)
     return (response, duration, exc)
