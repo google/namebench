@@ -84,7 +84,7 @@ def WeightedDistribution(elements, maximum):
       if picked.get(index, 0) < MAX_WEIGHTED_REPEAT:
         picks.append(elements[index])
         picked[index] = picked.get(index, 0) + 1
-        print '%s: %s' % (index, elements[index])
+#        print '%s: %s' % (index, elements[index])
   return picks
 
 
