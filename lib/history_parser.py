@@ -73,6 +73,9 @@ class HistoryParser(object):
     last_host = None
 
     for host in hosts:
+      if not host.endswith('.'):
+        host = host + '.'
+      
       if self._HostnameMayBeInternal(host):
         continue
 
@@ -80,13 +83,13 @@ class HistoryParser(object):
         if sorted_unique:
           hits[host] = hits.get(host, 0) + 1
         else:
-          history.append('A %s.' % host)
+          history.append('A %s' % host)
         last_host = host
 
     if sorted_unique:
       for (hit, count) in sorted(hits.items(), key=operator.itemgetter(1),
                                  reverse=True):
-        history.append('A %s. # %s hits' % (hit, count))
+        history.append('A %s # %s hits' % (hit, count))
     return history
 
   def ParseByFilename(self, filename):
