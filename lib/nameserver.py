@@ -27,9 +27,9 @@ import dns.reversename
 
 import util
 
-GOOGLE_CLASS_B = '74.125'
-WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
-WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.33')
+GOOGLE_CLASS_B = ('74.125',)
+WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
+WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
 MIN_SHARING_DELTA_MS = 2
@@ -106,7 +106,7 @@ class NameServer(object):
     Args:
       record_type: text record type for NS query (A, CNAME, etc)
       record: string to query for
-      expected: string expected in all answers
+      expected: tuple of strings expected in all answers
 
     Returns:
       (is_broken, warning, duration)
@@ -115,6 +115,7 @@ class NameServer(object):
     warning = None
     (response, duration, exc) = self.TimedRequest(record_type, record,
                                                   timeout=self.health_timeout)
+    failures = []
     if not response:
       is_broken = True
       warning = exc.__class__
@@ -123,10 +124,18 @@ class NameServer(object):
       warning = 'No answer'
     else:
       for a in response.answer:
-        if expected not in str(a):
-          answers = [' + '.join(map(str, x.items)) for x in response.answer]
-          answer_text = ' -> '.join(answers)
-          warning = '%s may be hijacked (%s)' % (record, answer_text)
+        failed = True
+        for string in expected:
+          if string in str(a):
+#            print "%s is in %s, marking not failed: %s" % (string, a, self.name)
+            failed=False
+            break
+        if failed:
+          failures.append(a)
+    if failures:
+      answers = [' + '.join(map(str, x.items)) for x in response.answer]
+      answer_text = ' -> '.join(answers)
+      warning = '%s may be hijacked (%s)' % (record, answer_text)
     return (is_broken, warning, duration)
     
   def ResponseToAscii(self, response):
