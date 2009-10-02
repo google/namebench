@@ -57,7 +57,7 @@ def ProcessConfiguration(options):
   config.read(options.config)
   general = dict(config.items('general'))
   primary = config.items('primary')
-  secondary = config.items('secondary')
+  secondary = config.items('open') + config.items('closed')
 
   for option in general:
     if not getattr(options, option):
