@@ -124,8 +124,14 @@ class NameServer(object):
     else:
       for a in response.answer:
         if expected not in str(a):
-          warning = '%s may be hijacked' % record
+          answers = [' + '.join(map(str, x.items)) for x in response.answer]
+          answer_text = ' -> '.join(answers)
+          warning = '%s may be hijacked (%s)' % (record, answer_text)
     return (is_broken, warning, duration)
+    
+  def ResponseToAscii(self, response):
+    answers = [' + '.join(map(str, x.items)) for x in response.answer]
+    return ' -> '.join(answers)
 
   def TestGoogleComResponse(self):
     return self.TestAnswers('A', 'google.com.', GOOGLE_CLASS_B)
@@ -147,7 +153,7 @@ class NameServer(object):
       is_broken = True
       warning = exc.__class__
     elif response.answer:
-      warning = 'NXDOMAIN Hijacking'
+      warning = 'NXDOMAIN Hijacking (%s)' % self.ResponseToAscii(response)
     return (is_broken, warning, duration)
 
   def QueryWildcardCache(self, hostname=None, save=True):
@@ -179,7 +185,12 @@ class NameServer(object):
 
   def TestSharedCache(self, other_ns):
     """Is this nameserver sharing a cache with another nameserver?"""
-    (cache_id, other_ttl) = other_ns.cache_check
+    if other_ns.cache_check:
+      (cache_id, other_ttl) = other_ns.cache_check
+    else:
+      print "* I think %s is broken (cache check is missing)"
+      other_ns.is_healthy = False
+      return (False, None, None)
     (response, is_broken) = self.QueryWildcardCache(cache_id, save=False)[0:2]
     if is_broken:
       self.is_healthy = False

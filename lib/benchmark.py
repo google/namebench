@@ -299,8 +299,7 @@ class NameBench(object):
           if response:
             if response.answer:
               answer_count = len(response.answer)
-              answers = [' + '.join(map(str, x.items)) for x in response.answer]
-              answer_text = ' -> '.join(answers)
+              answer_text = ns.ResponseToAscii(response)
               ttl = response.answer[0].ttl
             else:
               answer_text = dns.rcode.to_text(response.rcode())

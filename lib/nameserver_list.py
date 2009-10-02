@@ -26,7 +26,7 @@ import dns.resolver
 import nameserver
 import util
 
-NS_CACHE_SLACK = 1.25
+NS_CACHE_SLACK = 1.4
 CACHE_VERSION = 1
 
 
@@ -120,8 +120,8 @@ class NameServers(list):
         self.RunHealthCheckThreads()
 
     if not cached:
-      print('- Checking health of %s nameservers (%s threads), will cache.' %
-            (len(self), self.thread_count))
+      print('- No health-cache exists yet for the %s secondary nameservers. '
+            'Scanning now with %s threads.' % (len(self), self.thread_count))
       self._FilterUnhealthyServers(self.num_servers * NS_CACHE_SLACK)
       print '- Saving health status of %s best servers to cache' % len(self)
       self._UpdateServerCache(cpath)
