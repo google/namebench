@@ -29,7 +29,7 @@ import util
 
 GOOGLE_CLASS_B = '74.125'
 WWW_GOOGLE_RESPONSE = 'CNAME www.l.google.com'
-WWW_PAYPAL_RESPONSE = '66.211.169.'
+WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.33')
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
 MIN_SHARING_DELTA_MS = 2
@@ -198,7 +198,7 @@ class NameServer(object):
     if other_ns.cache_check:
       (cache_id, other_ttl) = other_ns.cache_check
     else:
-      print "* cache check for %s is missing (skipping)"
+      print "* cache check for %s is missing (skipping)" % other_ns
       return (False, None, None)
     (response, is_broken) = self.QueryWildcardCache(cache_id, save=False)[0:2]
     if is_broken:
