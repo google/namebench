@@ -169,9 +169,9 @@ if __name__ == '__main__':
     nameservers.FilterUnwantedServers()
   print ''
   print 'Final list of nameservers to benchmark:'
-  print '---------------------------------------'
+  print '-' * 60
   for ns in nameservers.SortByFastest():
-    print ' %-19.19s # %s' % (ns.ip, ns.name)
+    print ' %-19.19s %-20.20s (%sms)' % (ns.ip, ns.name, ns.check_duration)
   print ''
   bmark = benchmark.NameBench(nameservers,
                               run_count=opt.run_count,
