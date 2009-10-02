@@ -29,6 +29,8 @@ import sys
 import charts
 import dns.rcode
 
+# When running a weighted distribution, never repeat a domain more than this:
+MAX_WEIGHTED_REPEAT = 3
 
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
@@ -75,14 +77,15 @@ def WeightedDistribution(elements, maximum):
   picked = {}
   # TODO(tstromberg): Instead of using an offset, scale the numbers to min/max.
   offset = FindY(total, total)
+  
   while len(picks) < maximum:
     x = random.random() * total
     y = FindY(x, total) - offset
     index = abs(int(y))
     if index < total:
-      picks.append(elements[index])
-      picked[index] = picked.get(index, 0) + 1
-
+      if picked.get(index, 0) < MAX_WEIGHTED_REPEAT:
+        picks.append(elements[index])
+        picked[index] = picked.get(index, 0) + 1
   return picks
 
 
