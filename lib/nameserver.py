@@ -184,12 +184,21 @@ class NameServer(object):
     return self.QueryWildcardCache(save=True)[1:]
 
   def TestSharedCache(self, other_ns):
-    """Is this nameserver sharing a cache with another nameserver?"""
+    """Is this nameserver sharing a cache with another nameserver?
+    
+    Args:
+      other_ns: A nameserver to compare it to.
+      
+    Returns:
+      A tuple containing:
+        - Boolean of whether or not this host has a shared cache
+        - The faster NameServer object
+        - The slower NameServer object
+    """
     if other_ns.cache_check:
       (cache_id, other_ttl) = other_ns.cache_check
     else:
-      print "* I think %s is broken (cache check is missing)"
-      other_ns.is_healthy = False
+      print "* cache check for %s is missing (skipping)"
       return (False, None, None)
     (response, is_broken) = self.QueryWildcardCache(cache_id, save=False)[0:2]
     if is_broken:
