@@ -149,6 +149,9 @@ class NameBench(object):
     self.test_data = []
     for line in selected:
       selection = line.rstrip()
+      if len(selection) < 2:
+        continue
+      
       if ' ' in selection:
         self.test_data.append(selection.split(' ')[0:2])
       else:
@@ -190,7 +193,7 @@ class NameBench(object):
     """Manage all attempts."""
     for attempt in range(self.run_count):
       sys.stdout.write(('* Benchmarking %s servers with %s records (%s of %s).'
-                        % (len(self.nameservers), self.test_count, attempt+1,
+                        % (len(self.nameservers), len(self.test_data), attempt+1,
                            self.run_count)))
       for ns in self.nameservers:
         if ns not in self.results:
