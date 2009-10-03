@@ -171,7 +171,7 @@ class NameServers(list):
     else:
       print '- Checking the health of %s nameservers' % len(self)
     self.RunHealthCheckThreads()
-    self.RemoveUndesirables(target_count=self.num_servers * NS_CACHE_SLACK)
+    self.RemoveUndesirables(target_count=int(self.num_servers * NS_CACHE_SLACK))
     if not cached:
       self._UpdateSecondaryCache(cpath)
     
