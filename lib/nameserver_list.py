@@ -136,10 +136,9 @@ class NameServers(list):
       target_count = self.num_servers      
     
     # Phase one is removing all of the unhealthy servers
-    fastest = list(self.SortByFastest())
-    for ns in fastest:
+    for ns in list(self.SortByFastest()):
       if not ns.is_healthy:
-        print "- Removing %s (unhealthy)" % ns
+#        print "- Removing %s (unhealthy)" % ns
         self.remove(ns)
       elif ns.is_slower_replica:
         print "- Removing %s (slow replica)" % ns
@@ -148,10 +147,10 @@ class NameServers(list):
     primary_count = len(self.primaries)
     secondaries_kept = 0
     secondaries_needed = target_count - primary_count
-    print "- We need %s secondaries to fill the slack" % secondaries_needed
+    print "- We need %s secondaries to get to %s total" % (secondaries_needed, target_count)
         
     # Phase two is removing all of the slower secondary servers
-    for ns in fastest:
+    for ns in list(self.SortByFastest()):
       if not ns.is_primary:
         if secondaries_kept >= secondaries_needed:
           print "- Removing %s (slower secondary: %sms)" % (ns, ns.check_duration)
