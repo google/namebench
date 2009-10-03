@@ -33,7 +33,7 @@ from lib import history_parser
 from lib import nameserver_list
 from lib import util
 
-VERSION = '0.8.0'
+VERSION = '0.8.1'
 
 # Detect congestion problems early!
 EXPECTED_DURATION = 120.0
