@@ -21,16 +21,14 @@ Designed to assist system administrators in selection and prioritization.
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import ConfigParser
 import datetime
 import optparse
 import sys
 import tempfile
-
 # Make it easy to import 3rd party utilities without editing their imports.
 sys.path.append('lib/third_party')
-
 from lib import benchmark
+from lib import config
 from lib import history_parser
 from lib import nameserver_list
 from lib import util
@@ -40,36 +38,6 @@ VERSION = '0.8.0'
 # Detect congestion problems early!
 EXPECTED_DURATION = 120.0
 SEVERE_CONGESTION_MULTIPLIER = 3
-
-
-def ProcessConfiguration(options):
-  """Process configuration file, merge configuration with OptionParser.
-
-  Args:
-    options: optparse.OptionParser() object
-
-  Returns:
-    options: optparse.OptionParser() object
-    primary: A list of primary nameservers
-    secondary: A list of secondary nameservers.
-  """
-  config = ConfigParser.ConfigParser()
-  config.read(options.config)
-  general = dict(config.items('general'))
-  primary = config.items('primary')
-  secondary = config.items('open') + config.items('closed')
-
-  for option in general:
-    if not getattr(options, option):
-      if 'timeout' in option:
-        value = float(general[option])
-      elif 'count' in option or 'num' in option:
-        value = int(general[option])
-      else:
-        value = general[option]
-      setattr(options, option, value)
-
-  return (options, primary, secondary)
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
@@ -104,19 +72,17 @@ if __name__ == '__main__':
                     action='store_true',
                     help='Only test nameservers passed as arguments')
   (cli_options, args) = parser.parse_args()
-  (opt, primary_ns, secondary_ns) = ProcessConfiguration(cli_options)
+  (opt, primary_ns, secondary_ns) = config.ProcessConfiguration(cli_options)
+  for arg in args:
+    if '.' in arg:
+      primary_ns.append((arg, arg))
+  
+  include_internal = True
   if opt.only:
     include_internal = False
-    if args:
-      primary_ns = []
-    else:
+    if not primary_ns:
       print 'If you use --only, you must provide nameservers to use.'
       sys.exit(1)
-  else:
-    include_internal = True
-
-  if opt.no_secondary or opt.only:
-    secondary_ns = []
 
   print('namebench %s - %s (%s) on %s' %
         (VERSION, opt.import_file or opt.data_file, opt.select_mode,
@@ -125,10 +91,6 @@ if __name__ == '__main__':
          (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
           opt.health_timeout, opt.num_servers))
   print '-' * 78
-
-  for arg in args:
-    if '.' in arg:
-      primary_ns.append((arg, arg))
 
   if opt.import_file:
     importer = history_parser.HistoryParser()

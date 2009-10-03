@@ -16,10 +16,29 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import math
 import nameserver
 
 OPENDNS_NS = '208.67.220.220'
 
+def CalculateListAverage(values):
+  """Computes the arithmetic mean of a list of numbers."""
+  return sum(values) / float(len(values))
+
+def DrawTextBar(value, max_value, max_width=53):
+  """Return a simple ASCII bar graph, making sure it fits within max_width.
+
+  Args:
+    value: integer or float representing the value of this bar.
+    max_value: integer or float representing the largest bar.
+    max_width: How many characters this graph can use (int)
+
+  Returns:
+    string
+  """
+
+  hash_width = max_value / max_width
+  return int(math.ceil(value/hash_width)) * '#'
 
 def TimeDeltaToMilliseconds(td):
   """Convert timedelta object to milliseconds."""

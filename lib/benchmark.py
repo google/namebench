@@ -22,79 +22,14 @@ Designed to assist system administrators in selection and prioritization.
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import csv
-import math
 import operator
 import random
 import sys
+
 import charts
 import dns.rcode
-
-# When running a weighted distribution, never repeat a domain more than this:
-MAX_WEIGHTED_REPEAT = 3
-
-def CalculateListAverage(values):
-  """Computes the arithmetic mean of a list of numbers."""
-  return sum(values) / float(len(values))
-
-
-def DrawTextBar(value, max_value, max_width=53):
-  """Return a simple ASCII bar graph, making sure it fits within max_width.
-
-  Args:
-    value: integer or float representing the value of this bar.
-    max_value: integer or float representing the largest bar.
-    max_width: How many characters this graph can use (int)
-
-  Returns:
-    string
-  """
-
-  hash_width = max_value / max_width
-  return int(math.ceil(value/hash_width)) * '#'
-
-
-def WeightedDistribution(elements, maximum):
-  """Given a set of elements, return a weighted distribution back.
-
-  Args:
-    elements: A list of elements to choose from
-    maximum: how many elements to return
-
-  Returns:
-    A random but fairly distributed list of elements of maximum count.
-
-  The distribution is designed to mimic real-world DNS usage. The observed
-  formula for request popularity was:
-
-  522.520776 * math.pow(x, -0.998506)-2
-  """
-
-  def FindY(x, total):
-    return total * math.pow(x, -0.408506)
-
-  total = len(elements)
-  picks = []
-  picked = {}
-  offset = FindY(total, total)
-  while len(picks) < maximum:
-    x = random.random() * total
-    y = FindY(x, total) - offset
-    index = abs(int(y))
-    if index < total:
-      if picked.get(index, 0) < MAX_WEIGHTED_REPEAT:
-        picks.append(elements[index])
-        picked[index] = picked.get(index, 0) + 1
-#        print '%s: %s' % (index, elements[index])
-  return picks
-
-
-def ChunkSelect(elements, count):
-  """Return a random count-sized contiguous chunk of elements."""
-  if len(elements) <= count:
-    return elements
-  start = random.randint(0, len(elements) - count)
-  return elements[start:start + count]
-
+import selectors
+import util
 
 class NameBench(object):
   """The main benchmarking class."""
@@ -135,9 +70,9 @@ class NameBench(object):
       print '* input contains duplicates, switching select_mode to random'
       select_mode = 'random'
     if select_mode == 'weighted':
-      selected = WeightedDistribution(input_data, self.test_count)
+      selected = selectors.WeightedDistribution(input_data, self.test_count)
     elif select_mode == 'chunk':
-      selected = ChunkSelect(input_data, self.test_count)
+      selected = selectors.ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
       if self.test_count > len(input_data):
         selected = input_data
@@ -218,7 +153,7 @@ class NameBench(object):
         run_averages.append(duration / len(test_run))
 
       # This appears to be a safe use of averaging averages
-      overall_average = CalculateListAverage(run_averages)
+      overall_average = util.CalculateListAverage(run_averages)
       yield (ns, overall_average, run_averages, failure_count)
 
   def FastestNameServerResult(self):
@@ -245,7 +180,7 @@ class NameBench(object):
     slowest_result = min_responses[-1][1]
     for result in min_responses:
       (ns, duration) = result
-      textbar = DrawTextBar(duration, slowest_result)
+      textbar = util.DrawTextBar(duration, slowest_result)
       print '%-16.16s %s %2.2f' % (ns.name, textbar, duration)
 
     print ''
@@ -261,7 +196,7 @@ class NameBench(object):
         note = ' (%sT)' % failure_count
       else:
         note = ''
-      textbar = DrawTextBar(overall_mean, max_result)
+      textbar = util.DrawTextBar(overall_mean, max_result)
       print '%-16.16s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
     if timeout_seen:
       print '* (#T) represents the number of timeouts encountered.'
