@@ -55,9 +55,9 @@ class NameServer(object):
     self.cache_check = None
     self.is_slower_replica = False
 
-  def _get_check_duration(self):
+  @property
+  def check_duration(self):
     return sum([x[3] for x in self.checks])
-  check_duration = property(_get_check_duration, None)
 
   def __str__(self):
     return '%s [%s]' % (self.name, self.ip)
@@ -105,9 +105,9 @@ class NameServer(object):
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
       response = None
-    except:
-      print "! Unknown error querying %s for %s:%s" % (self.ip, type_string, record_string)
-      response = None
+#    except:
+#      print "! Unknown error querying %s for %s:%s" % (self.ip, type_string, record_string)
+#      response = None
     duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() -
                                             start_time)
     return (response, duration, exc)
@@ -224,7 +224,12 @@ class NameServer(object):
     else:
       print "* cache check for %s is missing (skipping)" % other_ns
       return (False, None, None)
-    (response, is_broken) = self.QueryWildcardCache(cache_id, save=False)[0:2]
+      
+    (response, is_broken, warning, duration) = self.QueryWildcardCache(cache_id, save=False)
+    # I am not sure this is the right thing to do, but it helps in adding duration data to
+    # determine the best secondaries to use later.
+    self.checks.append(("ShareCheck", is_broken, warning, duration))
+
     if is_broken:
       self.is_healthy = False
     else:

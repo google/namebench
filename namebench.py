@@ -129,7 +129,7 @@ if __name__ == '__main__':
   if len(nameservers) > 1:
     nameservers.thread_count = int(opt.thread_count)
     nameservers.cache_dir = tempfile.gettempdir()
-    nameservers.FilterUnwantedServers()
+    nameservers.FindAndRemoveUndesirables()
   print ''
   print 'Final list of nameservers to benchmark:'
   print '-' * 60
