@@ -26,7 +26,7 @@ import dns.resolver
 import nameserver
 import util
 
-NS_CACHE_SLACK = 1.4
+NS_CACHE_SLACK = 1.5
 CACHE_VERSION = 1
 MAX_CONGESTION_MULTIPLIER = 4
 
@@ -224,6 +224,9 @@ class NameServers(list):
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     """Schedule and manage threading for cache collusion checks."""
     threads = []
+    # TODO(tstromberg): This should be split per-test rather than per-server,
+    # to reduce the chance of eliminating servers just because a user began
+    # to download something in the background.
     for chunk in util.SplitSequence(test_servers, self.thread_count):
       thread = TestNameServersThread(chunk, compare_cache=other_ns)
       thread.start()
