@@ -30,6 +30,7 @@ import util
 GOOGLE_CLASS_B = ('74.125',)
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
+WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
 MIN_SHARING_DELTA_MS = 2
@@ -146,7 +147,7 @@ class NameServer(object):
     if failures:
       answers = [' + '.join(map(str, x.items)) for x in response.answer]
       answer_text = ' -> '.join(answers)
-      warning = '%s may be hijacked (%s)' % (record, answer_text)
+      warning = '%s is hijacked (%s)' % (record, answer_text)
     return (is_broken, warning, duration)
     
   def ResponseToAscii(self, response):
@@ -161,6 +162,9 @@ class NameServer(object):
 
   def TestWwwPaypalComResponse(self):
     return self.TestAnswers('A', 'www.paypal.com.', WWW_PAYPAL_RESPONSE)
+
+  def TestWwwTpbOrgResponse(self):
+    return self.TestAnswers('A', 'www.thepiratebay.org.', WWW_TPB_RESPONSE)
 
   def TestNegativeResponse(self):
     """Test for NXDOMAIN hijaaking."""
