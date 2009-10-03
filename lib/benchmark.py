@@ -105,39 +105,28 @@ class NameBench(object):
     else:
       return 'cache-%s.%s.' % (random.randint(0, 10), domain)
 
-  def BenchmarkNameServer(self, nameserver, tests):
-    """Record results for a single run on a nameserver.
-
-    Args:
-      nameserver: NameServerData object
-      tests: a list of tuples in the form of [(record_type, record_name)]
-
-    Returns:
-      results: list of tuples, including data for each request made.
-    """
-    results = []
-    for (req_type, record) in tests:
-      # test records can include a (RANDOM) in the string for cache busting.
-      if '(RANDOM)' in record:
-        record = record.replace('(RANDOM)', str(random.random() * 10))
-      (response, duration) = nameserver.TimedRequest(req_type, record)[0:2]
-      results.append((record, req_type, duration, response))
-    return results
-
   def Run(self):
-    """Manage all attempts."""
-    for attempt in range(self.run_count):
+    """Manage and execute all tests on all nameservers.
+    
+    We used to run all tests for a nameserver, but the results proved to be
+    unfair if the bandwidth was suddenly constrained. We now run a test on 
+    each server before moving on to the next.
+    """
+    for test_run in range(self.run_count):
       sys.stdout.write(('* Benchmarking %s servers with %s records (%s of %s).'
-                        % (len(self.nameservers), len(self.test_data), attempt+1,
+                        % (len(self.nameservers), len(self.test_data), test_run+1,
                            self.run_count)))
-      for ns in self.nameservers:
-        if ns not in self.results:
-          self.results[ns] = []
+      for (req_type, record) in self.test_data:
+        for ns in self.nameservers:
+          if ns not in self.results:
+            self.results[ns] = []
+            for run_num in range(test_run+1):
+              self.results[ns].append([])
+          (response, duration) = ns.TimedRequest(req_type, record)[0:2]
+          self.results[ns][test_run].append((record, req_type, duration, response))
         sys.stdout.write('.')
-        sys.stdout.flush()
-        self.results[ns].append(self.BenchmarkNameServer(ns, self.test_data))
+        sys.stdout.flush()       
       sys.stdout.write('\n')
-    sys.stdout.flush()
 
   def ComputeAverages(self):
     """Process all runs for all hosts, yielding an average for each host."""
