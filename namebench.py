@@ -49,10 +49,10 @@ def DetermineCongestionFactor():
 
   g_duration = util.CongestionCheck()
   duration = util.CalculateListAverage((i_duration, g_duration))
-  congestion = duration / EXPECTED_DURATION
-  print 'congestion duration: %s' % duration
+  congestion = EXPECTED_DURATION / duration
+  print '- Intercept query took %sms, Congestion query took %sms' % (i_duration, g_duration)
   if duration > EXPECTED_CONGESTION_DURATION:
-    print '* Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
+    print '- Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
     return congestion
   else:
     return 1
