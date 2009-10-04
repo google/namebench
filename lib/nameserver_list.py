@@ -125,7 +125,7 @@ class NameServers(list):
       if cache_data:
         cached = True
         cached_ips = [x.ip for x in cache_data if not x.is_primary]
-        print "- %s awesome secondaries loaded from cache." % len(cache_data)
+#        print "- %s awesome secondaries loaded from cache." % len(cache_data)
         for ns in list(self.secondaries):
           if ns.ip not in cached_ips:
             self.remove(ns) 
@@ -147,16 +147,16 @@ class NameServers(list):
     primary_count = len(self.primaries)
     secondaries_kept = 0
     secondaries_needed = target_count - primary_count
-    print "- We need %s secondaries to get to %s total" % (secondaries_needed, target_count)
+#    print "- We need %s secondaries to get to %s total" % (secondaries_needed, target_count)
         
     # Phase two is removing all of the slower secondary servers
     for ns in list(self.SortByFastest()):
       if not ns.is_primary:
         if secondaries_kept >= secondaries_needed:
-          print "- Removing %s (slower secondary: %sms)" % (ns, ns.check_duration)
+#          print "- Removing %s (slower secondary: %sms)" % (ns, ns.check_duration)
           self.remove(ns)
         else:
-          print '- Keeping %s (fast secondary: %sms)' % (ns, ns.check_duration)
+#          print '- Keeping %s (fast secondary: %sms)' % (ns, ns.check_duration)
           secondaries_kept += 1
 
   def FindAndRemoveUndesirables(self):
