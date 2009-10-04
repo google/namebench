@@ -35,7 +35,8 @@ OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
 MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
-
+# Limit the amount of skew share checks have on the first round ns selection.
+MAX_SHARE_CHECK_COUNT = 3
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -52,6 +53,7 @@ class NameServer(object):
     self.shared_with = []
     self.is_healthy = True
     self.checks = []
+    self.share_check_count = 0
     self.cache_check = None
     self.is_slower_replica = False
 
@@ -227,8 +229,10 @@ class NameServer(object):
       
     (response, is_broken, warning, duration) = self.QueryWildcardCache(cache_id, save=False)
     # I am not sure this is the right thing to do, but it helps in adding duration data to
-    # determine the best secondaries to use later.
-    self.checks.append(("ShareCheck", is_broken, warning, duration))
+    # determine the best secondaries to use later. Limit to prevet too much skew.
+    if self.share_check_count < MAX_SHARE_CHECK_COUNT:
+      self.checks.append(("ShareCheck", is_broken, warning, duration))
+      self.share_check_count += 1
 
     if is_broken:
       self.is_healthy = False
