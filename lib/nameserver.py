@@ -35,8 +35,8 @@ OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAIN = 'blogspot.com.'
 MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
-# Limit the amount of skew share checks have on the first round ns selection.
-MAX_SHARE_CHECK_COUNT = 3
+
+CHECK_DURATION_MAX_COUNT = 8
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -46,8 +46,8 @@ class NameServer(object):
     self.ip = ip
     self.is_internal = internal
     self.is_primary = primary
-    self.timeout = 4
-    self.health_timeout = 2.5
+    self.timeout = 60
+    self.health_timeout = 30
 
     self.warnings = []
     self.shared_with = []
@@ -59,7 +59,15 @@ class NameServer(object):
 
   @property
   def check_duration(self):
-    return sum([x[3] for x in self.checks])
+    return sum([x[3] for x in self.checks[0:CHECK_DURATION_MAX_COUNT]])
+    
+  @property
+  def failure(self):
+    failures = [x for x in self.checks if x[1]]
+    if failures:
+      return failures[0]
+    else:
+      return None
 
   def __str__(self):
     return '%s [%s]' % (self.name, self.ip)
@@ -83,7 +91,6 @@ class NameServer(object):
 
     In the case of a DNS response timeout, the response object will be None.
     """
-#    print '%s:%s -> %s [%s]' % (type_string, record_string, self.ip, self.name)
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)  
     return_type = dns.rdataclass.IN
@@ -107,9 +114,6 @@ class NameServer(object):
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
       response = None
-#    except:
-#      print "! Unknown error querying %s for %s:%s" % (self.ip, type_string, record_string)
-#      response = None
     duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() -
                                             start_time)
     return (response, duration, exc)
@@ -141,7 +145,6 @@ class NameServer(object):
         failed = True
         for string in expected:
           if string in str(a):
-#            print "%s is in %s, marking not failed: %s" % (string, a, self.name)
             failed=False
             break
         if failed:
@@ -153,8 +156,13 @@ class NameServer(object):
     return (is_broken, warning, duration)
     
   def ResponseToAscii(self, response):
-    answers = [' + '.join(map(str, x.items)) for x in response.answer]
-    return ' -> '.join(answers)
+    if not response:
+      return None
+    if response.answer:
+      answers = [' + '.join(map(str, x.items)) for x in response.answer]
+      return ' -> '.join(answers)
+    else:
+      return 'no answer'
 
   def TestGoogleComResponse(self):
     return self.TestAnswers('A', 'google.com.', GOOGLE_CLASS_B)
@@ -182,19 +190,21 @@ class NameServer(object):
       warning = 'NXDOMAIN Hijacking (%s)' % self.ResponseToAscii(response)
     return (is_broken, warning, duration)
 
-  def QueryWildcardCache(self, hostname=None, save=True):
+  def QueryWildcardCache(self, hostname=None, save=True, timeout=None):
     """Make a cache to a random wildcard DNS host, storing the record."""
+    if not timeout:
+      timeout = self.health_timeout
     is_broken = False
     warning = None
     if not hostname:
       hostname = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
 
     (response, duration, exc) = self.TimedRequest('A', hostname,
-                                                  timeout=self.health_timeout)
+                                                  timeout=timeout)
     ttl = None
     if not response:
       is_broken = True
-      warning = '%s (%sms)' % (exc.__class__, duration)
+      warning = '%s' % exc.__class__
     elif not response.answer:
       is_broken = True
       warning = 'No response'
@@ -226,19 +236,16 @@ class NameServer(object):
     else:
       print "* cache check for %s is missing (skipping)" % other_ns
       return (False, None, None)
-      
-    (response, is_broken, warning, duration) = self.QueryWildcardCache(cache_id, save=False)
-    # I am not sure this is the right thing to do, but it helps in adding duration data to
-    # determine the best secondaries to use later. Limit to prevet too much skew.
-    if self.share_check_count < MAX_SHARE_CHECK_COUNT:
-      self.checks.append(("ShareCheck", is_broken, warning, duration))
-      self.share_check_count += 1
+
+    # These queries tend to run slow, and we've already narrowed down the worst.
+    timeout = self.health_timeout * 10
+    (response, is_broken, warning, duration) = self.QueryWildcardCache(cache_id, save=False, timeout=timeout)
+    self.checks.append(("ShareCheck", is_broken, warning, duration))
 
     if is_broken:
       self.is_healthy = False
     else:
       delta = abs(other_ttl - response.answer[0].ttl)
-
       if delta > 0:
         if other_ns.check_duration > self.check_duration:
           slower = other_ns
@@ -264,18 +271,11 @@ class NameServer(object):
 
     for test in tests:
       (is_broken, warning, duration) = test()
-      if is_broken:
-        self.is_healthy = False
-        if self.is_primary:
-          print '  * %s is unhealthy: %s %s' % (self, test.__name__, warning)
-        break
-
+      self.checks.append((test.__name__, is_broken, warning, duration))
       if warning:
         self.warnings.append(warning)
-      self.checks.append((test.__name__, is_broken, warning, duration))
-
-    if self.warnings:
-      print '  o %s: %s' % (self.name, ', '.join(self.warnings))
-
+      if is_broken:
+        self.is_healthy = False
+        break
     return self.is_healthy
 

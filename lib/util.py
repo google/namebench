@@ -21,6 +21,7 @@ import dns.resolver
 import nameserver
 
 OPENDNS_NS = '208.67.220.220'
+EXPECTED_CONGESTION_DURATION = 90.0
 
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
@@ -78,3 +79,12 @@ def CongestionCheck():
   primary = nameserver.NameServer(primary_ip)
   return primary.TestNegativeResponse()[2]
   
+def CheckConnectionQuality():
+  (intercepted, i_duration) = AreDNSPacketsIntercepted()
+  g_duration = CongestionCheck()
+  duration = CalculateListAverage((i_duration, g_duration))
+  congestion = duration / EXPECTED_CONGESTION_DURATION
+  print '- Intercept query took %sms, Congestion query took %sms' % (i_duration, g_duration)
+  if congestion > 1:
+    print '- Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
+  return (intercepted, congestion)

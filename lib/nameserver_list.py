@@ -21,6 +21,7 @@ import os
 import pickle
 import threading
 import time
+import sys
 
 import dns.resolver
 import nameserver
@@ -29,6 +30,7 @@ import util
 NS_CACHE_SLACK = 2
 CACHE_VERSION = 1
 MAX_CONGESTION_MULTIPLIER = 4
+PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 3
 
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
@@ -40,11 +42,15 @@ class TestNameServersThread(threading.Thread):
     self.results = []
 
   def run(self):
+    sys.stdout.write('o')
+    sys.stdout.flush()
     for ns in self.nameservers:
       if self.compare_cache:
         self.results.append(ns.TestSharedCache(self.compare_cache))
       else:
         self.results.append(ns.CheckHealth())
+    sys.stdout.write('.')
+    sys.stdout.flush()
 
 
 class NameServers(list):
@@ -86,8 +92,9 @@ class NameServers(list):
     ns = nameserver.NameServer(ip, name=name, primary=primary,
                                internal=internal)
     ns.timeout = self.timeout
+    # Give them a little extra love for the road.
     if primary or internal:
-      ns.health_timeout *= 1.2
+      ns.health_timeout = self.health_timeout * PRIMARY_HEALTH_TIMEOUT_MULTIPLIER
     else:
       ns.health_timeout = self.health_timeout
     self.append(ns)
@@ -126,7 +133,6 @@ class NameServers(list):
       if cache_data:
         cached = True
         cached_ips = [x.ip for x in cache_data if not x.is_primary]
-#        print "- %s awesome secondaries loaded from cache." % len(cache_data)
         for ns in list(self.secondaries):
           if ns.ip not in cached_ips:
             self.remove(ns) 
@@ -134,30 +140,39 @@ class NameServers(list):
       
   def RemoveUndesirables(self, target_count=None):
     if not target_count:
-      target_count = self.num_servers      
+      target_count = self.num_servers
+      
+    # No need to flood the screen
+    if len(self) < 30:
+      display_rejections = True
+    else:
+      display_rejections = False
     
     # Phase one is removing all of the unhealthy servers
     for ns in list(self.SortByFastest()):
       if not ns.is_healthy:
-#        print "- Removing %s (unhealthy)" % ns
         self.remove(ns)
+        if display_rejections or ns.is_primary:
+          (test, is_broken, warning, duration) = ns.failure
+          print "- Removing %s: %s %s (%sms)" % (ns, test, warning, duration)
       elif ns.is_slower_replica:
-        print "- Removing %s (slow replica)" % ns
         self.remove(ns)
+        if display_rejections:
+          replicas = ', '.join([x.ip for x in ns.shared_with])
+          print "- Removing %s (slow replica of %s)" % (ns, replicas)
 
     primary_count = len(self.primaries)
     secondaries_kept = 0
     secondaries_needed = target_count - primary_count
-#    print "- We need %s secondaries to get to %s total" % (secondaries_needed, target_count)
         
     # Phase two is removing all of the slower secondary servers
     for ns in list(self.SortByFastest()):
       if not ns.is_primary:
         if secondaries_kept >= secondaries_needed:
-#          print "- Removing %s (slower secondary: %sms)" % (ns, ns.check_duration)
           self.remove(ns)
+          if display_rejections:
+            print "- Removing %s (slower secondary: %sms)" % (ns, ns.check_duration)
         else:
-#          print '- Keeping %s (fast secondary: %sms)' % (ns, ns.check_duration)
           secondaries_kept += 1
 
   def FindAndRemoveUndesirables(self):
@@ -169,14 +184,11 @@ class NameServers(list):
     if not cached:
       print('- Building initial DNS cache for %s nameservers [%s threads]' %
             (len(self), self.thread_count))
-    else:
-      print '- Checking the health of %s nameservers' % len(self)
     self.RunHealthCheckThreads()
     self.RemoveUndesirables(target_count=int(self.num_servers * NS_CACHE_SLACK))
     if not cached:
       self._UpdateSecondaryCache(cpath)
     
-    print '- Checking for slow replicas among %s nameservers' % len(self)
     self.CheckCacheCollusion()
     self.RemoveUndesirables()
 
@@ -219,7 +231,7 @@ class NameServers(list):
     time.sleep(5)
     tested = []
     ns_by_fastest = self.SortByFastest()
-
+    sys.stdout.write('- Checking for slow replicas among %s nameservers: ' % len(self))
     for other_ns in ns_by_fastest:
       test_servers = []
       for ns in ns_by_fastest:
@@ -231,14 +243,14 @@ class NameServers(list):
         tested.append((ns.ip, other_ns.ip))
 
       self.RunCacheCollusionThreads(other_ns, test_servers)
+    print ''
 
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     """Schedule and manage threading for cache collusion checks."""
+    
     threads = []
-    # TODO(tstromberg): This should be split per-test rather than per-server,
-    # to reduce the chance of eliminating servers just because a user began
-    # to download something in the background.
-    for chunk in util.SplitSequence(test_servers, self.thread_count):
+    thread_count = int(self.thread_count * 0.5)
+    for chunk in util.SplitSequence(test_servers, thread_count):
       thread = TestNameServersThread(chunk, compare_cache=other_ns)
       thread.start()
       threads.append(thread)
@@ -252,8 +264,6 @@ class NameServers(list):
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
-        print ('  * %s is a slower replica of %s (%sms slower)' %
-               (slower, faster, dur_delta))
         slower.warnings.append('shares cache with %s' % faster.ip)
         faster.warnings.append('shares cache with %s' % slower.ip)
         slower.shared_with.append(faster)
@@ -263,9 +273,12 @@ class NameServers(list):
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
+    sys.stdout.write('- Checking the health of %s nameservers: ' % len(self))
+    sys.stdout.flush()
     for chunk in util.SplitSequence(self, self.thread_count):
       thread = TestNameServersThread(chunk)
       thread.start()
       threads.append(thread)
     for thread in threads:
       thread.join()
+    print ''

@@ -34,32 +34,6 @@ from lib import nameserver_list
 from lib import util
 
 VERSION = '0.8.3'
-EXPECTED_CONGESTION_DURATION = 50
-
-def DetermineCongestionFactor():
-  (intercepted, i_duration) = util.AreDNSPacketsIntercepted()
-  if intercepted:
-    print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    print 'XX Someone upstream of this machine is doing evil things and  XX'
-    print 'XX intercepting all outgoing nameserver requests. The results XX'
-    print 'XX of this program will be useless. Get your ISP to fix it.   XX'
-    print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    print ''
-    sys.exit(1)
-
-  g_duration = util.CongestionCheck()
-  duration = util.CalculateListAverage((i_duration, g_duration))
-  congestion = EXPECTED_DURATION / duration
-  print '- Intercept query took %sms, Congestion query took %sms' % (i_duration, g_duration)
-  if duration > EXPECTED_CONGESTION_DURATION:
-    print '- Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
-    return congestion
-  else:
-    return 1
-
-# Detect congestion problems early!
-EXPECTED_DURATION = 75
-SEVERE_CONGESTION_MULTIPLIER = 1.75
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
@@ -130,17 +104,31 @@ if __name__ == '__main__':
                                             include_internal=include_internal,
                                             timeout=opt.timeout,
                                             health_timeout=opt.health_timeout)
-  nameservers.ApplyCongestionFactor(DetermineCongestionFactor())                                        
+  (intercepted, congestion) = util.CheckConnectionQuality()
+  if intercepted:
+    print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    print 'XX Someone upstream of this machine is doing evil things and  XX'
+    print 'XX intercepting all outgoing nameserver requests. The results XX'
+    print 'XX of this program will be useless. Get your ISP to fix it.   XX'
+    print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    print ''
+  if congestion > 1:
+    nameservers.ApplyCongestionFactor(congestion)                                        
   if len(nameservers) > 1:
     nameservers.thread_count = int(opt.thread_count)
     nameservers.cache_dir = tempfile.gettempdir()
     nameservers.FindAndRemoveUndesirables()
   print ''
   print 'Final list of nameservers to benchmark:'
-  print '-' * 60
+  print '-' * 78
   for ns in nameservers.SortByFastest():
-    print ' %-19.19s %-20.20s (%sms)' % (ns.ip, ns.name, ns.check_duration)
+    if ns.warnings:
+      add_text = '# ' + ', '.join(ns.warnings)
+    else:
+      add_text = ''
+    print ' %-16.16s %-18.18s %-4.4sms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
   print ''
+  
   bmark = benchmark.NameBench(nameservers,
                               run_count=opt.run_count,
                               test_count=opt.test_count)
