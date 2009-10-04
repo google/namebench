@@ -34,10 +34,32 @@ from lib import nameserver_list
 from lib import util
 
 VERSION = '0.8.3'
+EXPECTED_CONGESTION_DURATION = 45
+
+def DetermineCongestionFactor():
+  (intercepted, i_duration) = util.AreDNSPacketsIntercepted()
+  if intercepted:
+    print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    print 'XX Someone upstream of this machine is doing evil things and  XX'
+    print 'XX intercepting all outgoing nameserver requests. The results XX'
+    print 'XX of this program will be useless. Get your ISP to fix it.   XX'
+    print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    print ''
+    sys.exit(1)
+
+  g_duration = util.CongestionCheck()
+  duration = util.CalculateListAverage((i_duration, g_duration))
+  congestion = duration / EXPECTED_DURATION
+  print 'congestion duration: %s' % duration
+  if duration > EXPECTED_CONGESTION_DURATION:
+    print '* Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
+    return congestion
+  else:
+    return 1
 
 # Detect congestion problems early!
-EXPECTED_DURATION = 120.0
-SEVERE_CONGESTION_MULTIPLIER = 3
+EXPECTED_DURATION = 75
+SEVERE_CONGESTION_MULTIPLIER = 1.75
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
@@ -108,24 +130,7 @@ if __name__ == '__main__':
                                             include_internal=include_internal,
                                             timeout=opt.timeout,
                                             health_timeout=opt.health_timeout)
-  (intercepted, duration) = util.AreDNSPacketsIntercepted()
-  print '- DNS Intercept test completed in %sms' % duration
-  congestion = duration / EXPECTED_DURATION
-
-  if intercepted:
-    print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    print 'XX Someone upstream of this machine is doing evil things and  XX'
-    print 'XX intercepting all outgoing nameserver requests. The results XX'
-    print 'XX of this program will be useless. Get your ISP to fix it.   XX'
-    print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    print ''
-    sys.exit(1)
-  elif congestion > SEVERE_CONGESTION_MULTIPLIER:
-    print '* Health checks are running %.1fX slower than expected!' % congestion
-    print '* NOTE: results may be inconsistent if your connection is saturated!'
-    print ''
-    nameservers.ApplyCongestionFactor(congestion / 2.5)
-
+  nameservers.ApplyCongestionFactor(DetermineCongestionFactor())                                        
   if len(nameservers) > 1:
     nameservers.thread_count = int(opt.thread_count)
     nameservers.cache_dir = tempfile.gettempdir()

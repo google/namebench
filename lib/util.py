@@ -17,6 +17,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import math
+import dns.resolver
 import nameserver
 
 OPENDNS_NS = '208.67.220.220'
@@ -52,7 +53,11 @@ def SplitSequence(seq, size):
   for i in range(size):
     newseq.append(seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
   return newseq
+  
 
+def InternalNameServers():
+  """Return list of DNS server IP's used by the host."""
+  return dns.resolver.Resolver().nameservers
 
 def AreDNSPacketsIntercepted():
   """Check if our packets are actually getting to the correct servers."""
@@ -67,3 +72,9 @@ def AreDNSPacketsIntercepted():
     print '* DNS interception test failed (no response)'
 
   return (False, duration)
+  
+def CongestionCheck():
+  primary_ip = InternalNameServers()[0]
+  primary = nameserver.NameServer(primary_ip)
+  return primary.TestNegativeResponse()[2]
+  

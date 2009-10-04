@@ -70,7 +70,7 @@ class NameServers(list):
         self.AddServer(ip, name, primary=False)
 
     if include_internal:
-      for ip in self.InternalNameServers():
+      for ip in util.InternalNameServers():
         self.AddServer(ip, 'SYS-%s' % ip, internal=True, primary=True)
 
   @property
@@ -206,10 +206,6 @@ class NameServers(list):
       pickle.dump(self, cf)
     except TypeError, exc:
       print '* Could not save cache: %s' % exc
-
-  def InternalNameServers(self):
-    """Return list of DNS server IP's used by the host."""
-    return dns.resolver.Resolver().nameservers
 
   def SortByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
