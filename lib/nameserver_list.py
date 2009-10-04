@@ -26,7 +26,7 @@ import dns.resolver
 import nameserver
 import util
 
-NS_CACHE_SLACK = 1.6
+NS_CACHE_SLACK = 2
 CACHE_VERSION = 1
 MAX_CONGESTION_MULTIPLIER = 4
 
