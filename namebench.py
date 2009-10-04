@@ -34,7 +34,7 @@ from lib import nameserver_list
 from lib import util
 
 VERSION = '0.8.3'
-EXPECTED_CONGESTION_DURATION = 45
+EXPECTED_CONGESTION_DURATION = 50
 
 def DetermineCongestionFactor():
   (intercepted, i_duration) = util.AreDNSPacketsIntercepted()
