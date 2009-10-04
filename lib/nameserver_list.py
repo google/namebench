@@ -112,10 +112,11 @@ class NameServers(list):
   def ApplyCongestionFactor(self, multiplier):
     if multiplier > MAX_CONGESTION_MULTIPLIER:
       multiplier = MAX_CONGESTION_MULTIPLIER
-    self.timeout *= multiplier
-    self.health_timeout *= multiplier
-    print ('* General timeout is now %.1fs, Health timeout is now %.1fs' %
-           (self.timeout, self.health_timeout))
+    if multiplier > 1:
+      self.timeout *= multiplier
+      self.health_timeout *= multiplier
+      print ('- General timeout is now %.1fs, Health timeout is now %.1fs' %
+             (self.timeout, self.health_timeout))
 
   def InvokeSecondaryCache(self):
     cached = False
