@@ -33,7 +33,7 @@ from lib import history_parser
 from lib import nameserver_list
 from lib import util
 
-VERSION = '0.8.3'
+VERSION = '0.8.4'
 
 if __name__ == '__main__':
   parser = optparse.OptionParser()
