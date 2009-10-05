@@ -17,11 +17,9 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import sys
-sys.path.append('third_party')
 import datetime
+import util
 import unittest
-import conn_quality
 
 
 class TestBasicMethods(unittest.TestCase):

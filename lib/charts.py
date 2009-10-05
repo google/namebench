@@ -19,8 +19,8 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import itertools
 import re
 import urllib
-from graphy import common
-from graphy.backends import google_chart_api
+from third_party.graphy import common
+from third_party.graphy.backends import google_chart_api
 
 # How many ms to display in the distribution graph.
 MAX_DIST_MS = 350

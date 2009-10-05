@@ -31,7 +31,7 @@ import dns.rcode
 import selectors
 import util
 
-class NameBench(object):
+class Benchmark(object):
   """The main benchmarking class."""
 
   def __init__(self, nameservers, run_count=2, test_count=30):

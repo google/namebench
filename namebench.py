@@ -25,8 +25,6 @@ import datetime
 import optparse
 import sys
 import tempfile
-# Make it easy to import 3rd party utilities without editing their imports.
-sys.path.append('lib/third_party')
 from lib import benchmark
 from lib import config
 from lib import history_parser

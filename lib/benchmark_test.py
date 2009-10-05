@@ -20,37 +20,9 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import datetime
 import unittest
 import mocks
-import namebench
+import benchmark
 
-
-class TestBasicMethods(unittest.TestCase):
-  def testTimeDeltaToMilliseconds(self):
-    delta = datetime.timedelta(days=1)
-    self.assertEqual(namebench.TimeDeltaToMilliseconds(delta), 86400000)
-
-    delta = datetime.timedelta(0, 3, 248193)
-    self.assertEqual(namebench.TimeDeltaToMilliseconds(delta),
-                     3248.1930000000002)
-
-  def testCalculateListAverage(self):
-    self.assertEqual(namebench.CalculateListAverage([3, 2, 2]),
-                     2.3333333333333335)
-
-  def testDrawTextBar(self):
-    self.assertEqual(namebench.DrawTextBar(1, 10, max_width=10), '#')
-    self.assertEqual(namebench.DrawTextBar(5, 10, max_width=10), '#####')
-    self.assertEqual(namebench.DrawTextBar(5, 5, max_width=5), '#####')
-    # Make sure to draw at least something!
-    self.assertEqual(namebench.DrawTextBar(0.05, 10, max_width=10), '#')
-
-  def testWeightedDistribution(self):
-    elements = range(0, 100)
-    dist = namebench.WeightedDistribution(elements, 10)
-    self.assertTrue(max(dist[0:8]) < 20)
-    self.assertEquals(len(dist), 10)
-
-
-class TestNameBench(unittest.TestCase):
+class TestBenchmark(unittest.TestCase):
   def testFindUsableNameServers(self):
     """Test automagic nameserver discovery and validation."""
     mock = mocks.MockNameBench('mock')

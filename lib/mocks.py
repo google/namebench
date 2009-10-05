@@ -18,10 +18,9 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import dns.message
 import dns.rrset
-import namebench
+import benchmark
 
-
-class MockNameBench(namebench.NameBench):
+class MockBenchmark(benchmark.Benchmark):
   """Neutered NameBench, does make any DNS queries."""
 
   def LoadDomainsList(self, unused_filename):
