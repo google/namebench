@@ -128,7 +128,7 @@ if __name__ == '__main__':
     print ' %-16.16s %-18.18s %-4.4sms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
   print ''
 
-  bmark = benchmark.NameBench(nameservers,
+  bmark = benchmark.Benchmark(nameservers,
                               run_count=opt.run_count,
                               test_count=opt.test_count)
   if history:

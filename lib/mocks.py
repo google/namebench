@@ -12,46 +12,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Mocks for namebench.py, does not send any actual DNS requests."""
+"""Mocks for tests."""
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import dns.message
-import dns.rrset
-import benchmark
+import time
+import nameserver
+from third_party.dns import message
+from third_party.dns import query
 
-class MockBenchmark(benchmark.Benchmark):
-  """Neutered NameBench, does make any DNS queries."""
+GOOD_IP = '127.0.0.1'
+PERFECT_IP = '127.127.127.127'
+NO_RESPONSE_IP = '10.0.0.1'
+BROKEN_IP = '192.168.0.1'
 
-  def LoadDomainsList(self, unused_filename):
-    return ['slashdot.org', 'google.com', 'x.gov']
+class MockNameServer(nameserver.NameServer):
+  """Act like Nameserver, but do not issue any actual queries!"""
 
-  def BuiltInNameServerDetails(self):
-    return {'192.168.1.1': 'Test', '192.168.1.2': 'Test 2'}
+  def Query(self, request, timeout):
+    """Return a falsified DNS response."""
+    if self.ip == BROKEN_IP:
+      raise query.BadResponse('This sucks.')
 
-  def InternalNameServers(self):
-    return ['10.0.0.1']
 
-  def TimedDNSRequest(self, nameserver, type_string, record_string):
-    """Call the real method, but manipulate the returned duration."""
-    response = super(MockNameBench, self).TimedDNSRequest(
-        nameserver, type_string, record_string
-    )[0]
-    if nameserver == '192.168.1.2':
-      return (response, 22.5)
-    else:
-      return (response, 9.0)
+    response_text = """id 999
+opcode QUERY
+rcode NOERROR
+flags QR RD RA
+;QUESTION
+www.paypal.com. IN A
+;ANSWER
+www.paypal.com. 159 IN A 66.211.169.65
+www.paypal.com. 159 IN A 66.211.169.2
+;AUTHORITY
+paypal.com. 3459 IN NS ppns1.den.paypal.com.
+paypal.com. 3459 IN NS ppns1.phx.paypal.com.
+paypal.com. 3459 IN NS ppns2.den.paypal.com.
+paypal.com. 3459 IN NS ppns2.phx.paypal.com.
+;ADDITIONAL
+ppns1.den.paypal.com. 165480 IN A 216.113.188.121
+ppns1.phx.paypal.com. 73170 IN A 66.211.168.226
+ppns2.den.paypal.com. 73170 IN A 216.113.188.122
+ppns2.phx.paypal.com. 73170 IN A 66.211.168.227"""
+    msg = message.from_text(response_text)
+    question = str(request.question[0])
+    # We need to fail something!
+    msg.question = request.question
+    if self.ip == NO_RESPONSE_IP:
+      msg.answer = None
+    elif self.ip == GOOD_IP and  'www.google.com' in question:
+      msg.answer = None
 
-  def DNSQuery(self, request, nameserver):
-    # This server is down
-    if str(nameserver) == '192.168.1.1':
-      return None
-    message = dns.message.Message()
+    if self.ip == GOOD_IP:
+      time.sleep(0.02)
+    return msg
 
-    # Only positive requests from here.
-    if 'INTERNIC.NET.' in str(request) or 'google.com.' in str(request):
-      message.answer = [dns.rrset.RRset(None, None, None)]
-    return message
 
-  def DisplayBanner(self):
-    pass
