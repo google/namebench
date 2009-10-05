@@ -36,6 +36,9 @@ WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
 
+# These queries tend to block occassionally.
+CACHE_SHARING_TIMEOUT = 60
+
 # How many checks to consider when calculating ns check_duration
 CHECK_DURATION_MAX_COUNT = 8
 
@@ -240,8 +243,12 @@ class NameServer(object):
       return (False, None, None)
 
     # These queries tend to run slow, and we've already narrowed down the worst.
-    timeout = self.health_timeout * 10
-    (response, is_broken, warning, duration) = self.QueryWildcardCache(cache_id, save=False, timeout=timeout)
+    timeout = self.health_timeout * 12
+    (response, is_broken, warning, duration) = self.QueryWildcardCache(
+        cache_id,
+        save=False,
+        timeout=CACHE_SHARING_TIMEOUT
+    )
     self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
