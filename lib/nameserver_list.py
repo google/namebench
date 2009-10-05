@@ -82,7 +82,7 @@ class NameServers(list):
   @property
   def primaries(self):
     return [x for x in self if x.is_primary]
-    
+
   @property
   def secondaries(self):
     return [x for x in self if not x.is_primary]
@@ -135,19 +135,19 @@ class NameServers(list):
         cached_ips = [x.ip for x in cache_data if not x.is_primary]
         for ns in list(self.secondaries):
           if ns.ip not in cached_ips:
-            self.remove(ns) 
+            self.remove(ns)
     return cached
-      
+
   def RemoveUndesirables(self, target_count=None):
     if not target_count:
       target_count = self.num_servers
-      
+
     # No need to flood the screen
     if len(self) < 30:
       display_rejections = True
     else:
       display_rejections = False
-    
+
     # Phase one is removing all of the unhealthy servers
     for ns in list(self.SortByFastest()):
       if not ns.is_healthy:
@@ -164,7 +164,7 @@ class NameServers(list):
     primary_count = len(self.primaries)
     secondaries_kept = 0
     secondaries_needed = target_count - primary_count
-        
+
     # Phase two is removing all of the slower secondary servers
     for ns in list(self.SortByFastest()):
       if not ns.is_primary:
@@ -180,7 +180,7 @@ class NameServers(list):
     print("- Considering %s primary and %s secondary servers for benchmarking." %
           (len(self.primaries), len(self.secondaries)))
     cpath = self._SecondaryCachePath()
-    cached = self.InvokeSecondaryCache()    
+    cached = self.InvokeSecondaryCache()
     if not cached:
       print('- Building initial DNS cache for %s nameservers [%s threads]' %
             (len(self), self.thread_count))
@@ -188,7 +188,7 @@ class NameServers(list):
     self.RemoveUndesirables(target_count=int(self.num_servers * NS_CACHE_SLACK))
     if not cached:
       self._UpdateSecondaryCache(cpath)
-    
+
     self.CheckCacheCollusion()
     self.RemoveUndesirables()
 
@@ -247,9 +247,9 @@ class NameServers(list):
 
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     """Schedule and manage threading for cache collusion checks."""
-    
+
     threads = []
-    thread_count = int(self.thread_count * 0.5)
+    thread_count = self.thread_count
     for chunk in util.SplitSequence(test_servers, thread_count):
       thread = TestNameServersThread(chunk, compare_cache=other_ns)
       thread.start()

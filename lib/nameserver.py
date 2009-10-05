@@ -32,7 +32,7 @@ WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
 WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
-WILDCARD_DOMAIN = 'blogspot.com.'
+WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
 
@@ -60,7 +60,7 @@ class NameServer(object):
   @property
   def check_duration(self):
     return sum([x[3] for x in self.checks[0:CHECK_DURATION_MAX_COUNT]])
-    
+
   @property
   def failure(self):
     failures = [x for x in self.checks if x[1]]
@@ -92,16 +92,16 @@ class NameServer(object):
     In the case of a DNS response timeout, the response object will be None.
     """
     request_type = dns.rdatatype.from_text(type_string)
-    record = dns.name.from_text(record_string, None)  
+    record = dns.name.from_text(record_string, None)
     return_type = dns.rdataclass.IN
-    
+
     # Ocassionally we will fail
     try:
       request = dns.message.make_query(record, request_type, return_type)
     except IndexError, exc:
       print '- Error creating packet: %s (trying again)' % exc
       request = dns.message.make_query(record, request_type, return_type)
-      
+
     if not timeout:
       timeout = self.timeout
 
@@ -154,7 +154,7 @@ class NameServer(object):
       answer_text = ' -> '.join(answers)
       warning = '%s is hijacked (%s)' % (record, answer_text)
     return (is_broken, warning, duration)
-    
+
   def ResponseToAscii(self, response):
     if not response:
       return None
@@ -197,10 +197,11 @@ class NameServer(object):
     is_broken = False
     warning = None
     if not hostname:
-      hostname = 'www%s.%s' % (random.random(), WILDCARD_DOMAIN)
-
+      domain = random.choice(WILDCARD_DOMAINS)
+      hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
     (response, duration, exc) = self.TimedRequest('A', hostname,
                                                   timeout=timeout)
+#    print "%s -> %s" % (hostname, response)
     ttl = None
     if not response:
       is_broken = True
@@ -221,10 +222,10 @@ class NameServer(object):
 
   def TestSharedCache(self, other_ns):
     """Is this nameserver sharing a cache with another nameserver?
-    
+
     Args:
       other_ns: A nameserver to compare it to.
-      
+
     Returns:
       A tuple containing:
         - Boolean of whether or not this host has a shared cache
@@ -255,6 +256,8 @@ class NameServer(object):
           faster = other_ns
 
         if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
+#          print "%s (%s vs %s) has delta %s for TTL %s" % (cache_id, self, other_ns, delta,
+#                                                response.answer[0].ttl)
           return (True, slower, faster)
 
     return (False, None, None)
