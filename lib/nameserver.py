@@ -242,7 +242,7 @@ class NameServer(object):
     # These queries tend to run slow, and we've already narrowed down the worst.
     timeout = self.health_timeout * 10
     (response, is_broken, warning, duration) = self.QueryWildcardCache(cache_id, save=False, timeout=timeout)
-    self.checks.append(("ShareCheck", is_broken, warning, duration))
+    self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
       self.is_healthy = False
