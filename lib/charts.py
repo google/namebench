@@ -23,7 +23,7 @@ from graphy import common
 from graphy.backends import google_chart_api
 
 # How many ms to display in the distribution graph.
-MAX_DIST_MS = 320
+MAX_DIST_MS = 350
 CHART_URI = 'http://chart.apis.google.com/chart'
 BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',
                '9900ff', '9f5734', '000000', '7b9f34', '3090c0', '477248f',

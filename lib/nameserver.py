@@ -19,6 +19,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import datetime
 import random
 
+import sys
 import dns.name
 import dns.rdataclass
 import dns.rdatatype
@@ -36,11 +37,9 @@ WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
 
-# These queries tend to block occassionally.
-CACHE_SHARING_TIMEOUT = 60
-
 # How many checks to consider when calculating ns check_duration
-CHECK_DURATION_MAX_COUNT = 8
+SHARED_CACHE_TIMEOUT_MULTIPLIER = 3
+CHECK_DURATION_MAX_COUNT = 9
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -243,12 +242,22 @@ class NameServer(object):
       return (False, None, None)
 
     # These queries tend to run slow, and we've already narrowed down the worst.
-    timeout = self.health_timeout * 12
+    timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
     (response, is_broken, warning, duration) = self.QueryWildcardCache(
         cache_id,
         save=False,
-        timeout=CACHE_SHARING_TIMEOUT
+        timeout=timeout
     )
+    # Try again, but only once. Do penalize them for the first fail however.
+    if is_broken:
+      sys.stdout.write('t')
+      (response, is_broken, warning, duration2) = self.QueryWildcardCache(
+          cache_id,
+          save=False,
+          timeout=timeout
+      )
+      if is_broken:
+        sys.stdout.write('T')
     self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:

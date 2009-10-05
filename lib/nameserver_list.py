@@ -49,6 +49,9 @@ class TestNameServersThread(threading.Thread):
         self.results.append(ns.TestSharedCache(self.compare_cache))
       else:
         self.results.append(ns.CheckHealth())
+      if not ns.is_healthy:
+        sys.stdout.write('x')
+
     sys.stdout.write('.')
     sys.stdout.flush()
 
