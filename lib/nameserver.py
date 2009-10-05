@@ -36,6 +36,7 @@ WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
 
+# How many checks to consider when calculating ns check_duration
 CHECK_DURATION_MAX_COUNT = 8
 
 class NameServer(object):
@@ -201,7 +202,7 @@ class NameServer(object):
       hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
     (response, duration, exc) = self.TimedRequest('A', hostname,
                                                   timeout=timeout)
-#    print "%s -> %s" % (hostname, response)
+#    print "%s -> %s" % (self, hostname)
     ttl = None
     if not response:
       is_broken = True

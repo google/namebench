@@ -159,7 +159,7 @@ class NameServers(list):
         self.remove(ns)
         if display_rejections:
           replicas = ', '.join([x.ip for x in ns.shared_with])
-          print "- Removing %s (slow replica of %s)" % (ns, replicas)
+          print "- Removing %s (slower replica of %s)" % (ns, replicas)
 
     primary_count = len(self.primaries)
     secondaries_kept = 0
@@ -235,9 +235,13 @@ class NameServers(list):
     for other_ns in ns_by_fastest:
       test_servers = []
       for ns in ns_by_fastest:
-        if ns.ip == other_ns.ip or ns in other_ns.shared_with:
+        if ns.is_slower_replica or not ns.is_healthy:
           continue
-        elif (ns.ip, other_ns.ip) in tested or (other_ns.ip, ns.ip) in tested:
+        elif ns.ip == other_ns.ip or ns in other_ns.shared_with:
+          continue
+        # We do extra work here because we do not check for (other, ns), but
+        # I believe it is worth the extra time to check it anyways.
+        elif (ns.ip, other_ns.ip) in tested:
           continue
         test_servers.append(ns)
         tested.append((ns.ip, other_ns.ip))
@@ -264,7 +268,7 @@ class NameServers(list):
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
-        slower.warnings.append('shares cache with %s' % faster.ip)
+#        slower.warnings.append('shares cache with %s' % faster.ip)
         faster.warnings.append('shares cache with %s' % slower.ip)
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
