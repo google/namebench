@@ -31,7 +31,7 @@ from lib import benchmark
 from lib import config
 from lib import history_parser
 from lib import nameserver_list
-from lib import util
+from lib import conn_quality
 
 VERSION = '0.8.4'
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
   for arg in args:
     if '.' in arg:
       primary_ns.append((arg, arg))
-  
+
   include_internal = True
   if opt.only:
     include_internal = False
@@ -104,7 +104,8 @@ if __name__ == '__main__':
                                             include_internal=include_internal,
                                             timeout=opt.timeout,
                                             health_timeout=opt.health_timeout)
-  (intercepted, congestion) = util.CheckConnectionQuality()
+  cq = conn_quality.ConnectionQuality()
+  (intercepted, congestion) = cq.CheckConnectionQuality()
   if intercepted:
     print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print 'XX Someone upstream of this machine is doing evil things and  XX'
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     print ''
   if congestion > 1:
-    nameservers.ApplyCongestionFactor(congestion)                                        
+    nameservers.ApplyCongestionFactor(congestion)
   if len(nameservers) > 1:
     nameservers.thread_count = int(opt.thread_count)
     nameservers.cache_dir = tempfile.gettempdir()
@@ -128,7 +129,7 @@ if __name__ == '__main__':
       add_text = ''
     print ' %-16.16s %-18.18s %-4.4sms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
   print ''
-  
+
   bmark = benchmark.NameBench(nameservers,
                               run_count=opt.run_count,
                               test_count=opt.test_count)
