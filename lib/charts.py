@@ -149,7 +149,7 @@ def _SortDistribution(a, b):
   return cmp(a[0].name, b[0].name)
 
 
-def DistributionLineGraph(run_data, maximum_x=300):
+def DistributionLineGraph(run_data, maximum_x=320):
   """Return a Google Chart API URL showing duration distribution per ns."""
 
   # TODO(tstromberg): Rewrite this method using graphy. Graphy does not
