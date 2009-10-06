@@ -130,7 +130,6 @@ class HistoryParser(object):
     """
     tried = []
     for path_elements in paths:
-      print path_elements
       path = os.path.join(*path_elements)
       tried.append(path)
       for filename in glob.glob(path):
