@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Mocks for tests."""
+"""Tests for the selector module."""
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
@@ -92,6 +92,7 @@ class SelectorsTest(unittest.TestCase):
     result = selectors.ChunkSelect(elements, 25)
     self.assertEquals(len(result), 20)
     self.assertEquals(elements, result)
+
 
 
 if __name__ == '__main__':

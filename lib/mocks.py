@@ -23,6 +23,7 @@ import dns.message
 import dns.query
 
 GOOD_IP = '127.0.0.1'
+SLOW_IP = '9.9.9.9'
 PERFECT_IP = '127.127.127.127'
 NO_RESPONSE_IP = '10.0.0.1'
 BROKEN_IP = '192.168.0.1'
@@ -65,7 +66,9 @@ ppns2.phx.paypal.com. 73170 IN A 66.211.168.227"""
       msg.answer = None
 
     if self.ip == GOOD_IP:
-      time.sleep(0.02)
+      time.sleep(0.001)
+    elif self.ip == SLOW_IP:
+      time.sleep(0.03)
     return msg
 
 

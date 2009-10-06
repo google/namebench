@@ -46,6 +46,7 @@ class Benchmark(object):
     self.run_count = run_count
     self.nameservers = nameservers
     self.results = {}
+    self.test_data = []
 
   def CreateTestsFromFile(self, filename, select_mode='weighted'):
     """Open an input file, and pass the data to CreateTests."""
@@ -89,6 +90,7 @@ class Benchmark(object):
       else:
         self.test_data.append(('A', self.GenerateFqdn(selection)))
 
+    assert self.test_data
     return self.test_data
 
   def GenerateFqdn(self, domain):
@@ -109,6 +111,7 @@ class Benchmark(object):
     unfair if the bandwidth was suddenly constrained. We now run a test on
     each server before moving on to the next.
     """
+    assert self.test_data
     for test_run in range(self.run_count):
       sys.stdout.write(('* Benchmarking %s servers with %s records (%s of %s).'
                         % (len(self.nameservers), len(self.test_data), test_run+1,
@@ -117,9 +120,13 @@ class Benchmark(object):
         for ns in self.nameservers:
           if ns not in self.results:
             self.results[ns] = []
-            for run_num in range(test_run+1):
+            for run_num in range(self.run_count):
               self.results[ns].append([])
-          (response, duration) = ns.TimedRequest(req_type, record)[0:2]
+          (response, duration, exc) = ns.TimedRequest(req_type, record)
+          if exc:
+            sys.stdout.write('!')
+            duration = ns.timeout
+
           self.results[ns][test_run].append((record, req_type, duration, response))
         sys.stdout.write('.')
         sys.stdout.flush()
