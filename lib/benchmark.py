@@ -74,10 +74,7 @@ class Benchmark(object):
     elif select_mode == 'chunk':
       selected = selectors.ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
-      if self.test_count > len(input_data):
-        selected = input_data
-      else:
-        selected = random.sample(input_data, self.test_count)
+      selected = selectors.RandomSelect(input_data, self.test_count)
     else:
       raise ValueError('Invalid select_mode: %s' % select_mode)
 
@@ -86,7 +83,7 @@ class Benchmark(object):
       selection = line.rstrip()
       if len(selection) < 2:
         continue
-      
+
       if ' ' in selection:
         self.test_data.append(selection.split(' ')[0:2])
       else:
@@ -107,9 +104,9 @@ class Benchmark(object):
 
   def Run(self):
     """Manage and execute all tests on all nameservers.
-    
+
     We used to run all tests for a nameserver, but the results proved to be
-    unfair if the bandwidth was suddenly constrained. We now run a test on 
+    unfair if the bandwidth was suddenly constrained. We now run a test on
     each server before moving on to the next.
     """
     for test_run in range(self.run_count):
@@ -125,7 +122,7 @@ class Benchmark(object):
           (response, duration) = ns.TimedRequest(req_type, record)[0:2]
           self.results[ns][test_run].append((record, req_type, duration, response))
         sys.stdout.write('.')
-        sys.stdout.flush()       
+        sys.stdout.flush()
       sys.stdout.write('\n')
 
   def ComputeAverages(self):

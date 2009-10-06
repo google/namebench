@@ -158,11 +158,21 @@ class TestNameserver(unittest.TestCase):
     other_ns = mocks.MockNameServer(mocks.PERFECT_IP)
     ns.QueryWildcardCache(save=True)
     other_ns.QueryWildcardCache(save=True)
-    # Increase the TTL
+    # Increase the TTL of 'other'
     other_ns.cache_check = (other_ns.cache_check[0], other_ns.cache_check[1] + 5)
     (shared, slower, faster) = ns.TestSharedCache(other_ns)
+    self.assertEquals(shared, True)
     self.assertEquals(slower.ip, mocks.GOOD_IP)
     self.assertEquals(faster.ip, mocks.PERFECT_IP)
+
+
+    # Increase the TTL of 'other' by a whole lot
+    other_ns.cache_check = (other_ns.cache_check[0], other_ns.cache_check[1] + 3600)
+    (shared, slower, faster) = ns.TestSharedCache(other_ns)
+    self.assertEquals(shared, False)
+    self.assertEquals(slower, None)
+    self.assertEquals(faster, None)
+
 
 if __name__ == '__main__':
   unittest.main()

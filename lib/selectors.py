@@ -17,18 +17,24 @@ import math
 import random
 
 # When running a weighted distribution, never repeat a domain more than this:
-MAX_WEIGHTED_REPEAT = 3
+MAX_REPEAT = 3
 
+def MaxRepeatCount(elements, count):
+  # If we're asked to be crazy, lets be crazy.
+  if count > (len(elements) * MAX_REPEAT):
+    return 2**32
+  else:
+    return MAX_REPEAT
 
-def WeightedDistribution(elements, maximum):
+def WeightedDistribution(elements, count):
   """Given a set of elements, return a weighted distribution back.
 
   Args:
     elements: A list of elements to choose from
-    maximum: how many elements to return
+    count: how many elements to return
 
   Returns:
-    A random but fairly distributed list of elements of maximum count.
+    A random but fairly distributed list of elements of count count.
 
   The distribution is designed to mimic real-world DNS usage. The observed
   formula for request popularity was:
@@ -43,12 +49,13 @@ def WeightedDistribution(elements, maximum):
   picks = []
   picked = {}
   offset = FindY(total, total)
-  while len(picks) < maximum:
+  max_repeat = MaxRepeatCount(elements, count)
+  while len(picks) < count:
     x = random.random() * total
     y = FindY(x, total) - offset
     index = abs(int(y))
     if index < total:
-      if picked.get(index, 0) < MAX_WEIGHTED_REPEAT:
+      if picked.get(index, 0) < max_repeat:
         picks.append(elements[index])
         picked[index] = picked.get(index, 0) + 1
 #        print '%s: %s' % (index, elements[index])
@@ -61,4 +68,15 @@ def ChunkSelect(elements, count):
     return elements
   start = random.randint(0, len(elements) - count)
   return elements[start:start + count]
-  
+
+def RandomSelect(elements, count):
+  picks = []
+  picked = {}
+
+  max_repeat = MaxRepeatCount(elements, count)
+  while len(picks) < count:
+    choice = random.choice(elements)
+    if picked.get(choice, 0) < max_repeat:
+      picks.append(choice)
+      picked[choice] = picked.get(choice, 0) + 1
+  return picks

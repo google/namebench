@@ -18,8 +18,9 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import time
 import nameserver
-from third_party.dns import message
-from third_party.dns import query
+import third_party
+import dns.message
+import dns.query
 
 GOOD_IP = '127.0.0.1'
 PERFECT_IP = '127.127.127.127'
@@ -32,7 +33,7 @@ class MockNameServer(nameserver.NameServer):
   def Query(self, request, timeout):
     """Return a falsified DNS response."""
     if self.ip == BROKEN_IP:
-      raise query.BadResponse('This sucks.')
+      raise dns.query.BadResponse('This sucks.')
 
 
     response_text = """id 999
@@ -54,7 +55,7 @@ ppns1.den.paypal.com. 165480 IN A 216.113.188.121
 ppns1.phx.paypal.com. 73170 IN A 66.211.168.226
 ppns2.den.paypal.com. 73170 IN A 216.113.188.122
 ppns2.phx.paypal.com. 73170 IN A 66.211.168.227"""
-    msg = message.from_text(response_text)
+    msg = dns.message.from_text(response_text)
     question = str(request.question[0])
     # We need to fail something!
     msg.question = request.question
