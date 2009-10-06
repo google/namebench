@@ -20,13 +20,11 @@ import datetime
 import random
 
 import sys
-import third_party
-import dns.exception
-import dns.query
-import dns.message
 import dns.name
 import dns.rdataclass
 import dns.rdatatype
+import dns.resolver
+import dns.reversename
 
 import util
 
@@ -190,7 +188,7 @@ class NameServer(object):
                                                   timeout=self.health_timeout)
     if not response:
       is_broken = True
-      warning = str(exc.__class__.__name__)
+      warning = exc.__class__
     elif response.answer:
       warning = 'NXDOMAIN Hijacking (%s)' % self.ResponseToAscii(response)
     return (is_broken, warning, duration)
@@ -210,7 +208,7 @@ class NameServer(object):
     ttl = None
     if not response:
       is_broken = True
-      warning = exc.__class__.__name__
+      warning = '%s' % exc.__class__
     elif not response.answer:
       is_broken = True
       warning = 'No response'

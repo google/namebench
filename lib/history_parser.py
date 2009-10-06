@@ -33,6 +33,8 @@ class HistoryParser(object):
     self.TYPES = {
         'google_chrome': self.GoogleChromeHistoryPath,
         'chrome': self.GoogleChromeHistoryPath,
+        'chromium': self.ChromiumHistoryPath,
+        'epiphany': self.EpiphanyHistoryPath,
         'opera': self.OperaHistoryPath,
         'safari': self.SafariHistoryPath,
         'firefox': self.FirefoxHistoryPath,
@@ -51,6 +53,7 @@ class HistoryParser(object):
   def ReadHistoryFile(self, filename):
     # Only matches http://host.domain type entries (needs at least one sub)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
+    print '- Reading history from %s' % filename
     return parse_re.findall(open(filename).read())
 
   def _HostnameMayBeInternal(self, hostname):
@@ -75,7 +78,7 @@ class HistoryParser(object):
     for host in hosts:
       if not host.endswith('.'):
         host = host + '.'
-      
+
       if self._HostnameMayBeInternal(host):
         continue
 
@@ -127,53 +130,72 @@ class HistoryParser(object):
     """
     tried = []
     for path_elements in paths:
+      print path_elements
       path = os.path.join(*path_elements)
       tried.append(path)
       for filename in glob.glob(path):
-        if os.path.getsize(filename) > 0:
+        if os.path.getsize(filename) > 1:
           return (filename, tried)
 
     return (None, tried)
 
   def GoogleChromeHistoryPath(self):
     paths = (
-        (os.getenv('HOME', None), 'Library', 'Application Support', 'Google',
+        (os.getenv('HOME', ''), 'Library', 'Application Support', 'Google',
          'Chrome', 'Default', 'History'),
-        (os.getenv('HOME', None), '.config', 'google-chrome', 'Default',
+        (os.getenv('HOME', ''), '.config', 'google-chrome', 'Default',
          'History'),
-        (os.getenv('APPDATA', None), 'Google', 'Chrome', 'Default',
+        (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'Default',
+         'History')
+    )
+    return self.FindGlobPath(paths)
+
+  def ChromiumHistoryPath(self):
+    paths = (
+        (os.getenv('HOME', ''), 'Library', 'Application Support',
+         'Chromium', 'Default', 'History'),
+        (os.getenv('HOME', ''), '.config', 'chromium', 'Default',
+         'History'),
+        (os.getenv('APPDATA', ''), 'Chromium', 'Default',
          'History')
     )
     return self.FindGlobPath(paths)
 
   def OperaHistoryPath(self):
     paths = (
-        (os.getenv('HOME', None), 'Library', 'Preferences', 'Opera Preferences',
+        (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences',
          'global_history.dat'),
     )
     return self.FindGlobPath(paths)
 
   def SafariHistoryPath(self):
     paths = (
-        (os.getenv('HOME', None), 'Library', 'Safari', 'History.plist'),
-        (os.getenv('APPDATA', None), 'Apple Computer', 'Safari',
+        (os.getenv('HOME', ''), 'Library', 'Safari', 'History.plist'),
+        (os.getenv('APPDATA', ''), 'Apple Computer', 'Safari',
          'History.plist')
     )
     return self.FindGlobPath(paths)
 
   def FirefoxHistoryPath(self):
     paths = (
-        (os.getenv('HOME', None), 'Library', 'Application Support', 'Firefox',
+        (os.getenv('HOME', ''), 'Library', 'Application Support', 'Firefox',
          'Profiles', '*', 'places.sqlite'),
-        (os.getenv('APPDATA', None), 'Mozilla', 'Firefox', 'Profiles', '*',
+        (os.getenv('HOME', ''), '.mozilla', 'firefox', '*', 'places.sqlite'),
+        (os.getenv('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles', '*',
          'places.sqlite')
     )
     return self.FindGlobPath(paths)
 
   def InternetExplorerHistoryPath(self):
     paths = (
-        (os.getenv('APPDATA', None), 'Microsoft', 'Windows', 'History',
+        (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History',
          'History.IE5', 'index.dat'),
+    )
+    return self.FindGlobPath(paths)
+
+  def EpiphanyHistoryPath(self):
+    paths = (
+        (os.getenv('HOME', ''), '.gnome2', 'epiphany', 'ephy-history.xml'),
     )
     return self.FindGlobPath(paths)
 
