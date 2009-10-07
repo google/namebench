@@ -166,7 +166,6 @@ class HistoryParser(object):
           new_path[index] = 'Chromium'
         elif part == 'chrome':
           new_path[index] = 'chromium'
-      print new_path
       paths.append(new_path)
     return paths
 
