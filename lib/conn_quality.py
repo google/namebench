@@ -50,7 +50,7 @@ class ConnectionQuality(object):
     g_duration = self.GetNegativeResponseDuration()
     duration = util.CalculateListAverage((i_duration, g_duration))
     congestion = duration / EXPECTED_CONGESTION_DURATION
-    print '- Intercept query took %sms, Congestion query took %sms' % (i_duration, g_duration)
+    print '- Intercept query took %.1fms, Congestion query took %.1fms' % (i_duration, g_duration)
     if congestion > 1:
       print '- Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
     return (intercepted, congestion)
