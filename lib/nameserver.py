@@ -17,6 +17,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
+import time
 import random
 
 import sys
@@ -29,6 +30,12 @@ import dns.rdataclass
 import dns.rdatatype
 
 import util
+
+# Pick the most accurate timer for a platform. Stolen from timeit.py:
+if sys.platform == "win32":
+  DEFAULT_TIMER = time.clock
+else:
+  DEFAULT_TIMER = time.time
 
 GOOGLE_CLASS_B = ('74.125',)
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
@@ -83,7 +90,8 @@ class NameServer(object):
   def Query(self, request, timeout):
     return dns.query.udp(request, self.ip, timeout, 53)
 
-  def TimedRequest(self, type_string, record_string, timeout=None):
+  def TimedRequest(self, type_string, record_string, timeout=None,
+                   timer=DEFAULT_TIMER):
     """Make a DNS request, returning the reply and duration it took.
 
     Args:
@@ -92,7 +100,7 @@ class NameServer(object):
       timeout: optional timeout (float)
 
     Returns:
-      A tuple of (response, duration [float], exception)
+      A tuple of (response, duration in ms [float], exception)
 
     In the case of a DNS response timeout, the response object will be None.
     """
@@ -110,18 +118,21 @@ class NameServer(object):
     if not timeout:
       timeout = self.timeout
 
-    start_time = datetime.datetime.now()
     exc = None
+    duration = None
     try:
+      start_time = timer()
       response = self.Query(request, timeout)
+      duration = timer() - start_time
     except (dns.exception.Timeout), exc:
       response = None
+      duration = timer() - start_time
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
       response = None
-    duration = util.TimeDeltaToMilliseconds(datetime.datetime.now() -
-                                            start_time)
-    return (response, duration, exc)
+      duration = timer() - start_time
+
+    return (response, duration*1000, exc)
 
   def TestAnswers(self, record_type, record, expected):
     """Test to see that an answer returns correct IP's.
