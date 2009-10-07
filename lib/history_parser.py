@@ -51,7 +51,9 @@ class HistoryParser(object):
     # Only matches http://host.domain type entries (needs at least one sub)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
     print '- Reading history from %s' % filename
-    return parse_re.findall(open(filename).read())
+
+    # binary mode is necessary for running under Windows
+    return parse_re.findall(open(filename, 'rb').read())
 
   def _HostnameMayBeInternal(self, hostname):
     if self.INTERNAL_RE.search(hostname):
@@ -113,9 +115,11 @@ class HistoryParser(object):
                                  sorted_unique=sorted_unique)
 
   def ParseByType(self, source):
-    (history_file_path, tried) = self.TYPES[source]()
+    (history_file_path, tried) = self.FindGlobPath(self.TYPES[source]())
     if not history_file_path:
-      print "* Could not find data for '%s'. Tried: %s" % (source, tried)
+      print "* Could not find data for '%s'. Tried:"
+      for path in tried:
+        print path
       return None
     return self.ParseByFilename(history_file_path)
 
@@ -143,31 +147,35 @@ class HistoryParser(object):
          'History'),
         (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
          'History'),
-        # TODO(tstromberg): Check if this one is ever valid.
-        (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'Default',
-         'History'),
+        (os.getenv('USERPROFILE', ''), 'Local Settings', 'Application Data',
+         'Google', 'Chrome', 'User Data', 'Default', 'History'),
     )
-    return self.FindGlobPath(paths)
+    return paths
 
   def ChromiumHistoryPath(self):
-    paths = (
-        (os.getenv('HOME', ''), 'Library', 'Application Support',
-         'Chromium', 'Default', 'History'),
-        (os.getenv('HOME', ''), '.config', 'chromium', 'Default',
-         'History'),
-        (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
-         'History'),
-        (os.getenv('APPDATA', ''), 'Chromium', 'Default',
-         'History')
-    )
-    return self.FindGlobPath(paths)
+    """It's like Chrome, but with the branding stripped out."""
+
+    # TODO(tstromberg): Find a terser way to do this.
+    paths = []
+    for path in self.GoogleChromeHistoryPath():
+      new_path = list(path)
+      if 'Google' in new_path:
+        new_path.remove('Google')
+      for (index, part) in enumerate(new_path):
+        if part == 'Chrome':
+          new_path[index] = 'Chromium'
+        elif part == 'chrome':
+          new_path[index] = 'chromium'
+      print new_path
+      paths.append(new_path)
+    return paths
 
   def OperaHistoryPath(self):
     paths = (
         (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences',
          'global_history.dat'),
     )
-    return self.FindGlobPath(paths)
+    return paths
 
   def SafariHistoryPath(self):
     paths = (
@@ -175,7 +183,7 @@ class HistoryParser(object):
         (os.getenv('APPDATA', ''), 'Apple Computer', 'Safari',
          'History.plist')
     )
-    return self.FindGlobPath(paths)
+    return paths
 
   def FirefoxHistoryPath(self):
     paths = (
@@ -185,7 +193,7 @@ class HistoryParser(object):
         (os.getenv('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles', '*',
          'places.sqlite')
     )
-    return self.FindGlobPath(paths)
+    return paths
 
   def InternetExplorerHistoryPath(self):
     paths = (
@@ -196,20 +204,20 @@ class HistoryParser(object):
         (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History',
          'History.IE5', 'index.dat'),
     )
-    return self.FindGlobPath(paths)
+    return paths
 
   def EpiphanyHistoryPath(self):
     paths = (
         (os.getenv('HOME', ''), '.gnome2', 'epiphany', 'ephy-history.xml'),
     )
-    return self.FindGlobPath(paths)
+    return paths
 
   def SquidLogPath(self):
     paths = (
         ('/usr/local/squid/logs/access.log',),
         ('/var/log/squid/access_log',)
     )
-    return self.FindGlobPath(paths)
+    return paths
 
 if __name__ == '__main__':
   parser = HistoryParser()
