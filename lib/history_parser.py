@@ -31,7 +31,6 @@ class HistoryParser(object):
 
   def __init__(self):
     self.TYPES = {
-        'google_chrome': self.GoogleChromeHistoryPath,
         'chrome': self.GoogleChromeHistoryPath,
         'chromium': self.ChromiumHistoryPath,
         'epiphany': self.EpiphanyHistoryPath,
@@ -39,8 +38,6 @@ class HistoryParser(object):
         'safari': self.SafariHistoryPath,
         'firefox': self.FirefoxHistoryPath,
         'internet_explorer': self.InternetExplorerHistoryPath,
-        'iexplorer': self.InternetExplorerHistoryPath,
-        'ie': self.InternetExplorerHistoryPath,
         'squid': self.SquidLogPath
     }
 
@@ -144,8 +141,11 @@ class HistoryParser(object):
          'Chrome', 'Default', 'History'),
         (os.getenv('HOME', ''), '.config', 'google-chrome', 'Default',
          'History'),
+        (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
+         'History'),
+        # TODO(tstromberg): Check if this one is ever valid.
         (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'Default',
-         'History')
+         'History'),
     )
     return self.FindGlobPath(paths)
 
@@ -154,6 +154,8 @@ class HistoryParser(object):
         (os.getenv('HOME', ''), 'Library', 'Application Support',
          'Chromium', 'Default', 'History'),
         (os.getenv('HOME', ''), '.config', 'chromium', 'Default',
+         'History'),
+        (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
          'History'),
         (os.getenv('APPDATA', ''), 'Chromium', 'Default',
          'History')
@@ -187,6 +189,10 @@ class HistoryParser(object):
 
   def InternetExplorerHistoryPath(self):
     paths = (
+        # XP
+        (os.getenv('USERPROFILE', ''), 'Local Settings', 'History',
+         'History.IE5', 'index.dat'),
+        # ?
         (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History',
          'History.IE5', 'index.dat'),
     )

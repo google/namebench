@@ -125,8 +125,6 @@ class NameServers(list):
     if multiplier > 1:
       self.timeout *= multiplier
       self.health_timeout *= multiplier
-      print ('- General timeout is now %.1fs, Health timeout is now %.1fs' %
-             (self.timeout, self.health_timeout))
 
   def InvokeSecondaryCache(self):
     cached = False
@@ -173,15 +171,11 @@ class NameServers(list):
       if not ns.is_primary:
         if secondaries_kept >= secondaries_needed:
           self.remove(ns)
-          if display_rejections:
-            print "- Removing %s (slower secondary: %sms)" % (ns, ns.check_duration)
         else:
           secondaries_kept += 1
 
   def FindAndRemoveUndesirables(self):
     """Filter out unhealthy or slow replica servers."""
-    print("- Considering %s primary and %s secondary servers for benchmarking." %
-          (len(self.primaries), len(self.secondaries)))
     cpath = self._SecondaryCachePath()
     cached = self.InvokeSecondaryCache()
     if not cached:

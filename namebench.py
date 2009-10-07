@@ -125,7 +125,7 @@ if __name__ == '__main__':
       add_text = '# ' + ', '.join(ns.warnings)
     else:
       add_text = ''
-    print ' %-16.16s %-18.18s %-4.4sms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
+    print '%-15.15s %-16.16s %-4.0fms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
   print ''
 
   bmark = benchmark.Benchmark(nameservers,

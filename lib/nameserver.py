@@ -168,7 +168,7 @@ class NameServer(object):
     if failures:
       answers = [' + '.join(map(str, x.items)) for x in response.answer]
       answer_text = ' -> '.join(answers)
-      warning = '%s is hijacked (%s)' % (record, answer_text)
+      warning = '%s hijacked (%s)' % (record, answer_text)
     return (is_broken, warning, duration)
 
   def ResponseToAscii(self, response):
@@ -203,7 +203,7 @@ class NameServer(object):
       is_broken = True
       warning = str(exc.__class__.__name__)
     elif response.answer:
-      warning = 'NXDOMAIN Hijacking (%s)' % self.ResponseToAscii(response)
+      warning = 'NXDOMAIN Hijacking'
     return (is_broken, warning, duration)
 
   def QueryWildcardCache(self, hostname=None, save=True, timeout=None):
