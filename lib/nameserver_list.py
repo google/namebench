@@ -28,7 +28,7 @@ import nameserver
 import util
 
 NS_CACHE_SLACK = 2
-CACHE_VERSION = 1
+CACHE_VER = 1
 MAX_CONGESTION_MULTIPLIER = 4
 PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 3
 
@@ -177,6 +177,7 @@ class NameServers(list):
   def FindAndRemoveUndesirables(self):
     """Filter out unhealthy or slow replica servers."""
     cpath = self._SecondaryCachePath()
+    print cpath
     cached = self.InvokeSecondaryCache()
     if not cached:
       print('- Building initial DNS cache for %s nameservers [%s threads]' %
@@ -193,10 +194,9 @@ class NameServers(list):
     """Find a usable and unique location to store health results."""
     secondary_ips = [x.ip for x in self.secondaries]
     checksum = hash(str(sorted(secondary_ips)))
-    return '%s/namebench.%s.%s.%0f.%s' % (self.cache_dir, CACHE_VERSION,
-                                          len(secondary_ips),
-                                          self.requested_health_timeout,
-                                          checksum)
+    basefile = '.'.join(map(str, ('namebench', CACHE_VER, len(secondary_ips),
+                                  self.requested_health_timeout, checksum)))
+    return os.path.join(self.cache_dir, basefile)
 
   def _LoadSecondaryCache(self, cpath):
     """Check if our health cache has any good data."""
