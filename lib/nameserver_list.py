@@ -23,6 +23,7 @@ import threading
 import time
 import sys
 
+import third_party
 import dns.resolver
 import nameserver
 import util
@@ -60,7 +61,7 @@ class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
                include_internal=False, threads=20, cache_dir=None,
-               timeout=None, health_timeout=None):
+               timeout=5, health_timeout=5):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
