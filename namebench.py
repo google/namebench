@@ -48,11 +48,7 @@ class NameBenchCli(object):
     elif count == total:
       sys.stdout.write('%s/%s\n' % (count, total))
     else:
-      # Avoid overly long lines of dots
-      if total < 50:
-        sys.stdout.write('.')
-      elif count % (total / 50):
-        sys.stdout.write('.')
+      sys.stdout.write('.')
     sys.stdout.flush()
 
   def PrepareNameservers(self):
