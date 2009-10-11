@@ -1,0 +1,19 @@
+
+Lowest latency for an individual query (in milliseconds):
+-------------------------------------------------------------
+{% for item in lowest_latency %}{{ "%-16.16s %s %2.2f\n"|format(item[0], item[1], item[2]) }}{% endfor %}
+Overall Mean Request Duration (in milliseconds):
+------------------------------------------------
+{% for item in mean_duration %}{{ "%-16.16s %s %2.2f\n"|format(item[0], item[1], item[2]) }}{% endfor %}
+Per-Run Mean Request Duration Chart URL:
+----------------------------------------
+{{ mean_duration_url }}
+
+Detailed Request Duration Distribution Chart URL:
+-------------------------------------------------
+{{ distribution_url }}
+
+Recommended configuration (fastest + nearest):
+----------------------------------------------
+{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, warning) }}{% endfor %}
+

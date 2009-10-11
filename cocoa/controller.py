@@ -21,39 +21,48 @@ from lib import third_party
 from lib import benchmark
 
 class controller(NSWindowController):
-	form_data = IBOutlet()
-	status = IBOutlet()
-	spinner = IBOutlet()
-	
-	def updateStatus(self, message):
-		NSLog(message)
-		self.status.setStringValue_(message)
+  form_data = IBOutlet()
+  status = IBOutlet()
+  spinner = IBOutlet()
 
-	@IBAction
-	def startJob_(self, sender):
-		self.updateStatus('Starting benchmark thread')
-		t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
-		t.start()
-				
-	def benchmarkThread(self):
-		pool = NSAutoreleasePool.alloc().init()
-		self.spinner.startAnimation_(self)		
-		primary = self.form_data.stringValue()
-		self.updateStatus('Using %s' % primary)
-		nameservers = nameserver_list.NameServers([(primary,primary)])
-		self.updateStatus('Preparing benchmark')
-		bmark = benchmark.Benchmark(nameservers, test_count=110, run_count=1)
-		bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % NB_SOURCE)
-		self.updateStatus('Running...')
-		bmark.Run()
-		self.updateStatus('Displaying Results...')
-		bmark.DisplayResults()
-		self.updateStatus('Saving results')
-		bmark.SaveResultsToCsv('output.csv')
-		self.spinner.stopAnimation_(self)		
-		best = bmark.BestOverallNameServer()
-		self.updateStatus('%s looks like the winner' % best.ip)
-		pool.release()
-		
-	def awakeFromNib(self):
-		self.updateStatus('Ready')
+  def updateStatus(self, message, count=None, total=None):
+    if total and count:
+      state = '%s [%s/%s]' % (message, count, total)
+    elif count:
+      state = '%s%s' % (message, '.' * count)
+    else:
+      state = message
+
+    NSLog(state)
+    self.status.setStringValue_(state)
+
+  @IBAction
+  def startJob_(self, sender):
+    self.updateStatus('Starting benchmark thread')
+    t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
+    t.start()
+
+  def benchmarkThread(self):
+    pool = NSAutoreleasePool.alloc().init()
+    self.spinner.startAnimation_(self)
+    primary = self.form_data.stringValue()
+    self.updateStatus('Using %s' % primary)
+    nameservers = nameserver_list.NameServers([(primary,primary)])
+    self.updateStatus('Preparing benchmark')
+    bmark = benchmark.Benchmark(nameservers, test_count=110, run_count=1)
+    bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % NB_SOURCE)
+    # Monkeypatching FTW.
+    bmark.updateStatus = self.updateStatus
+    self.updateStatus('Running...')
+    bmark.Run()
+    self.updateStatus('Displaying Results...')
+    bmark.DisplayResults()
+    self.updateStatus('Saving results')
+    bmark.SaveResultsToCsv('output.csv')
+    self.spinner.stopAnimation_(self)
+    best = bmark.BestOverallNameServer()
+    self.updateStatus('%s looks like the winner' % best.ip)
+    pool.release()
+
+  def awakeFromNib(self):
+    self.updateStatus('Ready')

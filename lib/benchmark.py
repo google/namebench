@@ -26,15 +26,20 @@ import operator
 import random
 import sys
 
-import charts
+import third_party
 import dns.rcode
+import jinja2
+import charts
 import selectors
 import util
+
+
 
 class Benchmark(object):
   """The main benchmarking class."""
 
-  def __init__(self, nameservers, run_count=2, test_count=30):
+  def __init__(self, nameservers, run_count=2, test_count=30,
+               status_callback=None):
     """Constructor.
 
     Args:
@@ -47,6 +52,13 @@ class Benchmark(object):
     self.nameservers = nameservers
     self.results = {}
     self.test_data = []
+    self.status_callback = status_callback
+
+  def msg(self, msg, count=None, total=None):
+    if self.status_callback:
+      self.status_callback(msg, count=count, total=total)
+    else:
+      print '%s [%s/%s]' % (msg, count, total)
 
   def CreateTestsFromFile(self, filename, select_mode='weighted'):
     """Open an input file, and pass the data to CreateTests."""
@@ -113,10 +125,12 @@ class Benchmark(object):
     """
     assert self.test_data
     for test_run in range(self.run_count):
-      sys.stdout.write(('* Benchmarking %s servers with %s records (%s of %s).'
-                        % (len(self.nameservers), len(self.test_data), test_run+1,
-                           self.run_count)))
+      state = ('Benchmarking %s server(s), run %s of %s' %
+               (len(self.nameservers), test_run+1, self.run_count))
+      count = 0
       for (req_type, record) in self.test_data:
+        count += 1
+        self.msg(state, count=count, total=len(self.test_data))
         for ns in self.nameservers:
           if ns not in self.results:
             self.results[ns] = []
@@ -124,13 +138,9 @@ class Benchmark(object):
               self.results[ns].append([])
           (response, duration, exc) = ns.TimedRequest(req_type, record)
           if exc:
-            sys.stdout.write('!')
             duration = ns.timeout
-
-          self.results[ns][test_run].append((record, req_type, duration, response))
-        sys.stdout.write('.')
-        sys.stdout.flush()
-      sys.stdout.write('\n')
+          self.results[ns][test_run].append((record, req_type, duration,
+                                             response))
 
   def ComputeAverages(self):
     """Process all runs for all hosts, yielding an average for each host."""
@@ -162,47 +172,56 @@ class Benchmark(object):
                            key=operator.itemgetter(1))
     return [x[0] for x in min_responses][0:count]
 
-  def DisplayResults(self):
-    """Display all of the results in an ASCII-graph format."""
-
-    print ''
-    print 'Lowest latency for an individual query (in milliseconds):'
-    print '-'* 78
+  def _LowestLatencyAsciiChart(self):
+    """Return a simple set of tuples to generate an ASCII chart from."""
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
     slowest_result = min_responses[-1][1]
+    chart = []
     for result in min_responses:
       (ns, duration) = result
       textbar = util.DrawTextBar(duration, slowest_result)
-      print '%-16.16s %s %2.2f' % (ns.name, textbar, duration)
+      chart.append((ns.name, textbar, duration))
+    return chart
 
-    print ''
-    print 'Overall Mean Request Duration (in milliseconds):'
-    print '-'* 78
+  def _MeanRequestAsciiChart(self):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     max_result = sorted_averages[-1][1]
-    timeout_seen = False
+    chart = []
     for result in sorted_averages:
       (ns, overall_mean, unused_run_means, failure_count) = result
-      if failure_count:
-        timeout_seen = True
-        note = ' (%sT)' % failure_count
-      else:
-        note = ''
       textbar = util.DrawTextBar(overall_mean, max_result)
-      print '%-16.16s %s %2.0f%s' % (ns.name, textbar, overall_mean, note)
-    if timeout_seen:
-      print '* (#T) represents the number of timeouts encountered.'
-    print ''
+      chart.append((ns.name, textbar, overall_mean))
+    return chart
 
-    print 'Per-Run Mean Request Duration Chart URL'
-    print '-' * 78
+  def CreateReport(self, format='ascii', output_path=None):
+    lowest_latency = self._LowestLatencyAsciiChart()
+    mean_duration = self._MeanRequestAsciiChart()
+    sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     runs_data = [(x[0].name, x[2]) for x in sorted_averages]
-    print charts.PerRunDurationBarGraph(runs_data)
-    print ''
-    print 'Detailed Request Duration Distribution Chart URL'
-    print '-' * 78
-    print charts.DistributionLineGraph(self.DigestedResults())
+    mean_duration_url = charts.PerRunDurationBarGraph(runs_data)
+    distribution_url = charts.DistributionLineGraph(self.DigestedResults())
+
+    best = self.BestOverallNameServer()
+    nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
+    recommended = [best] + nearest
+
+    env = jinja2.Environment(loader=jinja2.PackageLoader('namebench',
+                                                         'templates'))
+    template = env.get_template('%s.tmpl' % format)
+    rendered = template.render(
+        lowest_latency=lowest_latency,
+        mean_duration=mean_duration,
+        mean_duration_url=mean_duration_url,
+        distribution_url=distribution_url,
+        recommended=recommended
+    )
+
+    if not output_path:
+      return rendered
+    else:
+      # TODO(tstromberg): Implement file output.
+      return rendered
 
   def DigestedResults(self):
     """Return a tuple of nameserver and all associated durations."""

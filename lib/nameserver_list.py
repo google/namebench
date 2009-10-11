@@ -30,7 +30,7 @@ import util
 
 NS_CACHE_SLACK = 2
 CACHE_VER = 1
-MAX_CONGESTION_MULTIPLIER = 4
+MAX_CONGESTION_MULTIPLIER = 5
 PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 3
 
 class TestNameServersThread(threading.Thread):
@@ -43,25 +43,19 @@ class TestNameServersThread(threading.Thread):
     self.results = []
 
   def run(self):
-    sys.stdout.write('o')
     sys.stdout.flush()
     for ns in self.nameservers:
       if self.compare_cache:
         self.results.append(ns.TestSharedCache(self.compare_cache))
       else:
         self.results.append(ns.CheckHealth())
-      if not ns.is_healthy:
-        sys.stdout.write('x')
-
-    sys.stdout.write('.')
-    sys.stdout.flush()
 
 
 class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
                include_internal=False, threads=20, cache_dir=None,
-               timeout=5, health_timeout=5):
+               status_callback=None, timeout=5, health_timeout=5):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
@@ -69,6 +63,7 @@ class NameServers(list):
     self.num_servers = num_servers
     self.requested_health_timeout = health_timeout
     self.health_timeout = health_timeout
+    self.status_callback = status_callback
     self.cache_dir = cache_dir
 
     super(NameServers, self).__init__()
@@ -90,6 +85,12 @@ class NameServers(list):
   @property
   def secondaries(self):
     return [x for x in self if not x.is_primary]
+
+  def msg(self, msg, count=None, total=None):
+    if self.status_callback:
+      self.status_callback(msg, count=count, total=total)
+    else:
+      print '%s [%s/%s]' % (msg, count, total)
 
   def AddServer(self, ip, name, primary=False, internal=False):
     """Add a server to the list given an IP and name."""
@@ -156,12 +157,12 @@ class NameServers(list):
         self.remove(ns)
         if display_rejections or ns.is_primary:
           (test, is_broken, warning, duration) = ns.failure
-          print "- Removing %s: %s %s (%sms)" % (ns, test, warning, duration)
+          print("* Removing %s: %s %s (%sms)" % (ns, test, warning, duration))
       elif ns.is_slower_replica:
         self.remove(ns)
         if display_rejections:
           replicas = ', '.join([x.ip for x in ns.shared_with])
-          print "- Removing %s (slower replica of %s)" % (ns, replicas)
+          print("* Removing %s (slower replica of %s)" % (ns, replicas))
 
     primary_count = len(self.primaries)
     secondaries_kept = 0
@@ -178,11 +179,10 @@ class NameServers(list):
   def FindAndRemoveUndesirables(self):
     """Filter out unhealthy or slow replica servers."""
     cpath = self._SecondaryCachePath()
-    print cpath
     cached = self.InvokeSecondaryCache()
     if not cached:
-      print('- Building initial DNS cache for %s nameservers [%s threads]' %
-            (len(self), self.thread_count))
+      self.msg('- Building initial DNS cache for %s nameservers [%s threads]' %
+               (len(self), self.thread_count))
     self.RunHealthCheckThreads()
     self.RemoveUndesirables(target_count=int(self.num_servers * NS_CACHE_SLACK))
     if not cached:
@@ -202,12 +202,12 @@ class NameServers(list):
   def _LoadSecondaryCache(self, cpath):
     """Check if our health cache has any good data."""
     if os.path.exists(cpath) and os.path.isfile(cpath):
-      print '- Loading local server health cache: %s' % cpath
+      self.msg('Loading local server health cache: %s' % cpath)
       cf = open(cpath, 'r')
       try:
         return pickle.load(cf)
       except EOFError:
-        print '- No usable data in %s' % cpath
+        self.msg('- No usable data in %s' % cpath)
     return False
 
   def _UpdateSecondaryCache(self, cpath):
@@ -216,7 +216,7 @@ class NameServers(list):
     try:
       pickle.dump(self, cf)
     except TypeError, exc:
-      print '* Could not save cache: %s' % exc
+      self.msg('Could not save cache: %s' % exc)
 
   def SortByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
@@ -226,11 +226,11 @@ class NameServers(list):
     """Mark if any nameservers share cache, especially if they are slower."""
 
     # Give the TTL a chance to decrement
-    time.sleep(5)
+    self.msg("Waiting for nameservers TTL's to decrement")
+    time.sleep(4)
     tested = []
     ns_by_fastest = self.SortByFastest()
-    sys.stdout.write('- Checking for slow replicas among %s nameservers: ' % len(self))
-    for other_ns in ns_by_fastest:
+    for (index, other_ns) in enumerate(ns_by_fastest):
       test_servers = []
       for ns in ns_by_fastest:
         if ns.is_slower_replica or not ns.is_healthy:
@@ -244,8 +244,9 @@ class NameServers(list):
         test_servers.append(ns)
         tested.append((ns.ip, other_ns.ip))
 
+      self.msg('Checking nameservers for slow replicas', count=index+1,
+               total=len(ns_by_fastest))
       self.RunCacheCollusionThreads(other_ns, test_servers)
-    print ''
 
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     """Schedule and manage threading for cache collusion checks."""
@@ -275,12 +276,12 @@ class NameServers(list):
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
-    sys.stdout.write('- Checking the health of %s nameservers: ' % len(self))
-    sys.stdout.flush()
-    for chunk in util.SplitSequence(self, self.thread_count):
+    for (index, chunk) in enumerate(util.SplitSequence(self, self.thread_count)):
+      self.msg('Launching health check threads', count=index+1, total=self.thread_count)
       thread = TestNameServersThread(chunk)
       thread.start()
       threads.append(thread)
-    for thread in threads:
+
+    for (index, thread) in enumerate(threads):
+      self.msg('Waiting for health check threads', index+1, len(threads))
       thread.join()
-    print ''

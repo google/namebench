@@ -47,7 +47,7 @@ MIN_SHARING_DELTA_MS = 2
 MAX_SHARING_DELTA_MS = 240
 
 # How many checks to consider when calculating ns check_duration
-SHARED_CACHE_TIMEOUT_MULTIPLIER = 3
+SHARED_CACHE_TIMEOUT_MULTIPLIER = 2.25
 CHECK_DURATION_MAX_COUNT = 9
 
 class NameServer(object):
@@ -217,7 +217,6 @@ class NameServer(object):
       hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
     (response, duration, exc) = self.TimedRequest('A', hostname,
                                                   timeout=timeout)
-#    print "%s -> %s" % (self, hostname)
     ttl = None
     if not response:
       is_broken = True
@@ -263,14 +262,14 @@ class NameServer(object):
     )
     # Try again, but only once. Do penalize them for the first fail however.
     if is_broken:
-      sys.stdout.write('t')
+      sys.stdout.write('_')
       (response, is_broken, warning, duration2) = self.QueryWildcardCache(
           cache_id,
           save=False,
           timeout=timeout
       )
       if is_broken:
-        sys.stdout.write('T')
+        sys.stdout.write('o')
     self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
@@ -286,8 +285,6 @@ class NameServer(object):
           faster = other_ns
 
         if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
-#          print "%s (%s vs %s) has delta %s for TTL %s" % (cache_id, self, other_ns, delta,
-#                                                response.answer[0].ttl)
           return (True, slower, faster)
 
     return (False, None, None)

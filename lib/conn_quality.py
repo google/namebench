@@ -23,7 +23,7 @@ import nameserver
 import util
 
 OPENDNS_NS = '208.67.220.220'
-EXPECTED_CONGESTION_DURATION = 90.0
+EXPECTED_CONGESTION_DURATION = 65.0
 
 class ConnectionQuality(object):
   def GetInterceptionStatus(self):
@@ -50,7 +50,4 @@ class ConnectionQuality(object):
     g_duration = self.GetNegativeResponseDuration()
     duration = util.CalculateListAverage((i_duration, g_duration))
     congestion = duration / EXPECTED_CONGESTION_DURATION
-    print '- Intercept query took %.1fms, Congestion query took %.1fms' % (i_duration, g_duration)
-    if congestion > 1:
-      print '- Queries are running %.1fX slower than expected, increasing timeouts.' % congestion
-    return (intercepted, congestion)
+    return (intercepted, congestion, duration)

@@ -33,6 +33,119 @@ from lib import conn_quality
 
 VERSION = '0.8.7'
 
+class NameBenchCli(object):
+  def __init__(self, cli_options, args):
+    (self.options, self.primary_ns, self.secondary_ns) = config.ProcessConfiguration(cli_options)
+    for arg in args:
+      if '.' in arg:
+        self.primary_ns.append((arg, arg))
+
+  def msg(self, msg, count=None, total=None):
+    if not total:
+      print '- %s' % msg
+    elif count == 1:
+      sys.stdout.write('- %s: %s/%s' % (msg, count, total))
+    elif count == total:
+      sys.stdout.write('%s/%s\n' % (count, total))
+    else:
+      # Avoid overly long lines of dots
+      if total < 50:
+        sys.stdout.write('.')
+      elif count % (total / 50):
+        sys.stdout.write('.')
+    sys.stdout.flush()
+
+  def PrepareNameservers(self):
+    include_internal = True
+    if self.options.only:
+      include_internal = False
+      if not self.primary_ns:
+        print 'If you use --only, you must provide nameservers to use.'
+        sys.exit(1)
+
+    nameservers = nameserver_list.NameServers(
+        self.primary_ns, self.secondary_ns,
+        num_servers=self.options.num_servers,
+        include_internal=include_internal,
+        timeout=self.options.timeout,
+        health_timeout=self.options.health_timeout,
+        status_callback=self.msg
+    )
+    cq = conn_quality.ConnectionQuality()
+    (intercepted, congestion, duration) = cq.CheckConnectionQuality()
+
+    if intercepted:
+      print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+      print 'XX Someone upstream of this machine is doing evil things and  XX'
+      print 'XX intercepting all outgoing nameserver requests. The results XX'
+      print 'XX of this program will be useless. Get your ISP to fix it.   XX'
+      print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+      print ''
+    if congestion > 1:
+      nameservers.ApplyCongestionFactor(congestion)
+      print('- Congestion connection detected (%.1fX slower than expected), '
+            'timeouts increased to (%.1fms,%.1fms)' %
+            (congestion, nameservers.timeout, nameservers.health_timeout))
+    else:
+      print('- Connection looks healthy, check duration took %.0fms' % duration)
+    if len(nameservers) > 1:
+      nameservers.thread_count = int(self.options.thread_count)
+      nameservers.cache_dir = tempfile.gettempdir()
+      nameservers.FindAndRemoveUndesirables()
+    print ''
+    print 'Final list of nameservers to benchmark:'
+    print '-' * 78
+    for ns in nameservers.SortByFastest():
+      if ns.warnings:
+        add_text = '# ' + ', '.join(ns.warnings)
+      else:
+        add_text = ''
+      print '%-15.15s %-16.16s %-4.0fms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
+    print ''
+    return nameservers
+
+  def PrepareBenchmark(self, nameservers):
+    if self.options.import_file:
+      importer = history_parser.HistoryParser()
+      history = importer.Parse(self.options.import_file)
+      if history:
+        print '- Imported %s records from %s' % (len(history), self.options.import_file)
+      else:
+        print '- Could not import anything from %s' % self.options.import_file
+        sys.exit(2)
+    else:
+      history = None
+
+    bmark = benchmark.Benchmark(nameservers,
+                                run_count=self.options.run_count,
+                                test_count=self.options.test_count,
+                                status_callback=self.msg)
+    if history:
+      bmark.CreateTests(history, select_mode=self.options.select_mode)
+    else:
+      bmark.CreateTestsFromFile(self.options.data_file, select_mode=self.options.select_mode)
+
+    return bmark
+
+  def Execute(self):
+    print('namebench %s - %s (%s) on %s' %
+          (VERSION, self.options.import_file or self.options.data_file, self.options.select_mode,
+           datetime.datetime.now()))
+    print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
+           (self.options.thread_count, self.options.test_count, self.options.run_count, self.options.timeout,
+            self.options.health_timeout, self.options.num_servers))
+    print '-' * 78
+
+    nameservers = self.PrepareNameservers()
+    bmark = self.PrepareBenchmark(nameservers)
+    bmark.Run()
+    print bmark.CreateReport()
+    if self.options.output_file:
+      print ''
+      print '* Saving detailed results to %s' % self.options.output_file
+      bmark.SaveResultsToCsv(self.options.output_file)
+
+
 if __name__ == '__main__':
   parser = optparse.OptionParser()
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
@@ -65,93 +178,6 @@ if __name__ == '__main__':
   parser.add_option('-O', '--only', dest='only',
                     action='store_true',
                     help='Only test nameservers passed as arguments')
-  (cli_options, args) = parser.parse_args()
-  (opt, primary_ns, secondary_ns) = config.ProcessConfiguration(cli_options)
-  for arg in args:
-    if '.' in arg:
-      primary_ns.append((arg, arg))
-
-  include_internal = True
-  if opt.only:
-    include_internal = False
-    if not primary_ns:
-      print 'If you use --only, you must provide nameservers to use.'
-      sys.exit(1)
-
-  print('namebench %s - %s (%s) on %s' %
-        (VERSION, opt.import_file or opt.data_file, opt.select_mode,
-         datetime.datetime.now()))
-  print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
-         (opt.thread_count, opt.test_count, opt.run_count, opt.timeout,
-          opt.health_timeout, opt.num_servers))
-  print '-' * 78
-
-  if opt.import_file:
-    importer = history_parser.HistoryParser()
-    history = importer.Parse(opt.import_file)
-    if history:
-      print '- Imported %s records from %s' % (len(history), opt.import_file)
-    else:
-      print '- Could not import anything from %s' % opt.import_file
-      sys.exit(2)
-  else:
-    history = None
-
-  nameservers = nameserver_list.NameServers(primary_ns, secondary_ns,
-                                            num_servers=opt.num_servers,
-                                            include_internal=include_internal,
-                                            timeout=opt.timeout,
-                                            health_timeout=opt.health_timeout)
-  cq = conn_quality.ConnectionQuality()
-  (intercepted, congestion) = cq.CheckConnectionQuality()
-  if intercepted:
-    print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    print 'XX Someone upstream of this machine is doing evil things and  XX'
-    print 'XX intercepting all outgoing nameserver requests. The results XX'
-    print 'XX of this program will be useless. Get your ISP to fix it.   XX'
-    print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    print ''
-  if congestion > 1:
-    nameservers.ApplyCongestionFactor(congestion)
-  if len(nameservers) > 1:
-    nameservers.thread_count = int(opt.thread_count)
-    nameservers.cache_dir = tempfile.gettempdir()
-    nameservers.FindAndRemoveUndesirables()
-  print ''
-  print 'Final list of nameservers to benchmark:'
-  print '-' * 78
-  for ns in nameservers.SortByFastest():
-    if ns.warnings:
-      add_text = '# ' + ', '.join(ns.warnings)
-    else:
-      add_text = ''
-    print '%-15.15s %-16.16s %-4.0fms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
-  print ''
-
-  bmark = benchmark.Benchmark(nameservers,
-                              run_count=opt.run_count,
-                              test_count=opt.test_count)
-  if history:
-    bmark.CreateTests(history, select_mode=opt.select_mode)
-  else:
-    bmark.CreateTestsFromFile(opt.data_file, select_mode=opt.select_mode)
-
-  bmark.Run()
-  bmark.DisplayResults()
-  if opt.output_file:
-    print ''
-    print '* Saving detailed results to %s' % opt.output_file
-    bmark.SaveResultsToCsv(opt.output_file)
-
-  best = bmark.BestOverallNameServer()
-  nearest = [x for x in bmark.NearestNameServers(3) if x.ip != best.ip][0:2]
-
-  print ''
-  print 'Recommended Configuration (fastest + nearest):'
-  print '----------------------------------------------'
-  for ns in [best] + nearest:
-    if ns.warnings:
-      warning = '(%s)' % ', '.join(ns.warnings)
-    else:
-      warning = ''
-    print 'nameserver %-15.15s # %s %s' % (ns.ip, ns.name, warning)
+  (options, args) = parser.parse_args()
+  cli = NameBenchCli(options, args)
+  cli.Execute()
