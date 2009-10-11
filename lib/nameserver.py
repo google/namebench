@@ -108,12 +108,19 @@ class NameServer(object):
     record = dns.name.from_text(record_string, None)
     return_type = dns.rdataclass.IN
 
-    # Ocassionally we will fail
-    try:
-      request = dns.message.make_query(record, request_type, return_type)
-    except IndexError, exc:
-      print '- Error creating packet: %s (trying again)' % exc
-      request = dns.message.make_query(record, request_type, return_type)
+    # There is a bug in dns/entropy.py:64 that causes IndexErrors ocassionally
+    tries = 0
+    success = False
+    while not success and tries < 5:
+      tries += 1
+      try:
+        request = dns.message.make_query(record, request_type, return_type)
+        success = True
+      except IndexError, exc:
+        print 'Waiting for entropy (%s)' % exc
+        time.sleep(0.5)
+        success = False
+        request = dns.message.make_query(record, request_type, return_type)
 
     if not timeout:
       timeout = self.timeout
