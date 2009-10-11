@@ -181,7 +181,7 @@ class NameServers(list):
     cpath = self._SecondaryCachePath()
     cached = self.InvokeSecondaryCache()
     if not cached:
-      self.msg('- Building initial DNS cache for %s nameservers [%s threads]' %
+      self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
                (len(self), self.thread_count))
     self.RunHealthCheckThreads()
     self.RemoveUndesirables(target_count=int(self.num_servers * NS_CACHE_SLACK))
@@ -207,14 +207,14 @@ class NameServers(list):
       try:
         return pickle.load(cf)
       except EOFError:
-        self.msg('- No usable data in %s' % cpath)
+        self.msg('No cached nameserver data found')
     return False
 
   def _UpdateSecondaryCache(self, cpath):
     """Update the cache with our object."""
     cf = open(cpath, 'w')
     try:
-      pickle.dump(self, cf)
+      pickle.dump(list(self), cf)
     except TypeError, exc:
       self.msg('Could not save cache: %s' % exc)
 
