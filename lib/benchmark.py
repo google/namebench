@@ -25,6 +25,7 @@ import csv
 import operator
 import random
 import sys
+import math
 
 import third_party
 import dns.rcode
@@ -194,12 +195,18 @@ class Benchmark(object):
       chart.append((ns.name, textbar, overall_mean))
     return chart
 
-  def CreateReport(self, format='ascii', output_path=None):
+  def CreateReport(self, format='ascii', output_fp=None):
     lowest_latency = self._LowestLatencyAsciiChart()
     mean_duration = self._MeanRequestAsciiChart()
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
+    # This was used to enforce consistent scaling between min/mean graphs.
+    duration_scale = math.ceil(max(sorted_averages[-1][2]))
+
     runs_data = [(x[0].name, x[2]) for x in sorted_averages]
     mean_duration_url = charts.PerRunDurationBarGraph(runs_data)
+    min_duration_url = charts.MinimumDurationBarGraph(self.FastestNameServerResult())
+    distribution_url_200 = charts.DistributionLineGraph(self.DigestedResults(),
+                                                        scale=200)
     distribution_url = charts.DistributionLineGraph(self.DigestedResults())
 
     best = self.BestOverallNameServer()
@@ -213,14 +220,15 @@ class Benchmark(object):
         lowest_latency=lowest_latency,
         mean_duration=mean_duration,
         mean_duration_url=mean_duration_url,
+        min_duration_url=min_duration_url,
         distribution_url=distribution_url,
+        distribution_url_200=distribution_url_200,
         recommended=recommended
     )
 
-    if not output_path:
-      return rendered
+    if output_fp:
+      output_fp.write(rendered)
     else:
-      # TODO(tstromberg): Implement file output.
       return rendered
 
   def DigestedResults(self):

@@ -17,18 +17,18 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import itertools
+import math
 import re
 import urllib
 from third_party.graphy import common
 from third_party.graphy.backends import google_chart_api
 
-# How many ms to display in the distribution graph.
-MAX_DIST_MS = 350
 CHART_URI = 'http://chart.apis.google.com/chart'
 BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',
                '9900ff', '9f5734', '000000', '7b9f34', '3090c0', '477248f',
                'ababab', 'ff0000', '00ff00', '0000ff', '9900ff', '405090',
                '051290', 'f3e000', '9030f0', 'f03060', 'e0a030', '4598cd')
+
 
 def DarkenHexColorCode(color, shade=1):
   """Given a color in hex format (for HTML), darken it X shades."""
@@ -47,17 +47,17 @@ def DarkenHexColorCode(color, shade=1):
   return ''.join(new_color)
 
 
-def _GoodTicks(max_value, tick_size=5, num_ticks=10):
+def _GoodTicks(max_value, tick_size=5.0, num_ticks=10.0):
   """Find a good round tick size to use in graphs."""
   try_tick = tick_size
   while try_tick < max_value:
     if (max_value / try_tick) > num_ticks:
       try_tick *= 2
     else:
-      return try_tick
+      return int(round(try_tick))
 
 
-def PerRunDurationBarGraph(run_data):
+def PerRunDurationBarGraph(run_data, scale=None):
   """Output a Google Chart API URL showing per-run durations."""
   chart = google_chart_api.BarChart()
   chart.vertical = False
@@ -72,22 +72,54 @@ def PerRunDurationBarGraph(run_data):
       if run_num not in runs:
         runs[run_num] = []
 
-      runs[run_num].append(int(round(run_avg)))
+      runs[run_num].append(run_avg)
       if run_avg > max_run_avg:
         max_run_avg = run_avg
 
-  for run_num in sorted(runs):
-    chart.AddBars(runs[run_num], label='Run %s' % (run_num+1),
-                  color=DarkenHexColorCode('4684ee', run_num*3))
+  if not scale:
+    scale = int(math.ceil(max_run_avg / 5) * 5)
 
-  tick = _GoodTicks(max_run_avg, num_ticks=15)
-  labels = range(0, int(round(max_run_avg))+tick, tick)
+  if len(runs) == 1:
+    chart.AddBars(runs[0])
+  else:
+    for run_num in sorted(runs):
+      chart.AddBars(runs[run_num], label='Run %s' % (run_num+1),
+                    color=DarkenHexColorCode('4684ee', run_num*3))
+
+  tick = _GoodTicks(scale, num_ticks=15.0)
+  labels = range(0, scale, tick) + [scale]
   chart.bottom.min = 0
-  year_axis = chart.AddAxis('x', common.Axis())
-  year_axis.labels = ['Duration in ms.']
-  year_axis.label_positions = [int((max_run_avg/2.0)*.9)]
+  chart.display.enhanced_encoding = True
+  bottom_axis = chart.AddAxis('x', common.Axis())
+  bottom_axis.labels = ['Duration in ms.']
+  bottom_axis.label_positions = [int((max_run_avg/2.0)*.9)]
   chart.bottom.labels = labels
   chart.bottom.max = labels[-1]
+  return chart.display.Url(900, 320)
+
+
+def MinimumDurationBarGraph(fastest_data, scale=None):
+  """Output a Google Chart API URL showing minimum-run durations."""
+  chart = google_chart_api.BarChart()
+  chart.vertical = False
+  chart.bottom.label_gridlines = True
+  chart.bottom.label_positions = chart.bottom.labels
+  chart.AddBars([x[1] for x in fastest_data])
+  chart.left.labels = [x[0].name for x in fastest_data]
+
+  slowest_time = fastest_data[-1][1]
+  if not scale:
+    scale = int(math.ceil(slowest_time / 5) * 5)
+
+  tick = _GoodTicks(scale, num_ticks=15.0)
+  labels = range(0, scale, tick) + [scale]
+  chart.bottom.min = 0
+  chart.bottom.max = scale
+  chart.display.enhanced_encoding = True
+  bottom_axis = chart.AddAxis('x', common.Axis())
+  bottom_axis.labels = ['Duration in ms.']
+  bottom_axis.label_positions = [int((scale/2.0)*.9)]
+  chart.bottom.labels = labels
   return chart.display.Url(900, 320)
 
 
@@ -150,7 +182,7 @@ def _SortDistribution(a, b):
   return cmp(a[0].name, b[0].name)
 
 
-def DistributionLineGraph(run_data, maximum_x=MAX_DIST_MS):
+def DistributionLineGraph(run_data, scale=None):
   """Return a Google Chart API URL showing duration distribution per ns."""
 
   # TODO(tstromberg): Rewrite this method using graphy. Graphy does not
@@ -163,8 +195,10 @@ def DistributionLineGraph(run_data, maximum_x=MAX_DIST_MS):
   colors = BASE_COLORS[0:len(distribution)]
 
   max_value = _MaximumRunDuration(run_data)
-  if maximum_x < max_value:
-    max_value = maximum_x
+  if not scale:
+    scale = max_value
+  elif scale < max_value:
+    max_value = scale
 
   scale = max_value / 100.0
 
