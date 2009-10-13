@@ -47,7 +47,7 @@ def DarkenHexColorCode(color, shade=1):
   return ''.join(new_color)
 
 
-def _GoodTicks(max_value, tick_size=5.0, num_ticks=10.0):
+def _GoodTicks(max_value, tick_size=2.5, num_ticks=10.0):
   """Find a good round tick size to use in graphs."""
   try_tick = tick_size
   while try_tick < max_value:
@@ -55,7 +55,7 @@ def _GoodTicks(max_value, tick_size=5.0, num_ticks=10.0):
       try_tick *= 2
     else:
       return int(round(try_tick))
-
+  
 
 def PerRunDurationBarGraph(run_data, scale=None):
   """Output a Google Chart API URL showing per-run durations."""
