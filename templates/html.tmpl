@@ -1,0 +1,24 @@
+<html>
+<head><title>namebench output for {{ date }}</title></head>
+<body>
+
+<h2>Recommended configuration (fastest + nearest)</h2>
+<pre>{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, warning) }}{% endfor %}</pre>
+
+<h2>Per-Run Mean Request Duration Chart</h2>
+<img src="{{ mean_duration_url }}">
+
+<h2>Minimum Request Duration Chart</h2>
+<img src="{{ min_duration_url }}">
+
+<h2>Detailed Request Duration Distribution Chart (First 200ms)</h2>
+
+<img src="{{ distribution_url_200 }}">
+
+<h2>Detailed Request Duration Distribution Chart (Full)</h2>
+
+<img src="{{ distribution_url }}">
+
+
+</body>
+</html>
