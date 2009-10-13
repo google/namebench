@@ -162,6 +162,7 @@ class Benchmark(object):
 
   def FastestNameServerResult(self):
     """Process all runs for all hosts, yielding an average for each host."""
+    # TODO(tstromberg): This should not count queries which failed.
     return [(x[0], min(x[1])) for x in self.DigestedResults()]
 
   def BestOverallNameServer(self):

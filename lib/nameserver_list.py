@@ -157,7 +157,7 @@ class NameServers(list):
         self.remove(ns)
         if display_rejections or ns.is_primary:
           (test, is_broken, warning, duration) = ns.failure
-          print("* Removing %s: %s %s (%sms)" % (ns, test, warning, duration))
+          print("* Removing %s: %s %s (%.0fms)" % (ns, test, warning, duration))
       elif ns.is_slower_replica:
         self.remove(ns)
         if display_rejections:

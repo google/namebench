@@ -87,8 +87,6 @@ class NameServer(object):
   def __repr__(self):
     return self.__str__()
 
-  def Query(self, request, timeout):
-    return dns.query.udp(request, self.ip, timeout, 53)
 
   def TimedRequest(self, type_string, record_string, timeout=None,
                    timer=DEFAULT_TIMER):
@@ -129,7 +127,7 @@ class NameServer(object):
     duration = None
     try:
       start_time = timer()
-      response = self.Query(request, timeout)
+      response = dns.query.udp(request, self.ip, timeout, 53)
       duration = timer() - start_time
     except (dns.exception.Timeout), exc:
       response = None
