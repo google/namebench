@@ -13,14 +13,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Code to read/process the config file."""
+"""Define and process configuration from command-line or config file."""
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import optparse
 import ConfigParser
 
+def GetConfiguration(filename='namebench.cfg'):
+  (options, args) = DefineAndParseOptions(filename=filename)
+  (configured_options, primary, secondary) = ProcessConfigurationFile(options)
+  for arg in args:
+    if '.' in arg:
+      primary.append((arg, arg))
+  return (configured_options, primary, secondary)
 
-def ProcessConfiguration(options):
+def DefineAndParseOptions(filename='namebench.cfg'):
+  """Get our option configuration setup.
+  
+  Returns: tuple of (OptionParser object, args)
+  """  
+  parser = optparse.OptionParser()
+  parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
+                    help='Number of test runs to perform on each nameserver.')
+  parser.add_option('-c', '--config', dest='config', default=filename,
+                    help='Config file to use.')
+  parser.add_option('-o', '--output', dest='output_file', default='output.csv',
+                    help='Filename to write query results to (CSV format).')
+  parser.add_option('-j', '--threads', dest='thread_count',
+                    help='# of threads to use')
+  parser.add_option('-y', '--timeout', dest='timeout', type='float',
+                    help='# of seconds general requests timeout in.')
+  parser.add_option('-Y', '--health_timeout', dest='health_timeout',
+                    type='float', help='health check timeout (in seconds)')
+  parser.add_option('-f', '--filename', dest='data_file',
+                    default='data/alexa-top-10000-global.txt',
+                    help='File containing a list of domain names to query.')
+  parser.add_option('-i', '--import', dest='import_file',
+                    help=('Import history from safari, google_chrome, '
+                          'internet_explorer, opera, squid, or a file path.'))
+  parser.add_option('-t', '--tests', dest='test_count', type='int',
+                    help='Number of queries per run.')
+  parser.add_option('-x', '--select_mode', dest='select_mode',
+                    default='weighted',
+                    help='Selection algorithm to use (weighted, random, chunk)')
+  parser.add_option('-s', '--num_servers', dest='num_servers',
+                    type='int', help='Number of nameservers to include in test')
+  parser.add_option('-S', '--no_secondary', dest='no_secondary',
+                    action='store_true', help='Disable secondary servers')
+  parser.add_option('-O', '--only', dest='only',
+                    action='store_true',
+                    help='Only test nameservers passed as arguments')
+  return parser.parse_args()  
+
+def ProcessConfigurationFile(options):
   """Process configuration file, merge configuration with OptionParser.
 
   Args:

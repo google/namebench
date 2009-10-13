@@ -22,7 +22,6 @@ Designed to assist system administrators in selection and prioritization.
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
-import optparse
 import sys
 import tempfile
 from lib import benchmark
@@ -34,11 +33,10 @@ from lib import conn_quality
 VERSION = '0.8.9'
 
 class NameBenchCli(object):
-  def __init__(self, cli_options, args):
-    (self.options, self.primary_ns, self.secondary_ns) = config.ProcessConfiguration(cli_options)
-    for arg in args:
-      if '.' in arg:
-        self.primary_ns.append((arg, arg))
+  def __init__(self, options, primary_ns, secondary_ns):
+    self.options = options
+    self.primary_ns = primary_ns
+    self.secondary_ns = secondary_ns
 
   def msg(self, msg, count=None, total=None):
     if not total:
@@ -143,37 +141,6 @@ class NameBenchCli(object):
 
 
 if __name__ == '__main__':
-  parser = optparse.OptionParser()
-  parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
-                    help='Number of test runs to perform on each nameserver.')
-  parser.add_option('-c', '--config', dest='config', default='namebench.cfg',
-                    help='Config file to use.')
-  parser.add_option('-o', '--output', dest='output_file', default='output.csv',
-                    help='Filename to write query results to (CSV format).')
-  parser.add_option('-j', '--threads', dest='thread_count',
-                    help='# of threads to use')
-  parser.add_option('-y', '--timeout', dest='timeout', type='float',
-                    help='# of seconds general requests timeout in.')
-  parser.add_option('-Y', '--health_timeout', dest='health_timeout',
-                    type='float', help='health check timeout (in seconds)')
-  parser.add_option('-f', '--filename', dest='data_file',
-                    default='data/alexa-top-10000-global.txt',
-                    help='File containing a list of domain names to query.')
-  parser.add_option('-i', '--import', dest='import_file',
-                    help=('Import history from safari, google_chrome, '
-                          'internet_explorer, opera, squid, or a file path.'))
-  parser.add_option('-t', '--tests', dest='test_count', type='int',
-                    help='Number of queries per run.')
-  parser.add_option('-x', '--select_mode', dest='select_mode',
-                    default='weighted',
-                    help='Selection algorithm to use (weighted, random, chunk)')
-  parser.add_option('-s', '--num_servers', dest='num_servers',
-                    type='int', help='Number of nameservers to include in test')
-  parser.add_option('-S', '--no_secondary', dest='no_secondary',
-                    action='store_true', help='Disable secondary servers')
-  parser.add_option('-O', '--only', dest='only',
-                    action='store_true',
-                    help='Only test nameservers passed as arguments')
-  (options, args) = parser.parse_args()
-  cli = NameBenchCli(options, args)
+  (options, primary, secondary) = config.GetConfiguration()
+  cli = NameBenchCli(options, primary, secondary)
   cli.Execute()

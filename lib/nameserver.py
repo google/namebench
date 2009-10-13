@@ -109,13 +109,13 @@ class NameServer(object):
     # There is a bug in dns/entropy.py:64 that causes IndexErrors ocassionally
     tries = 0
     success = False
-    while not success and tries < 5:
+    while not success and tries < 10:
       tries += 1
       try:
         request = dns.message.make_query(record, request_type, return_type)
         success = True
       except IndexError, exc:
-        print 'Waiting for entropy (%s)' % exc
+        print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
         time.sleep(0.5)
         success = False
         request = dns.message.make_query(record, request_type, return_type)
