@@ -44,7 +44,7 @@ class controller(NSWindowController):
   def awakeFromNib(self):
     """Initializes our class."""
     conf_file = os.path.join(NB_SOURCE, 'namebench.cfg')
-    (self.options, self.primary, self.secondary) = config.GetConfiguration(filename=conf_file)
+    (self.options, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
     self.imported_records = None
     self.updateStatus('Discovering sources')
@@ -80,10 +80,14 @@ class controller(NSWindowController):
     if not int(self.include_global.stringValue()):
       self.updateStatus('Not using primary')
       self.primary = []
+    else:
+      self.primary = self.global_ns
     if not int(self.include_regional.stringValue()):
       self.updateStatus('Not using secondary')
       self.secondary = []
-      
+    else:
+      self.secondary = self.regional_ns
+
     self.select_mode = self.selection_mode.titleOfSelectedItem().lower()
     input_choice = self.data_source.titleOfSelectedItem()
     for source in self.sources:
@@ -93,8 +97,14 @@ class controller(NSWindowController):
         if src_type:
           self.imported_records = self.imported_sources[source[0]]
         
-    for ns in re.split('[, ]+', self.nameserver_form.stringValue()):
-      self.primary.append((ns,ns))
+    for ip in re.split('[, ]+', self.nameserver_form.stringValue()):
+      if re.match('\d+\.\d+\.\d+\.+\d+', ip):
+        self.primary.append((ip,ip))
+      else:
+        NSLog("%s does not look like an IP, ignoring" % ip)
+
+    for (ip, name) in self.primary:
+      NSLog("Using Global NS: %s [%s]" % (ip, name))
 
     self.options.test_count = int(self.num_tests.stringValue())
     self.options.run_count = int(self.num_runs.stringValue())
