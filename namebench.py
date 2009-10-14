@@ -130,6 +130,7 @@ class NameBenchCli(object):
     nameservers = self.PrepareNameservers()
     bmark = self.PrepareBenchmark(nameservers)
     bmark.Run()
+    print ''
     print bmark.CreateReport()
     if self.options.output_file:
       print ''

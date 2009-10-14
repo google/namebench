@@ -1,24 +1,15 @@
-
-Lowest latency for an individual query (in milliseconds):
--------------------------------------------------------------
+Fastest individual response (in milliseconds):
+----------------------------------------------
 {% for item in lowest_latency %}{{ "%-16.16s %s %2.5f\n"|format(item[0], item[1], item[2]) }}{% endfor %}
-Lowest latency for an individual query Chart URL (in milliseconds):
--------------------------------------------------------------------
-{{ min_duration_url }}
-
-Overall Mean Request Duration (in milliseconds):
-------------------------------------------------
+Mean response (in milliseconds):
+--------------------------------
 {% for item in mean_duration %}{{ "%-16.16s %s %2.2f\n"|format(item[0], item[1], item[2]) }}{% endfor %}
-Per-Run Mean Request Duration Chart URL:
+Response Distribution Chart URL (200ms):
 ----------------------------------------
-{{ mean_duration_url }}
-
-Detailed Request Duration Distribution Chart URL (200ms):
----------------------------------------------------------
 {{ distribution_url_200 }}
 
-Detailed Request Duration Distribution Chart URL (Full):
---------------------------------------------------------
+Response Distribution Chart URL (Full):
+---------------------------------------
 {{ distribution_url }}
 
 Recommended configuration (fastest + nearest):
