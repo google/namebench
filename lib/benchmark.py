@@ -186,7 +186,7 @@ class Benchmark(object):
 
   def _LowestLatencyAsciiChart(self):
     """Return a simple set of tuples to generate an ASCII chart from."""
-    fastest = self.FastestNameServerResult(),
+    fastest = self.FastestNameServerResult()
     slowest_result = fastest[-1][1]
     chart = []
     for (ns, duration) in fastest:

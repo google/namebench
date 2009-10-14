@@ -79,5 +79,3 @@ ppns2.phx.paypal.com. 73170 IN A 66.211.168.227"""
     elif self.ip == SLOW_IP:
       time.sleep(0.03)
     return answer
-
-

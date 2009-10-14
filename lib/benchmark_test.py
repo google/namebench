@@ -138,5 +138,14 @@ class BenchmarkTest(unittest.TestCase):
     fastest = [(x[0].ip, x[1]) for x in b.FastestNameServerResult()]
     self.assertEquals(fastest, expected)
 
+    expected = [
+        (None, '####', 3.2999999999999998),
+        (None, '##########', 9.8000000000000007),
+        (None, '###########################', 26.100000000000001),
+        (None, '############################################################',
+         60)
+    ]
+    self.assertEquals(b._LowestLatencyAsciiChart(), expected)
+
 if __name__ == '__main__':
   unittest.main()
