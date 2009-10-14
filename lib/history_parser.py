@@ -31,16 +31,23 @@ class HistoryParser(object):
 
   def __init__(self):
     self.TYPES = {
-        'chrome': self.GoogleChromeHistoryPath,
-        'chromium': self.ChromiumHistoryPath,
-        'epiphany': self.EpiphanyHistoryPath,
-        'opera': self.OperaHistoryPath,
-        'safari': self.SafariHistoryPath,
-        'firefox': self.FirefoxHistoryPath,
-        'internet_explorer': self.InternetExplorerHistoryPath,
-        'squid': self.SquidLogPath
+        'chrome': ('Google Chrome', self.GoogleChromeHistoryPath),
+        'chromium': ('Chromium', self.ChromiumHistoryPath),
+        'epiphany': ('Epiphany', self.EpiphanyHistoryPath),
+        'opera': ('Opera', self.OperaHistoryPath),
+        'safari': ('Apple Safari', self.SafariHistoryPath),
+        'firefox': ('Mozilla Firefox', self.FirefoxHistoryPath),
+        'internet_explorer': ('Microsoft Internet Explorer', self.InternetExplorerHistoryPath),
+        'squid': ('Squid Web Proxy', self.SquidLogPath),
     }
 
+  def GetTypes(self):
+    """Return a tuple of type names with a description."""
+    return [(x, self.TYPES[x][1]) for x in self.TYPES]
+  
+  def GetTypeMethod(self, type):
+    return self.TYPES[type][1]    
+  
   def Parse(self, path_or_type):
     if path_or_type.lower() in self.TYPES:
       return self.ParseByType(path_or_type.lower())
@@ -115,7 +122,7 @@ class HistoryParser(object):
                                  sorted_unique=sorted_unique)
 
   def ParseByType(self, source):
-    (history_file_path, tried) = self.FindGlobPath(self.TYPES[source]())
+    (history_file_path, tried) = self.FindGlobPath(self.GetTypeMethod(source)())
     if not history_file_path:
       print "* Could not find data for '%s'. Tried:"
       for path in tried:

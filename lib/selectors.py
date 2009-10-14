@@ -19,6 +19,12 @@ import random
 # When running a weighted distribution, never repeat a domain more than this:
 MAX_REPEAT = 3
 
+TYPES = {
+  'weighted': 'Chooses based on a weighted distribution, preferring entries in the top of the list',
+  'random': 'Random selection, including repeats.',
+  'chunk': 'Chooses a random contiguous segment of entries'
+}
+
 def MaxRepeatCount(elements, count):
   # If we're asked to be crazy, lets be crazy.
   if count > (len(elements) * MAX_REPEAT):
@@ -26,6 +32,11 @@ def MaxRepeatCount(elements, count):
   else:
     return MAX_REPEAT
 
+
+def GetTypes(self):
+  """Return a tuple of type names with a description."""
+  return sorted(TYPES.items())
+  
 def WeightedDistribution(elements, count):
   """Given a set of elements, return a weighted distribution back.
 
