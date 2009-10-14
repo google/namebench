@@ -58,23 +58,25 @@ class BasicChartTests(unittest.TestCase):
     results = charts.PerRunDurationBarGraph(sorted_averages)
     self.assertTrue('e%3AFBM48Y%2CCRNBM' in results)
     expected = (
-        'http://chart.apis.google.com/chart?chxt=y%2Cx%2Cx&chd=e%3AFBM48Y%2CCRN'
-        'BM0&chxp=2%2C31&chxr=1%2C0%2C75%7C2%2C-3.75%2C78.75&chxtc=1%2C-900&'
-        'chco=4684ee%2C00248e&chbh=a&chs=900x320&cht=bhg&chxl=0%3A%7C172.168.1.2'
-        '%7C192.168.1.2%7C10.0.0.1%7C1%3A%7C0%7C5%7C10%7C15%7C20%7C25%7C30%7C35'
-        '%7C40%7C45%7C50%7C55%7C60%7C65%7C70%7C75%7C2%3A%7CDuration%20in%20ms.'
-        '&chdl=Run%201%7CRun%202'
+        'http://chart.apis.google.com/chart?chxt=y%2Cx%2Cx&chd=e%3AFBM48Y%2'
+        'CCRNBM0&chxp=2%2C31&chxr=1%2C0%2C75%7C2%2C-3.75%2C78.75&chxtc=1%2C-720'
+        '&chco=4684ee%2C00248e&chbh=a&chs=720x130&cht=bhg&chxl=0%3A%7C'
+        '172.168.1.2%7C192.168.1.2%7C10.0.0.1%7C1%3A%7C0%7C5%7C10%7C15%7C20'
+        '%7C25%7C30%7C35%7C40%7C45%7C50%7C55%7C60%7C65%7C70%7C75%7C2%3A%7C'
+        'Duration%20in%20ms.&chdl=Run%201%7CRun%202'
     )
     self.assertEqual(results, expected)
 
   def testMinimumDurationBarGraph(self):
     fastest = ((nameserver.NameServer('208.67.220.220', name='OpenDNS'), 10.0),
                (nameserver.NameServer('156.154.70.1', name='UltraDNS'), 15.75))
+
     expected = (
         'http://chart.apis.google.com/chart?chxt=y%2Cx%2Cx&chd=e%3AgAyZ&'
-        'chxp=2%2C9&chxr=1%2C0%2C20%7C2%2C-1.0%2C21.0&chxtc=1%2C-900'
-        '&chco=0000ff&chbh=a&chs=900x320&cht=bhg&chxl=0%3A%7CUltraDNS%7COpenDNS'
-        '%7C1%3A%7C0%7C5%7C10%7C15%7C20%7C2%3A%7CDuration%20in%20ms.'
+        'chxp=2%2C9&chxr=1%2C0%2C20%7C2%2C-1.0%2C21.0&chxtc=1%2C-720'
+        '&chco=0000ff&chbh=a&chs=720x78&cht=bhg&chxl=0%3A%7CUltraDNS%7COpenDNS'
+        '%7C1%3A%7C0%7C3%7C6%7C9%7C12%7C15%7C18%7C20%7C2%3A%7C'
+        'Duration%20in%20ms.'
     )
     self.assertEquals(charts.MinimumDurationBarGraph(fastest), expected)
 
@@ -110,9 +112,9 @@ class DistributionChartTests(unittest.TestCase):
 
   def testDistributionLineGraph(self):
     runs_data = _ExampleRunsData()
-    url = charts.DistributionLineGraph(runs_data, maximum_x=350)
+    url = charts.DistributionLineGraph(runs_data, scale=350)
     expected = (
-        'http://chart.apis.google.com/chart?cht=lxy&chs=825x363&chxt=x,y&'
+        'http://chart.apis.google.com/chart?cht=lxy&chs=720x410&chxt=x,y&'
         'chg=10,20&chxr=0,0,350|1,0,100&chd=t:0,22,23,23,23,23,24,24,24,25,25'
         ',27,36,53,55,75,120|0,3,27,30,37,43,47,53,57,60,63,67,70,73,77,80,83|'
         '0,2,3,3,4,8,15,24,30,41,50,89,91,94,142|0,30,50,53,57,60,63,67,70,73,'

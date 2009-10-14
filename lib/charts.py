@@ -55,7 +55,11 @@ def _GoodTicks(max_value, tick_size=2.5, num_ticks=10.0):
       try_tick *= 2
     else:
       return int(round(try_tick))
-  
+
+
+def _BarGraphHeight(bar_count):
+  return 52 + (bar_count*13)
+
 
 def PerRunDurationBarGraph(run_data, scale=None):
   """Output a Google Chart API URL showing per-run durations."""
@@ -80,9 +84,12 @@ def PerRunDurationBarGraph(run_data, scale=None):
     scale = int(math.ceil(max_run_avg / 5) * 5)
 
   if len(runs) == 1:
+    bar_count = len(runs[0])
     chart.AddBars(runs[0])
   else:
+    bar_count = 0
     for run_num in sorted(runs):
+      bar_count += len(runs[run_num])
       chart.AddBars(runs[run_num], label='Run %s' % (run_num+1),
                     color=DarkenHexColorCode('4684ee', run_num*3))
 
@@ -95,8 +102,7 @@ def PerRunDurationBarGraph(run_data, scale=None):
   bottom_axis.label_positions = [int((max_run_avg/2.0)*.9)]
   chart.bottom.labels = labels
   chart.bottom.max = labels[-1]
-  return chart.display.Url(900, 320)
-
+  return chart.display.Url(720, _BarGraphHeight(bar_count))
 
 def MinimumDurationBarGraph(fastest_data, scale=None):
   """Output a Google Chart API URL showing minimum-run durations."""
@@ -120,7 +126,7 @@ def MinimumDurationBarGraph(fastest_data, scale=None):
   bottom_axis.labels = ['Duration in ms.']
   bottom_axis.label_positions = [int((scale/2.0)*.9)]
   chart.bottom.labels = labels
-  return chart.display.Url(900, 320)
+  return chart.display.Url(720, _BarGraphHeight(len(chart.left.labels)))
 
 
 def _MakeCumulativeDistribution(run_data, x_chunk=0.75, percent_chunk=3):
@@ -219,7 +225,7 @@ def DistributionLineGraph(run_data, scale=None):
     datasets.append(','.join(map(str, y)))
 
   # TODO(tstromberg): See if we can get the % sign in the labels!
-  uri = (('%(uri)s?cht=lxy&chs=825x363&chxt=x,y&chg=10,20'
+  uri = (('%(uri)s?cht=lxy&chs=720x410&chxt=x,y&chg=10,20'
           '&chxr=0,0,%(max)s|1,0,100&chd=t:%(datasets)s&chco=%(colors)s'
           '&chxt=x,y,x,y&chxl=2:||Duration+in+ms||3:||%%25|'
           '&chdl=%(labels)s') %
