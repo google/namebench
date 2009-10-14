@@ -61,6 +61,8 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     type='int', help='Number of nameservers to include in test')
   parser.add_option('-S', '--no_secondary', dest='no_secondary',
                     action='store_true', help='Disable secondary servers')
+  # Silly Mac OS X adding -psn_0_xxxx
+  parser.add_option('-p', '--psn')
   parser.add_option('-O', '--only', dest='only',
                     action='store_true',
                     help='Only test nameservers passed as arguments')
