@@ -20,8 +20,11 @@ import os
 import re
 
 # TODO(tstromberg): Research best practices for bundling cocoa frontends.
-NB_SOURCE = os.getcwd()[0:os.getcwd().index('/cocoa/')]
-sys.path.append(NB_SOURCE)
+if 'namebench/cocoa/' in os.getcwd():
+  NB_SOURCE = os.getcwd()[0:os.getcwd().index('/cocoa/')]
+  sys.path.append(NB_SOURCE)
+else:
+  NB_SOURCE = os.getcwd()
 from lib import config
 from lib import nameserver_list
 from lib import third_party

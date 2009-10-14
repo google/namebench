@@ -8,8 +8,8 @@
 		<string key="IBDocument.HIToolboxVersion">353.00</string>
 		<object class="NSMutableArray" key="IBDocument.EditedObjectIDs">
 			<bool key="EncodedWithXMLCoder">YES</bool>
-			<integer value="391"/>
 			<integer value="29"/>
+			<integer value="394"/>
 		</object>
 		<object class="NSArray" key="IBDocument.PluginDependencies">
 			<bool key="EncodedWithXMLCoder">YES</bool>
@@ -1598,14 +1598,6 @@
 						<reference key="destination" ref="666629269"/>
 					</object>
 					<int key="connectionID">435</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBOutletConnection" key="connection">
-						<string key="label">num_rums</string>
-						<reference key="source" ref="479154853"/>
-						<reference key="destination" ref="351353070"/>
-					</object>
-					<int key="connectionID">438</int>
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBOutletConnection" key="connection">
