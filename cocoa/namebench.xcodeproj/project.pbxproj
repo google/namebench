@@ -14,7 +14,6 @@
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		DCC248331085BB580000DDAC /* Crystal_Clear_app_linneighborhood.png in Resources */ = {isa = PBXBuildFile; fileRef = DCC248321085BB580000DDAC /* Crystal_Clear_app_linneighborhood.png */; };
 		DCC248381085BC3F0000DDAC /* Crystal_Clear_app_linneighborhood.icns in Resources */ = {isa = PBXBuildFile; fileRef = DCC248371085BC3F0000DDAC /* Crystal_Clear_app_linneighborhood.icns */; };
 		DCC47243107F4BB1009BBD14 /* controller.py in Resources */ = {isa = PBXBuildFile; fileRef = DCC47242107F4BB1009BBD14 /* controller.py */; };
 /* End PBXBuildFile section */
@@ -33,7 +32,6 @@
 		77C8C1F80C07829500965286 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* namebench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = namebench.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		DCC248321085BB580000DDAC /* Crystal_Clear_app_linneighborhood.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Crystal_Clear_app_linneighborhood.png; sourceTree = "<group>"; };
 		DCC248371085BC3F0000DDAC /* Crystal_Clear_app_linneighborhood.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Crystal_Clear_app_linneighborhood.icns; sourceTree = "<group>"; };
 		DCC47242107F4BB1009BBD14 /* controller.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = controller.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -113,7 +111,6 @@
 			isa = PBXGroup;
 			children = (
 				DCC248371085BC3F0000DDAC /* Crystal_Clear_app_linneighborhood.icns */,
-				DCC248321085BB580000DDAC /* Crystal_Clear_app_linneighborhood.png */,
 				77C8C1F70C07829500965286 /* MainMenu.xib */,
 				8D1107310486CEB800E47090 /* Info.plist */,
 				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
@@ -178,7 +175,6 @@
 				7790198F0C07548A00326F66 /* namebenchAppDelegate.py in Resources */,
 				77C8C1F90C07829500965286 /* MainMenu.xib in Resources */,
 				DCC47243107F4BB1009BBD14 /* controller.py in Resources */,
-				DCC248331085BB580000DDAC /* Crystal_Clear_app_linneighborhood.png in Resources */,
 				DCC248381085BC3F0000DDAC /* Crystal_Clear_app_linneighborhood.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
