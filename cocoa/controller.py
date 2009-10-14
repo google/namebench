@@ -143,7 +143,8 @@ class controller(NSWindowController):
     bmark.updateStatus = self.updateStatus
     self.updateStatus('Creating test records using %s' % self.select_mode)
     if self.imported_records:
-      bmark.CreateTests(self.imported_records, select_mode=self.select_mode)
+      test_data = history_parser.HistoryParser().GenerateTestData(self.imported_records)      
+      bmark.CreateTests(test_data, select_mode=self.select_mode)
     else:
       bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % RSRC_DIR,
                                 select_mode=self.select_mode)

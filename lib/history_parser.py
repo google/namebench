@@ -120,7 +120,7 @@ class HistoryParser(object):
       if not host.endswith('.'):
         host = host + '.'
 
-      if self.INTERNAL_RE.search(hostname):
+      if self.INTERNAL_RE.search(host):
         continue
 
       if host != last_host:
