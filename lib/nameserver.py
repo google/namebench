@@ -81,6 +81,13 @@ class NameServer(object):
     else:
       return None
 
+  @property
+  def warnings_comment(self, prefix=''):
+    if self.warnings:
+      return prefix + ', '.join(self.warnings)
+    else:
+      return ''
+
   def __str__(self):
     return '%s [%s]' % (self.name, self.ip)
 

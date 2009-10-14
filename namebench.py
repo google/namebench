@@ -89,12 +89,9 @@ class NameBenchCli(object):
     print ''
     print 'Final list of nameservers to benchmark:'
     print '-' * 78
-    for ns in nameservers.SortByFastest():
-      if ns.warnings:
-        add_text = '# ' + ', '.join(ns.warnings)
-      else:
-        add_text = ''
-      print '%-15.15s %-16.16s %-4.0fms %s' % (ns.ip, ns.name, ns.check_duration, add_text)
+    for n in nameservers.SortByFastest():
+      print '%-15.15s %-16.16s %-4.0fms %s' % (n.ip, n.name, n.check_duration,
+                                               n.warnings_comment(prefix='# '))
     print ''
     return nameservers
 
