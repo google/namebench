@@ -20,11 +20,15 @@ import os
 import re
 
 # TODO(tstromberg): Research best practices for bundling cocoa frontends.
-if 'namebench/cocoa/' in os.getcwd():
-  NB_SOURCE = os.getcwd()[0:os.getcwd().index('/cocoa/')]
-  sys.path.append(NB_SOURCE)
+pwd = os.getcwd()
+if 'namebench/cocoa/' in pwd:
+  NSLog("Enabling development mode resource hack")
+  RSRC_DIR = pwd[0:pwd.index('/cocoa/')]
+  sys.path.append(RSRC_DIR)
 else:
-  NB_SOURCE = os.getcwd()
+  RSRC_DIR = os.path.dirname(__file__)
+  
+NSLog("Resource directory is %s" % RSRC_DIR)
 from lib import config
 from lib import nameserver_list
 from lib import third_party
@@ -46,7 +50,8 @@ class controller(NSWindowController):
 
   def awakeFromNib(self):
     """Initializes our class."""
-    conf_file = os.path.join(NB_SOURCE, 'namebench.cfg')
+    conf_file = os.path.join(RSRC_DIR, 'namebench.cfg')
+    NSLog("Using configuration: %s" % conf_file)
     (self.options, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
     self.imported_records = None
@@ -140,7 +145,7 @@ class controller(NSWindowController):
     if self.imported_records:
       bmark.CreateTests(self.imported_records, select_mode=self.select_mode)
     else:
-      bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % NB_SOURCE,
+      bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % RSRC_DIR,
                                 select_mode=self.select_mode)
 
     self.updateStatus('Running...')
