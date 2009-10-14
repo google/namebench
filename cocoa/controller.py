@@ -41,7 +41,29 @@ class controller(NSWindowController):
   status = IBOutlet()
   spinner = IBOutlet()
 
+  def awakeFromNib(self):
+    """Initializes our class."""
+    conf_file = os.path.join(NB_SOURCE, 'namebench.cfg')
+    (self.options, self.primary, self.secondary) = config.GetConfiguration(filename=conf_file)
+    # TODO(tstromberg): Consider moving this into a thread for faster loading.
+    self.imported_records = None
+    self.updateStatus('Discovering sources')
+    self.discoverSources()
+    self.updateStatus('Populating Form...')
+    self.setFormDefaults()
+    self.updateStatus('Ready')
+
+  @IBAction
+  def startJob_(self, sender):
+    """Trigger for the 'Start Benchmark' button, starts benchmark thread."""
+    self.ProcessForm()
+    self.updateStatus('Starting benchmark thread')
+    t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
+    t.start()
+
   def updateStatus(self, message, count=None, total=None):
+    """Update the status message at the bottom of the window."""
+  
     if total and count:
       state = '%s [%s/%s]' % (message, count, total)
     elif count:
@@ -52,20 +74,25 @@ class controller(NSWindowController):
     NSLog(state)
     self.status.setStringValue_(state)
 
-  @IBAction
-  def startJob_(self, sender):
-    self.ProcessForm()
-    self.updateStatus('Starting benchmark thread')
-    t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
-    t.start()
-
   def ProcessForm(self):
+    """Parse the form fields and populate class variables."""
     self.updateStatus('Processing form inputs')
-    if self.include_global.stringValue() == '0':
+    if not int(self.include_global.stringValue()):
+      self.updateStatus('Not using primary')
       self.primary = []
-    elif self.include_regional.stringValue() == '0':
+    if not int(self.include_regional.stringValue()):
+      self.updateStatus('Not using secondary')
       self.secondary = []
-
+      
+    self.select_mode = self.selection_mode.titleOfSelectedItem().lower()
+    input_choice = self.data_source.titleOfSelectedItem()
+    for source in self.sources:
+      if self.sourceToTitle(source) == input_choice:
+        src_type = source[0]
+        self.updateStatus('Parsed source type to %s' % src_type)
+        if src_type:
+          self.imported_records = self.imported_sources[source[0]]
+        
     for ns in re.split('[, ]+', self.nameserver_form.stringValue()):
       self.primary.append((ns,ns))
 
@@ -88,20 +115,25 @@ class controller(NSWindowController):
       self.nameservers.cache_dir = tempfile.gettempdir()
 
   def benchmarkThread(self):
+    """Run the benchmarks, designed to be run in a thread."""
     pool = NSAutoreleasePool.alloc().init()
     self.spinner.startAnimation_(self)
     self.updateStatus('Preparing benchmark')
     self.nameservers.FindAndRemoveUndesirables()
     bmark = benchmark.Benchmark(self.nameservers, test_count=self.options.test_count, run_count=self.options.run_count,
                                 status_callback=self.updateStatus)
-    bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % NB_SOURCE)
-
-    # Patch in our graphical updateStatus method
     bmark.updateStatus = self.updateStatus
+    self.updateStatus('Creating test records using %s' % self.select_mode)
+    if self.imported_records:
+      bmark.CreateTests(self.imported_records, select_mode=self.select_mode)
+    else:
+      bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % NB_SOURCE,
+                                select_mode=self.select_mode)
+
     self.updateStatus('Running...')
     bmark.Run()
     output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
-    output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%m')
+    output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%m')
     report_path = os.path.join(output_dir, '%s.html' % output_base)
     self.updateStatus('Saving report to %s' % report_path)
     f = open(report_path, 'w')
@@ -122,34 +154,36 @@ class controller(NSWindowController):
     pool.release()
 
   def displayError(self, msg, details):
+    """Display an alert drop-down message"""
     alert = NSAlert.alloc().init()
     alert.setMessageText_(msg)
     alert.setInformativeText_(details)
     buttonPressed = alert.runModal()
 
-  def awakeFromNib(self):
-    conf_file = os.path.join(NB_SOURCE, 'namebench.cfg')
-    (self.options, self.primary, self.secondary) = config.GetConfiguration(filename=conf_file)
-    self.updateStatus('Populating Form...')
-    self.setFormDefaults()
-    self.updateStatus('Ready')
 
-  def createSourceList(self):
+  def discoverSources(self):
+    """Seek out and create a list of valid data sources."""
     self.updateStatus('Searching for usable data sources')
     h = history_parser.HistoryParser()
-    source_types = h.GetTypes()
-    imported_sources = h.ParseAllTypes()
-    sources = []
-    for source in imported_sources:
-      sources.append((source, source_types[source], len(imported_sources[source])))
+    source_desc = h.GetTypes()
+    self.imported_sources = h.ParseAllTypes()
+    self.sources = []
+    for src_type in self.imported_sources:
+      self.sources.append(
+        (src_type, source_desc[src_type], len(self.imported_sources[src_type]))
+      )
 
-    # Sort by the input type with the most records first
-    sources.sort(key=operator.itemgetter(2), reverse=True)
+    self.sources.sort(key=operator.itemgetter(2), reverse=True)
     # TODO(tstromberg): Don't hardcode input types.
-    sources.append((None, 'Alexa Top Global Domains', 10000))
-    return sources
+    self.sources.append((None, 'Alexa Top Global Domains', 10000))
+    
+  def sourceToTitle(self, source):
+    """Convert a source tuple to a title."""
+    (short_name, full_name, num_hosts) = source
+    return '%s (%s)' % (full_name, num_hosts)
 
   def setFormDefaults(self):
+    """Set up the form with sane initial values."""
     nameservers_string = ', '.join(util.InternalNameServers())
     self.nameserver_form.setStringValue_(nameservers_string)
     self.num_tests.setStringValue_(self.options.test_count)
@@ -157,9 +191,6 @@ class controller(NSWindowController):
     self.selection_mode.removeAllItems()
     self.selection_mode.addItemsWithTitles_(['Weighted', 'Random', 'Chunk'])
     self.data_source.removeAllItems()
-
-    # TODO(tstromberg): Consider moving this into a thread for faster loading.
-    self.sources = self.createSourceList()
-    for (short_name, full_name, num_hosts) in self.sources:
-      self.data_source.addItemWithTitle_('%s (%s)' % (full_name, num_hosts))
+    for source in self.sources:
+      self.data_source.addItemWithTitle_(self.sourceToTitle(source))
 
