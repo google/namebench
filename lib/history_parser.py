@@ -17,6 +17,7 @@
 import glob
 import operator
 import os
+import os.path
 import re
 import sys
 
@@ -24,8 +25,9 @@ import sys
 class HistoryParser(object):
   """Parse the history file from files and web browsers and such."""
 
-  # At 32MB, switch from replay format to sorted_unique
-  MAX_REPLAY_SIZE = 33554432
+  MAX_NON_UNIQUE_RECORD_COUNT = 500000
+  MIN_FILE_SIZE = 128
+  MIN_RECOMMENDED_RECORD_COUNT = 2
   INTERNAL_RE = re.compile('\.prod|\.corp|\.bor|internal|dmz')
   TYPES = {}
 
@@ -43,28 +45,61 @@ class HistoryParser(object):
 
   def GetTypes(self):
     """Return a tuple of type names with a description."""
-    return [(x, self.TYPES[x][1]) for x in self.TYPES]
-  
+    return dict([(x, self.TYPES[x][0]) for x in self.TYPES])
+
   def GetTypeMethod(self, type):
-    return self.TYPES[type][1]    
-  
+    return self.TYPES[type][1]
+
   def Parse(self, path_or_type):
+    if path_or_type == 'auto':
+      # TODO(tstromberg): complete this method
+      all = self.ParseAllTypes()
+
     if path_or_type.lower() in self.TYPES:
       return self.ParseByType(path_or_type.lower())
     else:
       return self.ParseByFilename(path_or_type)
 
-  def ReadHistoryFile(self, filename):
-    # Only matches http://host.domain type entries (needs at least one sub)
+  def ParseByType(self, source, complain=False):
+    """Given a type, parse the newest file and return a list of hosts."""
+    (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
+    if not paths:
+      if complain:
+        print "* Could not find data for '%s'. Tried:"
+        for path in tried:
+          print path
+      return None
+    newest = sorted(paths, key=os.path.getmtime)[-1]
+    return self.ParseByFilename(newest)
+
+  def ParseAllTypes(self):
+    """For each type we know of, attempt to find and parse each of them.
+
+    Returns:
+      dict of type: list of hosts
+    """
+    results = {}
+
+    for type in self.GetTypes():
+      hosts = self.ParseByType(type)
+      if hosts and len(hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
+        results[type] = hosts
+    return results
+
+  def ParseByFilename(self, filename):
+    # Only matches http://host.domain type entries (needs at least one subdom)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
     print '- Reading history from %s' % filename
-
     # binary mode is necessary for running under Windows
     return parse_re.findall(open(filename, 'rb').read())
 
-  def _HostnameMayBeInternal(self, hostname):
-    if self.INTERNAL_RE.search(hostname):
-      return True
+  def GenerateTestDataFromInput(self, path_or_type):
+    hosts = self.Parse(path_or_type)
+    if len(hosts) > self.MAX_NON_UNIQUE_RECORD_COUNT:
+      sorted_unique = True
+    else:
+      sorted_unique = False
+    return self.GenerateTestData(hosts, sorted_unique=sorted_unique)
 
   def GenerateTestData(self, hosts, sorted_unique=False):
     """Given a set of hosts, generate test data.
@@ -85,7 +120,7 @@ class HistoryParser(object):
       if not host.endswith('.'):
         host = host + '.'
 
-      if self._HostnameMayBeInternal(host):
+      if self.INTERNAL_RE.search(hostname):
         continue
 
       if host != last_host:
@@ -101,50 +136,22 @@ class HistoryParser(object):
         history.append('A %s # %s hits' % (hit, count))
     return history
 
-  def ParseByFilename(self, filename):
-    """Parse a history file, returning a history.
-
-    Args:
-      filename: duh
-
-    Returns:
-      a list of hosts
-
-    If the filename passed is greater than MAX_REPLAY_SIZE, we return a
-    unique list of hosts, sorted by descending popularity. If there are
-    multiple subsequent records for a host, only the first one is parsed.
-    """
-    if os.path.getsize(filename) > self.MAX_REPLAY_SIZE:
-      sorted_unique = True
-    else:
-      sorted_unique = False
-    return self.GenerateTestData(self.ReadHistoryFile(filename),
-                                 sorted_unique=sorted_unique)
-
-  def ParseByType(self, source):
-    (history_file_path, tried) = self.FindGlobPath(self.GetTypeMethod(source)())
-    if not history_file_path:
-      print "* Could not find data for '%s'. Tried:"
-      for path in tried:
-        print path
-      return None
-    return self.ParseByFilename(history_file_path)
-
-  def FindGlobPath(self, paths):
-    """Given a list of glob paths, return the first one with a real file.
+  def FindGlobPaths(self, paths):
+    """Given a list of glob paths, return a list of matches containing data.
 
     Returns:
       A tuple with (file path (str), list of paths checked)
     """
     tried = []
+    found = []
     for path_elements in paths:
       path = os.path.join(*path_elements)
       tried.append(path)
       for filename in glob.glob(path):
-        if os.path.getsize(filename) > 1:
-          return (filename, tried)
+        if os.path.getsize(filename) > self.MIN_FILE_SIZE:
+          found.append(filename)
 
-    return (None, tried)
+    return (found, tried)
 
   def GoogleChromeHistoryPath(self):
     paths = (
