@@ -20,6 +20,7 @@ import time
 import nameserver
 import third_party
 import dns.message
+import dns.rdataclass
 import dns.query
 
 GOOD_IP = '127.0.0.1'
@@ -31,11 +32,9 @@ BROKEN_IP = '192.168.0.1'
 class MockNameServer(nameserver.NameServer):
   """Act like Nameserver, but do not issue any actual queries!"""
 
-  def Query(self, request, timeout):
-    """Return a falsified DNS response."""
-    if self.ip == BROKEN_IP:
-      raise dns.query.BadResponse('This sucks.')
-
+  def FakeAnswer(self, request, no_answer=False):
+    if not request:
+      request = self.CreateRequest('www.com', 'A', dns.rdataclass.IN)
 
     response_text = """id 999
 opcode QUERY
@@ -57,18 +56,28 @@ ppns1.phx.paypal.com. 73170 IN A 66.211.168.226
 ppns2.den.paypal.com. 73170 IN A 216.113.188.122
 ppns2.phx.paypal.com. 73170 IN A 66.211.168.227"""
     msg = dns.message.from_text(response_text)
-    question = str(request.question[0])
-    # We need to fail something!
     msg.question = request.question
+    if no_answer:
+      msg.answer = None
+    return msg
+
+  def Query(self, request, timeout):
+    """Return a falsified DNS response."""
+    question = str(request.question[0])
+    if self.ip == BROKEN_IP:
+      raise dns.query.BadResponse('This sucks.')
+
     if self.ip == NO_RESPONSE_IP:
-      msg.answer = None
+      answer = self.FakeAnswer(request, no_answer=True)
     elif self.ip == GOOD_IP and  'www.google.com' in question:
-      msg.answer = None
+      answer = self.FakeAnswer(request, no_answer=True)
+    else:
+      answer = self.FakeAnswer(request)
 
     if self.ip == GOOD_IP:
       time.sleep(0.001)
     elif self.ip == SLOW_IP:
       time.sleep(0.03)
-    return msg
+    return answer
 
 

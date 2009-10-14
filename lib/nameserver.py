@@ -98,6 +98,23 @@ class NameServer(object):
   def __repr__(self):
     return self.__str__()
 
+  def CreateRequest(self, record, request_type, return_type):
+    """Work around a bug in dns/entropy.py that causes IndexErrors."""
+    tries = 0
+    success = False
+    while not success and tries < 10:
+      tries += 1
+      try:
+        request = dns.message.make_query(record, request_type, return_type)
+        success = True
+      except IndexError, exc:
+        print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
+        time.sleep(0.5)
+        success = False
+    return request
+
+  def Query(self, request, timeout):
+    return dns.query.udp(request, timeout, 53)
 
   def TimedRequest(self, type_string, record_string, timeout=None,
                    timer=DEFAULT_TIMER):
@@ -115,21 +132,7 @@ class NameServer(object):
     """
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)
-    return_type = dns.rdataclass.IN
-
-    # There is a bug in dns/entropy.py:64 that causes IndexErrors ocassionally
-    tries = 0
-    success = False
-    while not success and tries < 10:
-      tries += 1
-      try:
-        request = dns.message.make_query(record, request_type, return_type)
-        success = True
-      except IndexError, exc:
-        print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
-        time.sleep(0.5)
-        success = False
-        request = dns.message.make_query(record, request_type, return_type)
+    request = self.CreateRequest(record, request_type, dns.rdataclass.IN)
 
     if not timeout:
       timeout = self.timeout
@@ -138,7 +141,7 @@ class NameServer(object):
     duration = None
     try:
       start_time = timer()
-      response = dns.query.udp(request, self.ip, timeout, 53)
+      response = self.Query(request, timeout)
       duration = timer() - start_time
     except (dns.exception.Timeout), exc:
       response = None

@@ -163,7 +163,17 @@ class Benchmark(object):
   def FastestNameServerResult(self):
     """Process all runs for all hosts, yielding an average for each host."""
     # TODO(tstromberg): This should not count queries which failed.
-    return [(x[0], min(x[1])) for x in self.DigestedResults()]
+    fastest = []
+    for ns in self.results:
+      # It can't get any worse than this!
+      best_duration = ns.timeout
+      for test_run_results in self.results[ns]:
+        for (host, type, duration, response) in test_run_results:
+          if response and response.answer:
+            if duration < best_duration:
+              best_duration = duration
+      fastest.append((ns, best_duration))
+    return sorted(fastest, key=operator.itemgetter(1))
 
   def BestOverallNameServer(self):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
@@ -176,12 +186,10 @@ class Benchmark(object):
 
   def _LowestLatencyAsciiChart(self):
     """Return a simple set of tuples to generate an ASCII chart from."""
-    min_responses = sorted(self.FastestNameServerResult(),
-                           key=operator.itemgetter(1))
-    slowest_result = min_responses[-1][1]
+    fastest = self.FastestNameServerResult(),
+    slowest_result = fastest[-1][1]
     chart = []
-    for result in min_responses:
-      (ns, duration) = result
+    for (ns, duration) in fastest:
       textbar = util.DrawTextBar(duration, slowest_result)
       chart.append((ns.name, textbar, duration))
     return chart
