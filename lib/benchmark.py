@@ -166,7 +166,7 @@ class Benchmark(object):
     fastest = []
     for ns in self.results:
       # It can't get any worse than this!
-      best_duration = ns.timeout
+      best_duration = util.SecondsToMilliseconds(ns.timeout)
       for test_run_results in self.results[ns]:
         for (host, type, duration, response) in test_run_results:
           if response and response.answer:

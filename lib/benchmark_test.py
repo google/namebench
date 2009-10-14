@@ -147,5 +147,60 @@ class BenchmarkTest(unittest.TestCase):
     ]
     self.assertEquals(b._LowestLatencyAsciiChart(), expected)
 
+  def testFastest(self):
+    ns_list = (mocks.MockNameServer('X', name='X'),
+               mocks.MockNameServer('O', name='O'),
+               mocks.MockNameServer('U', name='U'))
+    b = benchmark.Benchmark(ns_list)
+    good = ns_list[0].FakeAnswer(None)
+    b.results = {
+        ns_list[0]: [[('www.microsoft.com.', 'A', 3.0879974365234375, good),
+                      ('www.youku.com.', 'A', 2.2590160369873047, good),
+                      ('www.orkut.co.in.', 'A', 25.511980056762695, good),
+                      ('cache-9.ku6.com.', 'A', 1013.6392116546631, good),
+                      ('wsj.com.', 'A', 2.3639202117919922, good),
+                      ('www.imagevenue.com.', 'A', 2.6688575744628906, good),
+                      ('www.travian.ae.', 'A', 2.5160312652587891, good),
+                      ('www.fotolog.net.', 'A', 2.6750564575195312, good),
+                      ('www.torrentz.com.', 'A', 2.7811527252197266, good),
+                      ('www.wer-kennt-wen.de.', 'A', 2.7070045471191406, good)]],
+        ns_list[1]: [[('www.microsoft.com.', 'A', 82.499980926513672, good),
+                      ('www.youku.com.', 'A', 81.991195678710938, good),
+                      ('www.orkut.co.in.', 'A', 82.377910614013672, good),
+                      ('cache-9.ku6.com.', 'A', 1141.1499977111816, good),
+                      ('wsj.com.', 'A', 84.334135055541992, good),
+                      ('www.imagevenue.com.', 'A', 84.282875061035156, good),
+                      ('www.travian.ae.', 'A', 84.036111831665039, good),
+                      ('www.fotolog.net.', 'A', 84.750175476074219, good),
+                      ('www.torrentz.com.', 'A', 84.517002105712891, good),
+                      ('www.wer-kennt-wen.de.', 'A', 83.980083465576172, good)]],
+         ns_list[2]: [[('www.microsoft.com.', 'A', 12.507915496826172, good),
+                       ('www.youku.com.', 'A', 357.06806182861328, good),
+                       ('www.orkut.co.in.', 'A', 46.499967575073242, good),
+                       ('cache-9.ku6.com.', 'A', 697.60799407958984, good),
+                       ('wsj.com.', 'A', 87.159872055053711, good),
+                       ('www.imagevenue.com.', 'A', 11.99793815612793, good),
+                       ('www.travian.ae.', 'A', 11.492013931274414, good),
+                       ('www.fotolog.net.', 'A', 12.087106704711914, good),
+                       ('www.torrentz.com.', 'A', 12.598991394042969, good),
+                       ('www.wer-kennt-wen.de.', 'A', 11.770963668823242, good)]]
+    }
+
+    expected = [('G', 2.2590160369873047),
+                ('U', 11.492013931274414),
+                ('O', 81.991195678710938)]
+    fastest = [(x[0].ip, x[1]) for x in b.FastestNameServerResult()]
+    self.assertEquals(fastest, expected)
+
+    expected = [
+        ('X', '##', 2.2590160369873047),
+        ('U', '########', 11.492013931274414),
+        ('O', '#####################################################',
+         81.991195678710938)
+    ]
+    self.assertEquals(b._LowestLatencyAsciiChart(), expected)
+
+
+
 if __name__ == '__main__':
   unittest.main()

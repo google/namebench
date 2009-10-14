@@ -151,7 +151,7 @@ class NameServer(object):
       response = None
       duration = timer() - start_time
 
-    return (response, duration*1000, exc)
+    return (response, util.SecondsToMilliseconds(duration), exc)
 
   def TestAnswers(self, record_type, record, expected):
     """Test to see that an answer returns correct IP's.

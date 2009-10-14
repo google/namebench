@@ -39,10 +39,9 @@ def DrawTextBar(value, max_value, max_width=53):
   hash_width = max_value / max_width
   return int(math.ceil(value/hash_width)) * '#'
 
-def TimeDeltaToMilliseconds(td):
-  """Convert timedelta object to milliseconds."""
-  return (td.days*86400000) + (td.seconds*1000) + (td.microseconds/1000.0)
 
+def SecondsToMilliseconds(seconds):
+  return seconds * 1000
 
 def SplitSequence(seq, size):
   """Recipe From http://code.activestate.com/recipes/425397/ ."""
