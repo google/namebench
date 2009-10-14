@@ -114,7 +114,7 @@ class NameServer(object):
     return request
 
   def Query(self, request, timeout):
-    return dns.query.udp(request, timeout, 53)
+    return dns.query.udp(request, self.ip, timeout, 53)
 
   def TimedRequest(self, type_string, record_string, timeout=None,
                    timer=DEFAULT_TIMER):
