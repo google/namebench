@@ -19,5 +19,5 @@ Detailed Request Duration Distribution Chart URL (Full):
 
 Recommended configuration (fastest + nearest):
 ----------------------------------------------
-{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, ns.warnings_comment) }}{% endfor %}
+{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, ns.warnings_string) }}{% endfor %}
 

@@ -3,7 +3,7 @@
 <body>
 
 <h2>Recommended configuration (fastest + nearest)</h2>
-<pre>{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, ns.warnings_comment) }}{% endfor %}</pre>
+<pre>{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, ns.warnings_string) }}{% endfor %}</pre>
 
 <h2>Per-Run Mean Request Duration Chart</h2>
 <img src="{{ mean_duration_url }}">

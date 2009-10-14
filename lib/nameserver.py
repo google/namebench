@@ -82,9 +82,13 @@ class NameServer(object):
       return None
 
   @property
-  def warnings_comment(self, prefix=''):
+  def warnings_string(self):
+    return ', '.join(self.warnings)
+
+  @property
+  def warnings_comment(self):
     if self.warnings:
-      return prefix + ', '.join(self.warnings)
+      return '# ' + self.warnings_string
     else:
       return ''
 
