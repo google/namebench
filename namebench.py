@@ -115,10 +115,17 @@ class NameBenchCli(object):
     bmark = self.PrepareBenchmark(nameservers)
     bmark.Run()
     print ''
-    print bmark.CreateReport()
+    print bmark.CreateReport(format='ascii')
     if self.options.output_file:
+      f = open(self.options.output_file, 'w')
+      print '* Saving report to %s (%s)' % (self.options.output_file,
+                                            self.options.output_format)
+      f.write(bmark.CreateReport(format=self.options.output_format))
+      f.close()
+
+    if self.options.csv_file:
       print ''
-      print '* Saving detailed results to %s' % self.options.output_file
+      print '* Saving request details to %s' % self.options.csv_file
       bmark.SaveResultsToCsv(self.options.output_file)
 
 

@@ -19,6 +19,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import optparse
 import ConfigParser
+import history_parser
 
 def GetConfiguration(filename='namebench.cfg'):
   (options, args) = DefineAndParseOptions(filename=filename)
@@ -30,28 +31,35 @@ def GetConfiguration(filename='namebench.cfg'):
 
 def DefineAndParseOptions(filename='namebench.cfg'):
   """Get our option configuration setup.
-  
+
   Returns: tuple of (OptionParser object, args)
-  """  
+  """
+  h = history_parser.HistoryParser()
+  import_types = [x[0] for x in h.GetTypes()]
+
   parser = optparse.OptionParser()
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
                     help='Number of test runs to perform on each nameserver.')
-  parser.add_option('-c', '--config', dest='config', default=filename,
+  parser.add_option('-z', '--config', dest='config', default=filename,
                     help='Config file to use.')
-  parser.add_option('-o', '--output', dest='output_file', default='output.csv',
-                    help='Filename to write query results to (CSV format).')
+  parser.add_option('-o', '--output', dest='output_file', default=None,
+                    help='Filename to write output to')
+  parser.add_option('-f', '--format', dest='output_format', default='ascii',
+                    help='Output format for file (ascii, html)')
+  parser.add_option('-c', '--csv_output', dest='csv_file', default=None,
+                    help='Filename to write CSV output to')
   parser.add_option('-j', '--threads', dest='thread_count',
                     help='# of threads to use')
   parser.add_option('-y', '--timeout', dest='timeout', type='float',
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='health check timeout (in seconds)')
-  parser.add_option('-f', '--filename', dest='data_file',
+  parser.add_option('-d', '--datafile', dest='data_file',
                     default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
   parser.add_option('-i', '--import', dest='import_file',
-                    help=('Import history from safari, google_chrome, '
-                          'internet_explorer, opera, squid, or a file path.'))
+                    help=('Import history from an external application (%s)' %
+                          ', '.join(import_types)))
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.')
   parser.add_option('-x', '--select_mode', dest='select_mode',
@@ -66,7 +74,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   parser.add_option('-O', '--only', dest='only',
                     action='store_true',
                     help='Only test nameservers passed as arguments')
-  return parser.parse_args()  
+  return parser.parse_args()
 
 def ProcessConfigurationFile(options):
   """Process configuration file, merge configuration with OptionParser.
@@ -91,8 +99,8 @@ def ProcessConfigurationFile(options):
     secondary = config.items('open') + config.items('closed')
 
   if options.no_secondary:
-    secondary = []    
-  
+    secondary = []
+
   for option in general:
     if not getattr(options, option):
       if 'timeout' in option:

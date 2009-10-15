@@ -258,7 +258,7 @@ class NameServers(list):
     for (index, other_ns) in enumerate(ns_by_fastest):
       test_servers = []
       for ns in ns_by_fastest:
-        if ns.is_slower_replica or not ns.disabled:
+        if ns.is_slower_replica or ns.disabled:
           continue
         elif ns.ip == other_ns.ip or ns in other_ns.shared_with:
           continue

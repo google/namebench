@@ -22,6 +22,7 @@ Designed to assist system administrators in selection and prioritization.
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import csv
+import datetime
 import operator
 import random
 import sys
@@ -30,6 +31,7 @@ import math
 import third_party
 import dns.rcode
 import jinja2
+
 import charts
 import selectors
 import util
@@ -222,12 +224,19 @@ class Benchmark(object):
     nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
     recommended = [best] + nearest
 
+    nameserver_details = list(sorted_averages)
+    for ns in self.nameservers:
+      if ns.disabled:
+        nameserver_details.append((ns, 0.0, [], '1'))
+
     env = jinja2.Environment(loader=jinja2.PackageLoader('namebench',
                                                          'templates'))
     template = env.get_template('%s.tmpl' % format)
     rendered = template.render(
+        timestamp = datetime.datetime.now(),
         lowest_latency=lowest_latency,
         mean_duration=mean_duration,
+        nameserver_details=nameserver_details,
         mean_duration_url=mean_duration_url,
         min_duration_url=min_duration_url,
         distribution_url=distribution_url,

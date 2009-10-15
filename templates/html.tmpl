@@ -1,9 +1,41 @@
 <html>
-<head><title>namebench output for {{ date }}</title></head>
+<head><title>namebench: {{ timestamp }}</title></head>
 <body>
 
 <h2>Recommended configuration (fastest + nearest)</h2>
-<pre>{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, ns.warnings_string) }}{% endfor %}</pre>
+
+<ul>
+{% for ns in recommended %}
+  <li>
+  <strong>
+  {% if loop.index == 1 %}Primary{% elif loop.index == 2 %}Secondary{% else %}Tertiary{% endif %}
+  : {{ ns.ip }}</strong>
+  </li>
+{% endfor %}
+</ul>
+
+<h2>Nameserver Details</h2>
+
+<table>
+<tr>
+  <td>IP</td>
+  <td>Hostname</td>
+  <td>Description</td>
+  <td>Mean Request</td>
+  <td>Error Count</td>
+  <td>Notes</td>
+</tr>
+{% for row in nameserver_details %}
+<tr>
+  <td>{{ row.0.ip }}</td>
+  <td>{{ row.0.hostname }}</td>
+  <td>{{ row.0.name }}</td>
+  <td>{{ "%0.2f"|format(row.1) }}</td>
+  <td>{{ row.3 }}</td>
+  <td>{{ row.0.warnings_string }}</td>
+</tr>
+{% endfor %}
+</table>
 
 <h2>Mean Response Duration</h2>
 <img src="{{ mean_duration_url }}">

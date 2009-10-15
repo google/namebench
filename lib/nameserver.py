@@ -28,7 +28,8 @@ import dns.message
 import dns.name
 import dns.rdataclass
 import dns.rdatatype
-
+import dns.reversename
+import dns.resolver
 import util
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:
@@ -60,7 +61,6 @@ class NameServer(object):
     self.is_primary = primary
     self.timeout = 60
     self.health_timeout = 30
-
     self.warnings = []
     self.shared_with = []
     self.disabled = False
@@ -93,6 +93,15 @@ class NameServer(object):
     if self.warnings or self.disabled:
       return '# ' + self.warnings_string
     else:
+      return ''
+
+  @property
+  def hostname(self):
+    try:
+      answer = dns.resolver.query(dns.reversename.from_address(self.ip), 'PTR')
+      if answer:
+        return str(answer[0])
+    except:
       return ''
 
   def __str__(self):
