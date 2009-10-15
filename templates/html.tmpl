@@ -1,41 +1,107 @@
 <html>
 <head><title>namebench: {{ timestamp }}</title></head>
+<style type-"text/css">
+body {
+  font-family: Helvetica, Arial, sans-serif;
+}
+h2 {
+	font-size: 1.1em;
+}
+div.nsdetails {
+	display: block;
+	background-color:  #C2CFF1;
+	border-radius: .5em;
+	-moz-border-radius: .5em;
+	-webkit-border-radius: .5em;
+	padding-left:  3px;
+	padding-bottom: 3px;
+	padding-right:  3px;
+	margin-left: 1em;
+	width: 900px
+}
+table.nstable {
+	width:  100%;
+	border-collapse:  collapse;	
+}
+thead {
+	font-weight:  strong;
+}
+tr {
+	vertical-align:  top;
+}
+ul.warnings {
+	padding:  0;
+	margin:  0;
+	margin-left: 0.4em;
+	list-style-position:  inside;
+}
+.warnings li {
+}
+td {
+	padding:  3px;
+	font-size: small;
+	border-right:  1px solid #C2CFF1;
+}
+.even {
+	background-color: #fff
+}
+.odd {
+	background-color: #ebeff9;
+}
+.disabled {
+	background-color:  #333;
+	border-bottom: 1px solid #666;
+	color: #fff;
+}
+</style>
 <body>
 
 <h2>Recommended configuration (fastest + nearest)</h2>
 
-<ul>
+<ul class="recommended">
 {% for ns in recommended %}
   <li>
   <strong>
   {% if loop.index == 1 %}Primary{% elif loop.index == 2 %}Secondary{% else %}Tertiary{% endif %}
-  : {{ ns.ip }}</strong>
+  :</strong> {{ ns.ip }}
   </li>
 {% endfor %}
 </ul>
 
 <h2>Nameserver Details</h2>
 
-<table>
+<div class="nsdetails">
+<table class="nstable">
+<thead>
 <tr>
-  <td>IP</td>
-  <td>Hostname</td>
-  <td>Description</td>
-  <td>Mean Request</td>
-  <td>Error Count</td>
+  <td nowrap="nowrap">IP</td>
+  <td nowrap="nowrap">Descr.</td>
+  <td nowrap="nowrap">Hostname</td>
+  <td nowrap="nowrap">Avg (ms)</td>
+  <td nowrap="nowrap">Errs</td>
   <td>Notes</td>
 </tr>
+</thead>
 {% for row in nameserver_details %}
-<tr>
+<tr class="{% if row.0.disabled %}disabled{% else %}{{ loop.cycle('odd', 'even')}}{% endif %}">
   <td>{{ row.0.ip }}</td>
-  <td>{{ row.0.hostname }}</td>
   <td>{{ row.0.name }}</td>
+  <td>{{ row.0.hostname }}</td>
   <td>{{ "%0.2f"|format(row.1) }}</td>
   <td>{{ row.3 }}</td>
-  <td>{{ row.0.warnings_string }}</td>
+  <td><ul class="warnings">
+	{% if row.0.disabled %}
+	    <li><strong>{{ row.0.disabled }}</strong></li>
+	{% endif %}
+  	{% for warning in row.0.warnings %}
+		<li>{{ warning }}</li>
+    {% endfor %}
+	</ul>
+  </td>
 </tr>
 {% endfor %}
 </table>
+</div>
 
 <h2>Mean Response Duration</h2>
 <img src="{{ mean_duration_url }}">

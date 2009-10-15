@@ -69,9 +69,10 @@ class controller(NSWindowController):
     t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
     t.start()
 
-  def updateStatus(self, message, count=None, total=None):
+  def updateStatus(self, message, count=None, total=None, error=False):
     """Update the status message at the bottom of the window."""
-  
+    if error:
+      return self.displayError("Error", message)
     if total and count:
       state = '%s [%s/%s]' % (message, count, total)
     elif count:
@@ -137,7 +138,7 @@ class controller(NSWindowController):
     pool = NSAutoreleasePool.alloc().init()
     self.spinner.startAnimation_(self)
     self.updateStatus('Preparing benchmark')
-    self.nameservers.FindAndRemoveUndesirables()
+    self.nameservers.CheckHealth()
     bmark = benchmark.Benchmark(self.nameservers, test_count=self.options.test_count, run_count=self.options.run_count,
                                 status_callback=self.updateStatus)
     bmark.updateStatus = self.updateStatus
@@ -174,6 +175,7 @@ class controller(NSWindowController):
 
   def displayError(self, msg, details):
     """Display an alert drop-down message"""
+    NSLog("ERROR: %s - %s" % (msg, details))
     alert = NSAlert.alloc().init()
     alert.setMessageText_(msg)
     alert.setInformativeText_(details)
