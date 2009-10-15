@@ -63,7 +63,7 @@ class NameServer(object):
 
     self.warnings = []
     self.shared_with = []
-    self.is_healthy = True
+    self.disabled = False
     self.checks = []
     self.share_check_count = 0
     self.cache_check = None
@@ -83,11 +83,14 @@ class NameServer(object):
 
   @property
   def warnings_string(self):
-    return ', '.join(self.warnings)
+    if self.disabled:
+      return '(excluded: %s)' % self.disabled
+    else:
+      return ', '.join(self.warnings)
 
   @property
   def warnings_comment(self):
-    if self.warnings:
+    if self.warnings or self.disabled:
       return '# ' + self.warnings_string
     else:
       return ''
@@ -292,7 +295,7 @@ class NameServer(object):
     self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
-      self.is_healthy = False
+      self.disabled = 'Failed shared-cache check: %s' % warning
     else:
       delta = abs(other_ttl - response.answer[0].ttl)
       if delta > 0:
@@ -324,7 +327,7 @@ class NameServer(object):
       if warning:
         self.warnings.append(warning)
       if is_broken:
-        self.is_healthy = False
+        self.disabled = 'Failed health check: %s' % warning
         break
-    return self.is_healthy
+    return self.disabled
 

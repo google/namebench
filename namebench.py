@@ -38,8 +38,12 @@ class NameBenchCli(object):
     self.primary_ns = primary_ns
     self.secondary_ns = secondary_ns
 
-  def msg(self, msg, count=None, total=None):
-    if not total:
+  def msg(self, msg, count=None, total=None, error=False):
+    if error:
+      print
+      print '* ERROR: %s' % msg
+      sys.exit(2)
+    elif not total:
       print '- %s' % msg
     elif count == 1:
       sys.stdout.write('- %s: %s/%s' % (msg, count, total))
@@ -65,33 +69,13 @@ class NameBenchCli(object):
         health_timeout=self.options.health_timeout,
         status_callback=self.msg
     )
-    cq = conn_quality.ConnectionQuality()
-    (intercepted, congestion, duration) = cq.CheckConnectionQuality()
-
-    if intercepted:
-      print 'XXX[ OHNO! ]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-      print 'XX Someone upstream of this machine is doing evil things and  XX'
-      print 'XX intercepting all outgoing nameserver requests. The results XX'
-      print 'XX of this program will be useless. Get your ISP to fix it.   XX'
-      print 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-      print ''
-    if congestion > 1:
-      nameservers.ApplyCongestionFactor(congestion)
-      print('- Congestion connection detected (%.1fX slower than expected), '
-            'timeouts increased to (%.1fms,%.1fms)' %
-            (congestion, nameservers.timeout, nameservers.health_timeout))
-    else:
-      print('- Connection looks healthy, check duration took %.0fms' % duration)
-    if len(nameservers) > 1:
-      nameservers.thread_count = int(self.options.thread_count)
-      nameservers.cache_dir = tempfile.gettempdir()
-      nameservers.FindAndRemoveUndesirables()
+    nameservers.CheckHealth()
     print ''
-    print 'Final list of nameservers to benchmark:'
+    print 'Final list of nameservers considered:'
     print '-' * 78
     for n in nameservers.SortByFastest():
-      print '%-15.15s %-16.16s %-4.0fms %s' % (n.ip, n.name, n.check_duration,
-                                               n.warnings_comment)
+      print '%-15.15s %-16.16s %-4.0fms | %s' % (n.ip, n.name, n.check_duration,
+                                               n.warnings_string)
     print ''
     return nameservers
 

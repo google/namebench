@@ -21,10 +21,12 @@ import os
 import pickle
 import threading
 import time
+import tempfile
 import sys
 
 import third_party
 import dns.resolver
+import conn_quality
 import nameserver
 import util
 
@@ -54,8 +56,8 @@ class TestNameServersThread(threading.Thread):
 class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
-               include_internal=False, threads=20, cache_dir=None,
-               status_callback=None, timeout=5, health_timeout=5):
+               include_internal=False, threads=20, status_callback=None,
+               timeout=5, health_timeout=5):
     self.seen_ips = set()
     self.seen_names = set()
     self.thread_count = threads
@@ -64,7 +66,8 @@ class NameServers(list):
     self.requested_health_timeout = health_timeout
     self.health_timeout = health_timeout
     self.status_callback = status_callback
-    self.cache_dir = cache_dir
+    self.cache_dir = tempfile.gettempdir()
+    self.ApplyCongestionFactor()
 
     super(NameServers, self).__init__()
     for (ip, name) in nameservers:
@@ -78,17 +81,30 @@ class NameServers(list):
       for ip in util.InternalNameServers():
         self.AddServer(ip, 'SYS-%s' % ip, internal=True, primary=True)
 
+
   @property
   def primaries(self):
     return [x for x in self if x.is_primary]
 
   @property
+  def enabled_primaries(self):
+    return [x for x in self.primaries if not x.disabled]
+
+  @property
   def secondaries(self):
     return [x for x in self if not x.is_primary]
 
-  def msg(self, msg, count=None, total=None):
+  @property
+  def enabled_secondaries(self):
+    return [x for x in self.secondaries if not x.disabled]
+
+  @property
+  def enabled(self):
+    return [x for x in self if not x.disabled]
+
+  def msg(self, msg, count=None, total=None, error=False):
     if self.status_callback:
-      self.status_callback(msg, count=count, total=total)
+      self.status_callback(msg, count=count, total=total, error=error)
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
@@ -121,12 +137,26 @@ class NameServers(list):
     self.seen_ips.add(ns.ip)
     self.seen_names.add(ns.name)
 
-  def ApplyCongestionFactor(self, multiplier):
-    if multiplier > MAX_CONGESTION_MULTIPLIER:
-      multiplier = MAX_CONGESTION_MULTIPLIER
-    if multiplier > 1:
+  def ApplyCongestionFactor(self):
+    cq = conn_quality.ConnectionQuality()
+    (intercepted, congestion, duration) = cq.CheckConnectionQuality()
+    if intercepted:
+      self.msg('Your internet service provider appears to be intercepting all'
+               ' outgoing UDP packets. Please contact them to get this fixed.',
+               error=True)
+    if congestion > 1:
+      if congestion > MAX_CONGESTION_MULTIPLIER:
+        multiplier = MAX_CONGESTION_MULTIPLIER
+      else:
+        multiplier = congestion
+
       self.timeout *= multiplier
       self.health_timeout *= multiplier
+      self.msg('Congestion detected. Applied %.2f multiplier to timeouts'
+               % multiplier)
+    else:
+      self.msg('Connection appears healthy (latency %.2fms)' % duration)
+
 
   def InvokeSecondaryCache(self):
     cached = False
@@ -141,55 +171,50 @@ class NameServers(list):
             self.remove(ns)
     return cached
 
-  def RemoveUndesirables(self, target_count=None):
+  def DisableUnwantedServers(self, target_count=None, delete_unwanted=False):
     if not target_count:
       target_count = self.num_servers
 
-    # No need to flood the screen
-    if len(self) < 30:
-      display_rejections = True
-    else:
-      display_rejections = False
-
-    # Phase one is removing all of the unhealthy servers
     for ns in list(self.SortByFastest()):
-      if not ns.is_healthy:
+      # If we have a specific target count to reach, we are in the first phase
+      # of narrowing down nameservers. Silently drop bad nameservers.
+      if ns.disabled and delete_unwanted and not ns.is_primary:
         self.remove(ns)
-        if display_rejections or ns.is_primary:
-          (test, is_broken, warning, duration) = ns.failure
-          print("* Removing %s: %s %s (%.0fms)" % (ns, test, warning, duration))
-      elif ns.is_slower_replica:
-        self.remove(ns)
-        if display_rejections:
-          replicas = ', '.join([x.ip for x in ns.shared_with])
-          print("* Removing %s (slower replica of %s)" % (ns, replicas))
 
-    primary_count = len(self.primaries)
+    primary_count = len(self.enabled_primaries)
     secondaries_kept = 0
     secondaries_needed = target_count - primary_count
 
     # Phase two is removing all of the slower secondary servers
     for ns in list(self.SortByFastest()):
-      if not ns.is_primary:
+      if not ns.is_primary and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
+          # Silently remove secondaries who's only fault was being too slow.
           self.remove(ns)
         else:
           secondaries_kept += 1
 
-  def FindAndRemoveUndesirables(self):
+  def CheckHealth(self, cache_dir=None):
     """Filter out unhealthy or slow replica servers."""
+    if len(self) == 1:
+      return None
+
+    if cache_dir:
+      self.cache_dir = cache_dir
+
     cpath = self._SecondaryCachePath()
     cached = self.InvokeSecondaryCache()
     if not cached:
       self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
                (len(self), self.thread_count))
     self.RunHealthCheckThreads()
-    self.RemoveUndesirables(target_count=int(self.num_servers * NS_CACHE_SLACK))
+    self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
+                                delete_unwanted=True)
     if not cached:
       self._UpdateSecondaryCache(cpath)
 
     self.CheckCacheCollusion()
-    self.RemoveUndesirables()
+    self.DisableUnwantedServers()
 
   def _SecondaryCachePath(self):
     """Find a usable and unique location to store health results."""
@@ -229,11 +254,11 @@ class NameServers(list):
     self.msg("Waiting for nameservers TTL's to decrement")
     time.sleep(4)
     tested = []
-    ns_by_fastest = self.SortByFastest()
+    ns_by_fastest = [x for x in self.SortByFastest() if not x.disabled]
     for (index, other_ns) in enumerate(ns_by_fastest):
       test_servers = []
       for ns in ns_by_fastest:
-        if ns.is_slower_replica or not ns.is_healthy:
+        if ns.is_slower_replica or not ns.disabled:
           continue
         elif ns.ip == other_ns.ip or ns in other_ns.shared_with:
           continue
@@ -246,7 +271,8 @@ class NameServers(list):
 
       self.msg('Checking nameservers for slow replicas', count=index+1,
                total=len(ns_by_fastest))
-      self.RunCacheCollusionThreads(other_ns, test_servers)
+      if not other_ns.disabled:
+        self.RunCacheCollusionThreads(other_ns, test_servers)
 
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     """Schedule and manage threading for cache collusion checks."""
@@ -267,11 +293,10 @@ class NameServers(list):
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
-#        slower.warnings.append('shares cache with %s' % faster.ip)
         faster.warnings.append('shares cache with %s' % slower.ip)
+        slower.disabled = 'Slower replica of %s' % faster.ip
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
-        slower.is_slower_replica = True
 
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""

@@ -127,12 +127,12 @@ class Benchmark(object):
     assert self.test_data
     for test_run in range(self.run_count):
       state = ('Benchmarking %s server(s), run %s of %s' %
-               (len(self.nameservers), test_run+1, self.run_count))
+               (len(self.nameservers.enabled), test_run+1, self.run_count))
       count = 0
       for (req_type, record) in self.test_data:
         count += 1
         self.msg(state, count=count, total=len(self.test_data))
-        for ns in self.nameservers:
+        for ns in self.nameservers.enabled:
           if ns not in self.results:
             self.results[ns] = []
             for run_num in range(self.run_count):
