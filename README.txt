@@ -16,14 +16,25 @@ plus 3 popular global DNS services, and the best 4-6 additional name servers
 that it can find for you. It will output some text-graphs and URL's for more
 a more detailed performance analysis of each nameserver.
 
-
 If you want to specify an additional set of name services, simply add the IP
 to the command-line, or edit namebench.cfg:
 
   ./namebench.py 10.0.0.1 192.168.0.1
 
+--[ credit ]------------------------------------------------------------------
 
---[ options ]-------------------------------------------------------------------
+namebench includes some wonderful third party software:
+
+ * dnspython 1.7.1 (http://www.dnspython.org/)
+ * graphy 1.0 (http://graphy.googlecode.com/)
+ * jinja2 2.2.1 (http://jinja.pocoo.org/2/)
+ * python 2.5 pkg_resources (http://www.python.org/) 
+ * Crystal SVG icons (http://www.everaldo.com/crystal/)
+
+For licensing information, see the LICENSE file within the appropriate
+subdirectory.
+
+--[ options ]-----------------------------------------------------------------
 
 Usage: namebench.py [options] <additional nameservers>
 
