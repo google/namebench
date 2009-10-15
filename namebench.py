@@ -30,7 +30,7 @@ from lib import history_parser
 from lib import nameserver_list
 from lib import conn_quality
 
-VERSION = '0.9.0'
+VERSION = '0.9.1'
 
 class NameBenchCli(object):
   def __init__(self, options, primary_ns, secondary_ns):
