@@ -37,8 +37,6 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   h = history_parser.HistoryParser()
   import_types = [x[0] for x in h.GetTypes()]
 
-  # TODO(tstromberg): Add option to force health cache invalidation.
-
   parser = optparse.OptionParser()
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
                     help='Number of test runs to perform on each nameserver.')
@@ -62,6 +60,9 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   parser.add_option('-i', '--import', dest='import_file',
                     help=('Import history from an external application (%s)' %
                           ', '.join(import_types)))
+  parser.add_option('-I', '--invalidate_cache', dest='invalidate_cache',
+                    action='store_true',
+                    help='Force health cache to be invalidated')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.')
   parser.add_option('-x', '--select_mode', dest='select_mode',

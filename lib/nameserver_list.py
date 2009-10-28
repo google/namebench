@@ -224,6 +224,14 @@ class NameServers(list):
                                   self.requested_health_timeout, checksum)))
     return os.path.join(self.cache_dir, basefile)
 
+  def InvalidateSecondaryCache(self):
+    cpath = self._SecondaryCachePath()
+    if os.path.exists(cpath):
+      self.msg('Invalidating cache in %s' % cpath)
+      os.unlink(cpath)
+    else:
+      self.msg('Cache not found in %s to invalidate' % cpath)
+
   def _LoadSecondaryCache(self, cpath):
     """Check if our health cache has any good data."""
     if os.path.exists(cpath) and os.path.isfile(cpath):

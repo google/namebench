@@ -70,6 +70,9 @@ class NameBenchCli(object):
         status_callback=self.msg,
         threads=self.options.thread_count
     )
+    if self.options.invalidate_cache:
+      nameservers.InvalidateSecondaryCache()
+
     nameservers.CheckHealth()
     print ''
     print 'Final list of nameservers considered:'
