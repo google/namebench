@@ -6,7 +6,7 @@ import tempfile
 import os.path
 from Tkinter import *
 
-NB_SOURCE = '/home/tstromberg/namebench'
+NB_SOURCE = '/Users/tstromberg/namebench'
 sys.path.append(NB_SOURCE)
 
 from lib import benchmark
@@ -58,29 +58,56 @@ class GridDemo(Frame):
     self.DisplayInterface()
 
   def DisplayInterface(self):
-    self.primary = StringVar()
+    self.nameservers = StringVar()
     self.status = StringVar()
-    self.tests_num = IntVar()
-
+    self.num_tests = IntVar()
+    self.num_runs = IntVar()
+    self.data_source = StringVar()
+    self.selection_type = StringVar()
+    
     self.master.title("namebench")
-    Label(self.master, text="Primary DNS").grid(row=0)
-    Label(self.master, text="Num Tests").grid(row=1)
-    primary = Entry(self.master, bg="white", textvariable=self.primary)
-    tests_num = Entry(self.master, bg="white", textvariable=self.tests_num)
+    x_padding=12
+    
+    Label(self.master, text="Nameservers").grid(row=0, columnspan=2, sticky=W, padx=x_padding)
+    
+    nameservers = Entry(self.master, bg="white", textvariable=self.nameservers, width=50)
+    nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding, padx=x_padding+4)
+    
+    global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)")
+    global_button.grid(row=2, columnspan=2, sticky=W, padx=x_padding)
 
-    checkbutton = Checkbutton(self.master, text="Include secondary")
-    button = Button(self.master, text = "Start", command=self.StartBenchmark)
+    regional_button = Checkbutton(self.master, text="Include best available regional DNS services")
+    regional_button.grid(row=3, columnspan=2, sticky=W, padx=x_padding)
+
+    Label(self.master, text="_" * 50).grid(row=4, columnspan=2)
+    
+    Label(self.master, text="Benchmark Data Source").grid(row=5, column=0, sticky=W, padx=x_padding)
+    Label(self.master, text="Number of tests").grid(row=5, column=1, sticky=W, padx=x_padding)
+
+    data_source = OptionMenu(self.master, self.data_source, "Alexa Top 10000", "b")
+    data_source.grid(row=6, column=0, sticky=W, padx=x_padding)
+    
+    num_tests = Entry(self.master, bg="white", textvariable=self.num_tests)
+    num_tests.grid(row=6, column=1, sticky=W, padx=x_padding+4)
+
+    Label(self.master, text="Benchmark Data Selection").grid(row=7, column=0, sticky=W, padx=x_padding)
+    Label(self.master, text="Number of runs").grid(row=7, column=1, sticky=W, padx=x_padding)
+    
+    selection_type = OptionMenu(self.master, self.selection_type, "Weighted", "Random", "Chunk")
+    selection_type.grid(row=8, column=0, sticky=W, padx=x_padding)
+    
+    num_runs = Entry(self.master, bg="white", textvariable=self.nameservers)
+    num_runs.grid(row=8, column=1, sticky=W, padx=x_padding+4)
+
+#    Label(self.master, text="_" * 50).grid(row=14, columnspan=2)
+
+    button = Button(self.master, text = "Start Benchmark", command=self.StartBenchmark)
     status = Label(self.master, textvariable=self.status)
-    primary.grid(row=0, column=1)
-    tests_num.grid(row=1, column=1)
-    checkbutton.grid(row=3, columnspan=2, sticky=W)
-    status.grid(row=10, column=1, columnspan=2)
-    button.grid(row=10, column=3)
+    status.grid(row=15, sticky=W, padx=x_padding, pady=8, column=0)
+    button.grid(row=15, sticky=E, column=1, padx=x_padding, pady=8)
+    self.updateStatus('Ready...')
 
-    self.tests_num.set(110)
-    self.updateStatus('Ready')
-
-  def updateStatus(self, message, count=None, total=None):
+  def updateStatus(self, message, count=None, total=None, error=None):
     if total and count:
       state = '%s [%s/%s]' % (message, count, total)
     elif count:
