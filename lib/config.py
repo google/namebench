@@ -37,6 +37,8 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   h = history_parser.HistoryParser()
   import_types = [x[0] for x in h.GetTypes()]
 
+  # TODO(tstromberg): Add option to force health cache invalidation.
+
   parser = optparse.OptionParser()
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
                     help='Number of test runs to perform on each nameserver.')

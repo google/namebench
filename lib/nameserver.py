@@ -114,7 +114,8 @@ class NameServer(object):
     """Work around a bug in dns/entropy.py that causes IndexErrors."""
     tries = 0
     success = False
-    while not success and tries < 10:
+    request = None
+    while not success and tries < 20:
       tries += 1
       try:
         request = dns.message.make_query(record, request_type, return_type)
@@ -123,6 +124,8 @@ class NameServer(object):
         print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
         time.sleep(0.5)
         success = False
+    if not success:
+      raise ValueError('Unable to create UDP packet')
     return request
 
   def Query(self, request, timeout):
@@ -144,7 +147,13 @@ class NameServer(object):
     """
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)
-    request = self.CreateRequest(record, request_type, dns.rdataclass.IN)
+
+    # Sometimes it takes great effort just to craft a UDP packet.
+    try:
+      request = self.CreateRequest(record, request_type, dns.rdataclass.IN)
+    except ValueError, exc:
+      if not request:
+        return (None, 0, exc)
 
     if not timeout:
       timeout = self.timeout
@@ -162,6 +171,10 @@ class NameServer(object):
             dns.query.UnexpectedSource), exc:
       response = None
       duration = timer() - start_time
+    except:
+      print "* Unexpected error with %s: %s" % (self, sys.exc_info()[0])
+      response = None
+      duration = time() - start_time
 
     return (response, util.SecondsToMilliseconds(duration), exc)
 
