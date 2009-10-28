@@ -172,9 +172,10 @@ class NameServer(object):
       response = None
       duration = timer() - start_time
     except:
-      print "* Unexpected error with %s: %s" % (self, sys.exc_info()[0])
+      print "* Unexpected error with %s: %s" % (self, sys.exc_info())
       response = None
-      duration = time() - start_time
+      exc = sys.exc_info()[0]
+      duration = timer() - start_time
 
     return (response, util.SecondsToMilliseconds(duration), exc)
 
