@@ -115,7 +115,7 @@ class NameServer(object):
     tries = 0
     success = False
     request = None
-    while not success and tries < 20:
+    while not success and tries < 10:
       tries += 1
       try:
         request = dns.message.make_query(record, request_type, return_type)
@@ -147,6 +147,7 @@ class NameServer(object):
     """
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)
+    request = None
 
     # Sometimes it takes great effort just to craft a UDP packet.
     try:
