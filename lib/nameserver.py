@@ -169,6 +169,8 @@ class NameServer(object):
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
       response = None
+    except (KeyboardInterrupt, SystemExit, SystemError), exc:
+      raise exc
     except:
       (exc, error) = sys.exc_info()[0:2]
       print "* Error with %s: %s (%s)" % (self, exc, error)
