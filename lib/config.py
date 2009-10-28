@@ -50,7 +50,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     help='Output format for file (ascii, html)')
   parser.add_option('-c', '--csv_output', dest='csv_file', default=None,
                     help='Filename to write CSV output to')
-  parser.add_option('-j', '--threads', dest='thread_count',
+  parser.add_option('-j', '--threads', dest='thread_count', type='int',
                     help='# of threads to use')
   parser.add_option('-y', '--timeout', dest='timeout', type='float',
                     help='# of seconds general requests timeout in.')
