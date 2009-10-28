@@ -115,14 +115,14 @@ class NameServer(object):
     tries = 0
     success = False
     request = None
-    while not success and tries < 10:
+    while not success and tries < 5:
       tries += 1
       try:
         request = dns.message.make_query(record, request_type, return_type)
         success = True
       except IndexError, exc:
         print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
-        time.sleep(0.5)
+        time.sleep(1)
         success = False
     if not success:
       raise ValueError('Unable to create UDP packet')
