@@ -67,7 +67,8 @@ class NameBenchCli(object):
         include_internal=include_internal,
         timeout=self.options.timeout,
         health_timeout=self.options.health_timeout,
-        status_callback=self.msg
+        status_callback=self.msg,
+        threads=self.options.thread_count
     )
     nameservers.CheckHealth()
     print ''
