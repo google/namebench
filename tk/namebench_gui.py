@@ -19,6 +19,7 @@ class BenchmarkThread(threading.Thread):
     threading.Thread.__init__(self)
     self.nameservers = []
     self.tests = tests
+    self.num_runs 
     self.status_callback = status_callback
     for ip in nameservers:
       self.nameservers.append((ip, ip))
@@ -64,6 +65,8 @@ class GridDemo(Frame):
     self.num_runs = IntVar()
     self.data_source = StringVar()
     self.selection_type = StringVar()
+    self.use_global = IntVar()
+    self.use_regional = IntVar()
     
     self.master.title("namebench")
     x_padding=12
@@ -73,11 +76,13 @@ class GridDemo(Frame):
     nameservers = Entry(self.master, bg="white", textvariable=self.nameservers, width=50)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding+4)
     
-    global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)")
+    global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)", variable=self.use_global)
     global_button.grid(row=2, columnspan=2, sticky=W, padx=x_padding)
+    global_button.toggle()
 
-    regional_button = Checkbutton(self.master, text="Include best available regional DNS services")
+    regional_button = Checkbutton(self.master, text="Include best available regional DNS services", variable=self.use_regional)
     regional_button.grid(row=3, columnspan=2, sticky=W, padx=x_padding)
+    regional_button.toggle()
 
     Label(self.master, text="_" * 50).grid(row=4, columnspan=2)
     
@@ -96,7 +101,7 @@ class GridDemo(Frame):
     selection_type = OptionMenu(self.master, self.selection_type, "Weighted", "Random", "Chunk")
     selection_type.grid(row=8, column=0, sticky=W, padx=x_padding)
     
-    num_runs = Entry(self.master, bg="white", textvariable=self.nameservers)
+    num_runs = Entry(self.master, bg="white", textvariable=self.num_runs)
     num_runs.grid(row=8, column=1, sticky=W, padx=x_padding+4)
 
 #    Label(self.master, text="_" * 50).grid(row=14, columnspan=2)
@@ -105,6 +110,11 @@ class GridDemo(Frame):
     status = Label(self.master, textvariable=self.status)
     status.grid(row=15, sticky=W, padx=x_padding, pady=8, column=0)
     button.grid(row=15, sticky=E, column=1, padx=x_padding, pady=8)
+    self.nameservers.set('192.168.1.1, 10.0.0.0.1')
+    self.num_runs.set(1)
+    self.selection_type.set('Weighted')
+    self.data_source.set('Alexa Top 10000')
+    self.num_tests.set(110)
     self.updateStatus('Ready...')
 
   def updateStatus(self, message, count=None, total=None, error=None):
