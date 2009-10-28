@@ -35,6 +35,13 @@ CACHE_VER = 1
 MAX_CONGESTION_MULTIPLIER = 5
 PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 3
 
+
+# Windows behaves in unfortunate ways if too many threads are specified
+if sys.platform == "win32":
+  MAX_SANE_THREAD_COUNT = 60
+else:
+  MAX_SANE_THREAD_COUNT = 90
+
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
@@ -60,13 +67,20 @@ class NameServers(list):
                timeout=5, health_timeout=5):
     self.seen_ips = set()
     self.seen_names = set()
-    self.thread_count = threads
     self.timeout = timeout
     self.num_servers = num_servers
     self.requested_health_timeout = health_timeout
     self.health_timeout = health_timeout
     self.status_callback = status_callback
     self.cache_dir = tempfile.gettempdir()
+    if threads > MAX_SANE_THREAD_COUNT:
+      self.msg('Lowing thread count from %s to sane limit of %s' %
+               (threads, MAX_SANE_THREAD_COUNT))
+      self.thread_count = MAX_SANE_THREAD_COUNT
+    else:
+      self.thread_count = threads
+
+
     self.ApplyCongestionFactor()
 
     super(NameServers, self).__init__()
