@@ -71,7 +71,7 @@ class GridDemo(Frame):
     Label(self.master, text="Nameservers").grid(row=0, columnspan=2, sticky=W, padx=x_padding)
     
     nameservers = Entry(self.master, bg="white", textvariable=self.nameservers, width=50)
-    nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding, padx=x_padding+4)
+    nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding+4)
     
     global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)")
     global_button.grid(row=2, columnspan=2, sticky=W, padx=x_padding)
