@@ -166,15 +166,15 @@ class NameServer(object):
       duration = timer() - start_time
     except (dns.exception.Timeout), exc:
       response = None
-      duration = timer() - start_time
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
       response = None
-      duration = timer() - start_time
     except:
-      print "* Unexpected error with %s: %s" % (self, sys.exc_info())
+      (exc, error) = sys.exc_info()[0:2]
+      print "* Error with %s: %s (%s)" % (self, exc, error)
       response = None
-      exc = sys.exc_info()[0]
+
+    if not duration:
       duration = timer() - start_time
 
     return (response, util.SecondsToMilliseconds(duration), exc)
