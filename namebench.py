@@ -48,6 +48,7 @@ if __name__ == '__main__':
       from lib import tk
       interface = tk.NameBenchGui
     except ImportError:
+      print '- Python TK libraries are unavailable (please install for a proper GUI)'
       interface = cli.NameBenchCli
   else:
     interface = cli.NameBenchCli
