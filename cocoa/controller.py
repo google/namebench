@@ -52,7 +52,7 @@ class controller(NSWindowController):
     """Initializes our class."""
     conf_file = os.path.join(RSRC_DIR, 'namebench.cfg')
     NSLog("Using configuration: %s" % conf_file)
-    (self.options, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
+    (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
     self.imported_records = None
     self.updateStatus('Discovering sources')
@@ -86,11 +86,12 @@ class controller(NSWindowController):
   def ProcessForm(self):
     """Parse the form fields and populate class variables."""
     self.updateStatus('Processing form inputs')
+    self.primary = self.supplied_ns
+    
     if not int(self.include_global.stringValue()):
       self.updateStatus('Not using primary')
-      self.primary = []
     else:
-      self.primary = self.global_ns
+      self.primary.extend(self.global_ns)
     if not int(self.include_regional.stringValue()):
       self.updateStatus('Not using secondary')
       self.secondary = []
@@ -106,12 +107,7 @@ class controller(NSWindowController):
         if src_type:
           self.imported_records = self.imported_sources[source[0]]
         
-    for ip in re.split('[, ]+', self.nameserver_form.stringValue()):
-      if re.match('\d+\.\d+\.\d+\.+\d+', ip):
-        self.primary.append((ip,ip))
-      else:
-        NSLog("%s does not look like an IP, ignoring" % ip)
-
+    self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue())
     for (ip, name) in self.primary:
       NSLog("Using Global NS: %s [%s]" % (ip, name))
 

@@ -55,3 +55,11 @@ def InternalNameServers():
   """Return list of DNS server IP's used by the host."""
   return dns.resolver.Resolver().nameservers
 
+def ExtractIPTuplesFromString(string):
+  valid_ips = []
+  for ip in re.split('[, ]+', string):
+    if re.match('\d+\.\d+\.\d+\.+\d+', ip):
+      valid_ips.append((ip,ip))
+
+
+  

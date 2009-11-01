@@ -23,11 +23,12 @@ import history_parser
 
 def GetConfiguration(filename='namebench.cfg'):
   (options, args) = DefineAndParseOptions(filename=filename)
-  (configured_options, primary, secondary) = ProcessConfigurationFile(options)
+  (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
+  supplied_ns = []
   for arg in args:
     if '.' in arg:
-      primary.append((arg, arg))
-  return (configured_options, primary, secondary)
+      supplied_ns.append((arg, arg))
+  return (configured_options, supplied_ns, global_ns, regional_ns)
 
 def DefineAndParseOptions(filename='namebench.cfg'):
   """Get our option configuration setup.
@@ -65,13 +66,15 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     help='Force health cache to be invalidated')
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.')
-  parser.add_option('-x', '--select_mode', dest='select_mode',
+  parser.add_option('-m', '--select_mode', dest='select_mode',
                     default='weighted',
                     help='Selection algorithm to use (weighted, random, chunk)')
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
-  parser.add_option('-S', '--no_secondary', dest='no_secondary',
-                    action='store_true', help='Disable secondary servers')
+  parser.add_option('-S', '--no_regional', dest='no_regional',
+                    action='store_true', help='Disable regional_ns servers')
+  parser.add_option('-x', '--no_gui', dest='no_gui',
+                    action='store_true', help='Disable GUI')
   # Silly Mac OS X adding -psn_0_xxxx
   parser.add_option('-p', '--psn')
   parser.add_option('-O', '--only', dest='only',
@@ -87,22 +90,22 @@ def ProcessConfigurationFile(options):
 
   Returns:
     options: optparse.OptionParser() object
-    primary: A list of primary nameservers
-    secondary: A list of secondary nameservers.
+    global_ns: A list of global nameserver tuples.
+    regional_ns: A list of regional nameservers tuples.
   """
   config = ConfigParser.ConfigParser()
   config.read(options.config)
   general = dict(config.items('general'))
 
   if options.only:
-    primary = []
-    secondary = []
+    global_ns = []
+    regional_ns = []
   else:
-    primary = config.items('primary')
-    secondary = config.items('open') + config.items('closed')
+    global_ns = config.items('global')
+    regional_ns = config.items('regional') + config.items('private')
 
-  if options.no_secondary:
-    secondary = []
+  if options.no_regional:
+    regional_ns = []
 
   for option in general:
     if not getattr(options, option):
@@ -114,4 +117,4 @@ def ProcessConfigurationFile(options):
         value = general[option]
       setattr(options, option, value)
 
-  return (options, primary, secondary)
+  return (options, global_ns, regional_ns)
