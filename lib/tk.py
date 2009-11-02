@@ -64,8 +64,7 @@ class NameBenchGui(Frame):
     self.DisplayInterface()
     
   def Execute(self):
-    pass
-    
+    self.mainloop()
 
   def DisplayInterface(self):
     self.nameservers = StringVar()
@@ -115,7 +114,7 @@ class NameBenchGui(Frame):
 
 #    Label(self.master, text="_" * 50).grid(row=14, columnspan=2)
 
-    button = Button(self.master, text = "Start Benchmark", command=self.StartBenchmark)
+    button = Button(self.master, text = "Start Benchmark", command=self.ProcessForm)
     status = Label(self.master, textvariable=self.status)
     status.grid(row=15, sticky=W, padx=x_padding, pady=8, column=0)
     button.grid(row=15, sticky=E, column=1, padx=x_padding, pady=8)
@@ -134,7 +133,11 @@ class NameBenchGui(Frame):
     else:
       state = message
 
+    print state
     self.status.set(state)
+
+  def ProcessForm(self):
+    pass
 
   def StartBenchmark(self):
     self.updateStatus('%s?' % self.primary.get())
@@ -144,9 +147,3 @@ class NameBenchGui(Frame):
                              status_callback=self.updateStatus)
     thread.start()
 
-
-def main():
-   GridDemo().mainloop()
-
-if __name__ == "__main__":
-   main()
