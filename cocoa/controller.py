@@ -101,13 +101,14 @@ class controller(NSWindowController):
     self.select_mode = self.selection_mode.titleOfSelectedItem().lower()
     input_choice = self.data_source.titleOfSelectedItem()
     for source in self.sources:
-      if self.sourceToTitle(source) == input_choice:
+      if history_parser.sourceToTitle(source) == input_choice:
         src_type = source[0]
         self.updateStatus('Parsed source type to %s' % src_type)
         if src_type:
-          self.imported_records = self.imported_sources[source[0]]
-        
-    self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue())
+          self.imported_records = self.hparser.GetParsedSource(source[0])
+    
+    self.updateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
+    self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     for (ip, name) in self.primary:
       NSLog("Using Global NS: %s [%s]" % (ip, name))
 
@@ -140,7 +141,7 @@ class controller(NSWindowController):
     bmark.updateStatus = self.updateStatus
     self.updateStatus('Creating test records using %s' % self.select_mode)
     if self.imported_records:
-      test_data = history_parser.HistoryParser().GenerateTestData(self.imported_records)      
+      test_data = self.hparser.GenerateTestData(self.imported_records)      
       bmark.CreateTests(test_data, select_mode=self.select_mode)
     else:
       bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % RSRC_DIR,
@@ -181,24 +182,9 @@ class controller(NSWindowController):
   def discoverSources(self):
     """Seek out and create a list of valid data sources."""
     self.updateStatus('Searching for usable data sources')
-    h = history_parser.HistoryParser()
-    source_desc = h.GetTypes()
-    self.imported_sources = h.ParseAllTypes()
-    self.sources = []
-    for src_type in self.imported_sources:
-      self.sources.append(
-        (src_type, source_desc[src_type], len(self.imported_sources[src_type]))
-      )
-
-    self.sources.sort(key=operator.itemgetter(2), reverse=True)
-    # TODO(tstromberg): Don't hardcode input types.
-    self.sources.append((None, 'Alexa Top Global Domains', 10000))
+    self.hparser = history_parser.HistoryParser()
+    self.sources = self.hparser.GetAvailableHistorySources()
     
-  def sourceToTitle(self, source):
-    """Convert a source tuple to a title."""
-    (short_name, full_name, num_hosts) = source
-    return '%s (%s)' % (full_name, num_hosts)
-
   def setFormDefaults(self):
     """Set up the form with sane initial values."""
     nameservers_string = ', '.join(util.InternalNameServers())
@@ -209,5 +195,5 @@ class controller(NSWindowController):
     self.selection_mode.addItemsWithTitles_(['Weighted', 'Random', 'Chunk'])
     self.data_source.removeAllItems()
     for source in self.sources:
-      self.data_source.addItemWithTitle_(self.sourceToTitle(source))
+      self.data_source.addItemWithTitle_(history_parser.sourceToTitle(source))
 

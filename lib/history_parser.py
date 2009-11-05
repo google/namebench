@@ -21,6 +21,10 @@ import os.path
 import re
 import sys
 
+def sourceToTitle(source):
+  """Convert a source tuple to a title."""
+  (short_name, full_name, num_hosts) = source
+  return '%s (%s)' % (full_name, num_hosts)
 
 class HistoryParser(object):
   """Parse the history file from files and web browsers and such."""
@@ -46,6 +50,27 @@ class HistoryParser(object):
   def GetTypes(self):
     """Return a tuple of type names with a description."""
     return dict([(x, self.TYPES[x][0]) for x in self.TYPES])
+    
+  def GetParsedSource(self, type):
+    return self.imported_sources[type]
+    
+  def GetAvailableHistorySources(self):
+    """Seek out and create a list of valid data sources.
+    
+    Returns:
+      sources: A list of tuples (type, description, record count)
+    """
+    source_desc = self.GetTypes()
+    self.imported_sources = self.ParseAllTypes()
+    sources = []
+    for src_type in self.imported_sources:
+      sources.append(
+        (src_type, source_desc[src_type], len(self.imported_sources[src_type]))
+      )
+    sources.sort(key=operator.itemgetter(2), reverse=True)
+    # TODO(tstromberg): Don't hardcode input types.
+    sources.append((None, 'Alexa Top Global Domains', 10000))
+    return sources
 
   def GetTypeMethod(self, type):
     return self.TYPES[type][1]

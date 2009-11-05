@@ -17,6 +17,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import math
+import re
 import dns.resolver
 import nameserver
 
@@ -60,6 +61,6 @@ def ExtractIPTuplesFromString(string):
   for ip in re.split('[, ]+', string):
     if re.match('\d+\.\d+\.\d+\.+\d+', ip):
       valid_ips.append((ip,ip))
-
+  return valid_ips
 
   

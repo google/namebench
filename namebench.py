@@ -36,7 +36,7 @@ if __name__ == '__main__':
     if os.getenv('DISPLAY', None):
       use_tk = True
     # Macs get a special Cocoa binary
-    if os.getenv('NAMEBENCH_FORCE_GUI', None):
+    if os.getenv('I_LOVE_TK', None):
       use_tk = True
     elif platform.mac_ver()[0]:
       use_tk = False

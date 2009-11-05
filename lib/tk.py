@@ -4,13 +4,12 @@ import time
 import webbrowser
 import tempfile
 import os.path
+import util
 from Tkinter import *
 
-NB_SOURCE = '/Users/tstromberg/namebench'
-sys.path.append(NB_SOURCE)
-
-from lib import benchmark
-from lib import nameserver_list
+import benchmark
+import history_parser
+import nameserver_list
 
 class BenchmarkThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
@@ -72,7 +71,7 @@ class NameBenchGui(Frame):
     self.num_tests = IntVar()
     self.num_runs = IntVar()
     self.data_source = StringVar()
-    self.selection_type = StringVar()
+    self.selection_mode = StringVar()
     self.use_global = IntVar()
     self.use_regional = IntVar()
 
@@ -83,6 +82,7 @@ class NameBenchGui(Frame):
 
     nameservers = Entry(self.master, bg="white", textvariable=self.nameservers, width=50)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding+4)
+    self.nameservers.set(', '.join(util.InternalNameServers()))
 
     global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)", variable=self.use_global)
     global_button.grid(row=2, columnspan=2, sticky=W, padx=x_padding)
@@ -97,32 +97,32 @@ class NameBenchGui(Frame):
     Label(self.master, text="Benchmark Data Source").grid(row=5, column=0, sticky=W, padx=x_padding)
     Label(self.master, text="Number of tests").grid(row=5, column=1, sticky=W, padx=x_padding)
 
-    data_source = OptionMenu(self.master, self.data_source, "Alexa Top 10000", "b")
+    self.DiscoverSources()
+    source_titles = [ history_parser.sourceToTitle(x) for x in self.sources ]
+    data_source = OptionMenu(self.master, self.data_source, *source_titles)
     data_source.grid(row=6, column=0, sticky=W, padx=x_padding)
+    self.data_source.set('Alexa Top 10000')
 
     num_tests = Entry(self.master, bg="white", textvariable=self.num_tests)
     num_tests.grid(row=6, column=1, sticky=W, padx=x_padding+4)
+    self.num_tests.set(self.options.test_count)
 
     Label(self.master, text="Benchmark Data Selection").grid(row=7, column=0, sticky=W, padx=x_padding)
     Label(self.master, text="Number of runs").grid(row=7, column=1, sticky=W, padx=x_padding)
 
-    selection_type = OptionMenu(self.master, self.selection_type, "Weighted", "Random", "Chunk")
-    selection_type.grid(row=8, column=0, sticky=W, padx=x_padding)
+    selection_mode = OptionMenu(self.master, self.selection_mode, "Weighted", "Random", "Chunk")
+    selection_mode.grid(row=8, column=0, sticky=W, padx=x_padding)
+    self.selection_mode.set('Weighted')
 
     num_runs = Entry(self.master, bg="white", textvariable=self.num_runs)
     num_runs.grid(row=8, column=1, sticky=W, padx=x_padding+4)
+    self.num_runs.set(self.options.run_count)
 
 #    Label(self.master, text="_" * 50).grid(row=14, columnspan=2)
-
     button = Button(self.master, text = "Start Benchmark", command=self.ProcessForm)
     status = Label(self.master, textvariable=self.status)
     status.grid(row=15, sticky=W, padx=x_padding, pady=8, column=0)
     button.grid(row=15, sticky=E, column=1, padx=x_padding, pady=8)
-    self.nameservers.set('192.168.1.1, 10.0.0.0.1')
-    self.num_runs.set(1)
-    self.selection_type.set('Weighted')
-    self.data_source.set('Alexa Top 10000')
-    self.num_tests.set(110)
     self.updateStatus('Ready...')
 
   def updateStatus(self, message, count=None, total=None, error=None):
@@ -136,9 +136,25 @@ class NameBenchGui(Frame):
     print state
     self.status.set(state)
 
-  def ProcessForm(self):
-    pass
+  def StartJob(self):
+    self.ProcessForm()
 
+  def DiscoverSources(self):
+    """Seek out and create a list of valid data sources."""
+    self.updateStatus('Searching for usable data sources')
+    self.hparser = history_parser.HistoryParser()
+    self.sources = self.hparser.GetAvailableHistorySources()
+
+  def ProcessForm(self):
+    self.primary = self.supplied_ns + extend(util.ExtractIPTuplesFromString(self.nameservers.get()))
+    if self.use_global:
+      self.primary = self.primary + self.global_ns
+    if self.use_regional:
+      self.secondary = self.regional_ns
+    else:
+      self.secondary = []
+    
+    
   def StartBenchmark(self):
     self.updateStatus('%s?' % self.primary.get())
     servers = self.primary.get().split()
