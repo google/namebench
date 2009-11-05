@@ -24,10 +24,13 @@ class BenchmarkThread(threading.Thread):
       self.nameservers.append((ip, ip))
 
   def updateStatus(self, msg, count=None, total=None):
+    """Update the little status message on the bottom of the window."""
+
     if hasattr(self, 'status_callback') and self.status_callback:
       self.status_callback(msg, count=count, total=total)
 
-  def run(self):
+  def Run(self):
+
     self.updateStatus('Preparing benchmark')
     nameservers = nameserver_list.NameServers(self.nameservers, include_internal=True,
                                               status_callback=self.status_callback)
@@ -36,7 +39,7 @@ class BenchmarkThread(threading.Thread):
     bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % NB_SOURCE)
     bmark.Run()
     best = bmark.BestOverallNameServer()
-    self.updateStatus('%s looks pretty good' % best)
+    self.UpdateStatus('%s looks pretty good' % best)
     self.CreateReport(bmark)
     return bmark
 
@@ -58,15 +61,23 @@ class NameBenchGui(Frame):
     self.supplied_ns = supplied_ns
     self.global_ns = global_ns
     self.regional_ns = regional_ns
-    self.version = version    
+    self.version = version
     Frame.__init__(self)
-    self.DisplayInterface()
-    
+
   def Execute(self):
+    """Called by namebench.py, begins the UI drawing process."""
+    self.DrawWindow()
     self.mainloop()
 
-  def DisplayInterface(self):
-    self.nameservers = StringVar()
+  def DiscoverSources(self):
+    """Seek out and create a list of valid data sources."""
+    self.UpdateStatus('Searching for usable data sources')
+    self.hparser = history_parser.HistoryParser()
+    self.sources = self.hparser.GetAvailableHistorySources()
+
+  def DrawWindow(self):
+    """Draws the user interface."""
+    self.nameserver_form = StringVar()
     self.status = StringVar()
     self.num_tests = IntVar()
     self.num_runs = IntVar()
@@ -80,9 +91,9 @@ class NameBenchGui(Frame):
 
     Label(self.master, text="Nameservers").grid(row=0, columnspan=2, sticky=W, padx=x_padding)
 
-    nameservers = Entry(self.master, bg="white", textvariable=self.nameservers, width=50)
+    nameservers = Entry(self.master, bg="white", textvariable=self.nameserver_form, width=50)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding+4)
-    self.nameservers.set(', '.join(util.InternalNameServers()))
+    self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
     global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)", variable=self.use_global)
     global_button.grid(row=2, columnspan=2, sticky=W, padx=x_padding)
@@ -98,7 +109,7 @@ class NameBenchGui(Frame):
     Label(self.master, text="Number of tests").grid(row=5, column=1, sticky=W, padx=x_padding)
 
     self.DiscoverSources()
-    source_titles = [ history_parser.sourceToTitle(x) for x in self.sources ]
+    source_titles = [history_parser.sourceToTitle(x) for x in self.sources]
     data_source = OptionMenu(self.master, self.data_source, *source_titles)
     data_source.grid(row=6, column=0, sticky=W, padx=x_padding)
     self.data_source.set('Alexa Top 10000')
@@ -119,13 +130,14 @@ class NameBenchGui(Frame):
     self.num_runs.set(self.options.run_count)
 
 #    Label(self.master, text="_" * 50).grid(row=14, columnspan=2)
-    button = Button(self.master, text = "Start Benchmark", command=self.ProcessForm)
+    button = Button(self.master, text = "Start Benchmark", command=self.StartJob)
     status = Label(self.master, textvariable=self.status)
     status.grid(row=15, sticky=W, padx=x_padding, pady=8, column=0)
     button.grid(row=15, sticky=E, column=1, padx=x_padding, pady=8)
-    self.updateStatus('Ready...')
+    self.UpdateStatus('Ready...')
 
-  def updateStatus(self, message, count=None, total=None, error=None):
+  def UpdateStatus(self, message, count=None, total=None, error=None):
+    """Update our little status window."""
     if total and count:
       state = '%s [%s/%s]' % (message, count, total)
     elif count:
@@ -137,29 +149,23 @@ class NameBenchGui(Frame):
     self.status.set(state)
 
   def StartJob(self):
+    """Events that get called when the Start button is pressed."""
     self.ProcessForm()
-
-  def DiscoverSources(self):
-    """Seek out and create a list of valid data sources."""
-    self.updateStatus('Searching for usable data sources')
-    self.hparser = history_parser.HistoryParser()
-    self.sources = self.hparser.GetAvailableHistorySources()
+    self.StartBenchmark()
 
   def ProcessForm(self):
-    self.primary = self.supplied_ns + extend(util.ExtractIPTuplesFromString(self.nameservers.get()))
+    """Read form and populate instance variables."""
+    self.primary = self.supplied_ns + util.ExtractIPTuplesFromString(self.nameserver_form.get())
     if self.use_global:
       self.primary = self.primary + self.global_ns
     if self.use_regional:
       self.secondary = self.regional_ns
     else:
       self.secondary = []
-    
-    
+
+
   def StartBenchmark(self):
-    self.updateStatus('%s?' % self.primary.get())
-    servers = self.primary.get().split()
-    self.status.set('Starting: servers=%s' % servers)
     thread = BenchmarkThread(servers, tests=self.tests_num.get(),
-                             status_callback=self.updateStatus)
+                             status_callback=self.UpdateStatus)
     thread.start()
 

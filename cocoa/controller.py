@@ -27,7 +27,7 @@ if 'namebench/cocoa/' in pwd:
   sys.path.append(RSRC_DIR)
 else:
   RSRC_DIR = os.path.dirname(__file__)
-  
+
 NSLog("Resource directory is %s" % RSRC_DIR)
 from lib import config
 from lib import nameserver_list
@@ -37,6 +37,7 @@ from lib import util
 from lib import history_parser
 
 class controller(NSWindowController):
+  """Controller class associated with the main window."""
   nameserver_form = IBOutlet()
   include_global = IBOutlet()
   include_regional = IBOutlet()
@@ -49,7 +50,8 @@ class controller(NSWindowController):
   spinner = IBOutlet()
 
   def awakeFromNib(self):
-    """Initializes our class."""
+    """Initializes our class, called automatically by Cocoa"""
+
     conf_file = os.path.join(RSRC_DIR, 'namebench.cfg')
     NSLog("Using configuration: %s" % conf_file)
     (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
@@ -86,8 +88,8 @@ class controller(NSWindowController):
   def ProcessForm(self):
     """Parse the form fields and populate class variables."""
     self.updateStatus('Processing form inputs')
-    self.primary = self.supplied_ns
-    
+    self.primary = self.supplied_n`s
+
     if not int(self.include_global.stringValue()):
       self.updateStatus('Not using primary')
     else:
@@ -106,7 +108,7 @@ class controller(NSWindowController):
         self.updateStatus('Parsed source type to %s' % src_type)
         if src_type:
           self.imported_records = self.hparser.GetParsedSource(source[0])
-    
+
     self.updateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     for (ip, name) in self.primary:
@@ -141,7 +143,7 @@ class controller(NSWindowController):
     bmark.updateStatus = self.updateStatus
     self.updateStatus('Creating test records using %s' % self.select_mode)
     if self.imported_records:
-      test_data = self.hparser.GenerateTestData(self.imported_records)      
+      test_data = self.hparser.GenerateTestData(self.imported_records)
       bmark.CreateTests(test_data, select_mode=self.select_mode)
     else:
       bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % RSRC_DIR,
@@ -184,7 +186,7 @@ class controller(NSWindowController):
     self.updateStatus('Searching for usable data sources')
     self.hparser = history_parser.HistoryParser()
     self.sources = self.hparser.GetAvailableHistorySources()
-    
+
   def setFormDefaults(self):
     """Set up the form with sane initial values."""
     nameservers_string = ', '.join(util.InternalNameServers())
