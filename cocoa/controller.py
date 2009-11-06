@@ -1,10 +1,22 @@
+# Copyright 2009 Google Inc. All Rights Reserved.
 #
-#  controller.py
-#  namebench
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#  Created by Thomas Stromberg on 9/10/09.
-#  Copyright (c) 2009 __MyCompanyName__. All rights reserved.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+"""Cocoa frontend implementation for namebench."""
+
+__author__ = 'tstromberg@google.com (Thomas Stromberg)'
+
 
 from objc import YES, NO, IBAction, IBOutlet
 from Foundation import *
@@ -88,7 +100,7 @@ class controller(NSWindowController):
   def ProcessForm(self):
     """Parse the form fields and populate class variables."""
     self.updateStatus('Processing form inputs')
-    self.primary = self.supplied_n`s
+    self.primary = self.supplied_nss
 
     if not int(self.include_global.stringValue()):
       self.updateStatus('Not using primary')
@@ -101,76 +113,24 @@ class controller(NSWindowController):
       self.secondary = self.regional_ns
 
     self.select_mode = self.selection_mode.titleOfSelectedItem().lower()
-    input_choice = self.data_source.titleOfSelectedItem()
-    for source in self.sources:
-      if history_parser.sourceToTitle(source) == input_choice:
-        src_type = source[0]
-        self.updateStatus('Parsed source type to %s' % src_type)
-        if src_type:
-          self.imported_records = self.hparser.GetParsedSource(source[0])
-
+    self.imported_records = self.GetSourceData(self.data_source.titleOfSelectedItem())
     self.updateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
-    for (ip, name) in self.primary:
-      NSLog("Using Global NS: %s [%s]" % (ip, name))
-
     self.options.test_count = int(self.num_tests.stringValue())
     self.options.run_count = int(self.num_runs.stringValue())
     self.updateStatus("%s tests, %s runs" % (self.options.test_count, self.options.run_count))
-
-    self.updateStatus('Building nameserver objects')
-    self.nameservers = nameserver_list.NameServers(
-        self.primary,
-        self.secondary,
-        num_servers=self.options.num_servers,
-        timeout=self.options.timeout,
-        health_timeout=self.options.health_timeout,
-        status_callback=self.updateStatus
-    )
-    self.nameservers.cache_dir = tempfile.gettempdir()
-    if len(self.nameservers) > 1:
-      self.nameservers.thread_count = int(self.options.thread_count)
-      self.nameservers.cache_dir = tempfile.gettempdir()
 
   def benchmarkThread(self):
     """Run the benchmarks, designed to be run in a thread."""
     pool = NSAutoreleasePool.alloc().init()
     self.spinner.startAnimation_(self)
     self.updateStatus('Preparing benchmark')
-    self.nameservers.CheckHealth()
-    bmark = benchmark.Benchmark(self.nameservers, test_count=self.options.test_count, run_count=self.options.run_count,
-                                status_callback=self.updateStatus)
-    bmark.updateStatus = self.updateStatus
-    self.updateStatus('Creating test records using %s' % self.select_mode)
-    if self.imported_records:
-      test_data = self.hparser.GenerateTestData(self.imported_records)
-      bmark.CreateTests(test_data, select_mode=self.select_mode)
-    else:
-      bmark.CreateTestsFromFile('%s/data/alexa-top-10000-global.txt' % RSRC_DIR,
-                                select_mode=self.select_mode)
-
-    self.updateStatus('Running...')
-    bmark.Run()
-    output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
-    output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%m')
-    report_path = os.path.join(output_dir, '%s.html' % output_base)
-    self.updateStatus('Saving report to %s' % report_path)
-    f = open(report_path, 'w')
-    bmark.CreateReport(format='html', output_fp=f)
-    f.close()
-    csv_path = os.path.join(output_dir, '%s.csv' % output_base)
-    self.updateStatus('Saving detailed results to %s' % csv_path)
-    bmark.SaveResultsToCsv(csv_path)
-    self.updateStatus('Creating report URL for %s' % report_path)
-    url = 'file://' + urllib.quote(report_path)
-    success = webbrowser.open(url)
-    if not success:
-      self.displayError("Unable to open web-browser", "Please open %s manually." % report_path)
-
+    self.PrepareBenchmark(self)
+    self.RunBenchmark(self)
     self.spinner.stopAnimation_(self)
-    best = bmark.BestOverallNameServer()
-    self.updateStatus('Complete! %s [%s] is the best.' % (best.name, best.ip))
     pool.release()
+
+
 
   def displayError(self, msg, details):
     """Display an alert drop-down message"""
@@ -180,12 +140,6 @@ class controller(NSWindowController):
     alert.setInformativeText_(details)
     buttonPressed = alert.runModal()
 
-
-  def discoverSources(self):
-    """Seek out and create a list of valid data sources."""
-    self.updateStatus('Searching for usable data sources')
-    self.hparser = history_parser.HistoryParser()
-    self.sources = self.hparser.GetAvailableHistorySources()
 
   def setFormDefaults(self):
     """Set up the form with sane initial values."""

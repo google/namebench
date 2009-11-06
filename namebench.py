@@ -21,7 +21,7 @@ Designed to assist system administrators in selection and prioritization.
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-VERSION = '0.9.1'
+VERSION = '0.9.2'
 
 import os
 import platform
@@ -44,6 +44,7 @@ if __name__ == '__main__':
       use_tk = True
 
   if use_tk:
+    print '- Will try to use Tk GUI'
     try:
       from lib import tk
       interface = tk.NameBenchGui
