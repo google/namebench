@@ -20,11 +20,23 @@ import os
 import os.path
 import re
 import sys
+import time
+import threading
 
 def sourceToTitle(source):
   """Convert a source tuple to a title."""
   (short_name, full_name, num_hosts) = source
   return '%s (%s)' % (full_name, num_hosts)
+
+class ParserThread(threading.Thread):
+  def __init__(self, record_type):
+    threading.Thread.__init__(self)
+    self.type = record_type
+
+  def run(self):
+    hp = HistoryParser()
+    self.hosts = hp.ParseByType(self.type)
+    return self.hosts
 
 class HistoryParser(object):
   """Parse the history file from files and web browsers and such."""
@@ -50,13 +62,13 @@ class HistoryParser(object):
   def GetTypes(self):
     """Return a tuple of type names with a description."""
     return dict([(x, self.TYPES[x][0]) for x in self.TYPES])
-    
+
   def GetParsedSource(self, type):
     return self.imported_sources[type]
-    
+
   def GetAvailableHistorySources(self):
     """Seek out and create a list of valid data sources.
-    
+
     Returns:
       sources: A list of tuples (type, description, record count)
     """
@@ -87,6 +99,7 @@ class HistoryParser(object):
 
   def ParseByType(self, source, complain=False):
     """Given a type, parse the newest file and return a list of hosts."""
+
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
     if not paths:
       if complain:
@@ -103,12 +116,25 @@ class HistoryParser(object):
     Returns:
       dict of type: list of hosts
     """
+    start_time = time.time()
     results = {}
+    records = 0
+    threads = []
 
     for type in self.GetTypes():
-      hosts = self.ParseByType(type)
-      if hosts and len(hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
-        results[type] = hosts
+      thread = ParserThread(type)
+      thread.start()
+      threads.append(thread)
+
+    for thread in threads:
+      thread.join()
+      if thread.hosts:
+        records += len(thread.hosts)
+
+      if thread.hosts and len(thread.hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
+        results[thread.type] = thread.hosts
+
+    print '- %s records read in %ss' % (records, time.time() - start_time)
     return results
 
   def ParseByFilename(self, filename):
@@ -203,7 +229,7 @@ class HistoryParser(object):
       for (index, part) in enumerate(new_path):
         if part == 'Chrome':
           new_path[index] = 'Chromium'
-        elif part == 'chrome':
+        elif part == 'chrome' or part == 'google-chrome':
           new_path[index] = 'chromium'
       paths.append(new_path)
     return paths
