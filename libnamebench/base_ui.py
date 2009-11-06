@@ -50,11 +50,13 @@ class BaseUI(object):
         health_timeout=self.options.health_timeout,
         status_callback=self.msg
     )
+
     self.nameservers.cache_dir = tempfile.gettempdir()
     if len(self.nameservers) > 1:
       self.nameservers.thread_count = int(self.options.thread_count)
       self.nameservers.cache_dir = tempfile.gettempdir()
 
+    self.msg('Checking nameserver health')
     self.nameservers.CheckHealth()
     self.bmark = benchmark.Benchmark(self.nameservers,
                                      test_count=self.options.test_count,

@@ -18,7 +18,10 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import math
 import re
+
+# third party lib
 import dns.resolver
+
 import nameserver
 
 def CalculateListAverage(values):

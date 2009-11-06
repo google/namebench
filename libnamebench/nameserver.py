@@ -21,7 +21,8 @@ import time
 import random
 
 import sys
-import third_party
+
+# external dependencies (from third_party)
 import dns.exception
 import dns.query
 import dns.message
@@ -30,6 +31,7 @@ import dns.rdataclass
 import dns.rdatatype
 import dns.reversename
 import dns.resolver
+
 import util
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:

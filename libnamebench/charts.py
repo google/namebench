@@ -20,8 +20,10 @@ import itertools
 import math
 import re
 import urllib
-from third_party.graphy import common
-from third_party.graphy.backends import google_chart_api
+
+# external dependencies (from third_party)
+from graphy import common
+from graphy.backends import google_chart_api
 
 CHART_URI = 'http://chart.apis.google.com/chart'
 BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',

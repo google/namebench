@@ -18,7 +18,8 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import time
 import nameserver
-import third_party
+
+# external dependencies (from third_party)
 import dns.message
 import dns.rdataclass
 import dns.query

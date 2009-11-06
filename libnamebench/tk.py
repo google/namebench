@@ -174,4 +174,4 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.options.run_count = self.num_runs.get()
     self.options.test_count = self.num_tests.get()
     self.options.data_source = self.ParseSourceSelection(self.data_source.get())
-    self.options.selection_mode = self.selection_mode.get().lower()
+    self.options.select_mode = self.selection_mode.get().lower()

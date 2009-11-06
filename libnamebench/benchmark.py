@@ -28,7 +28,7 @@ import random
 import sys
 import math
 
-import third_party
+# external dependencies (from third_party)
 import dns.rcode
 import jinja2
 

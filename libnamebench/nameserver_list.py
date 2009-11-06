@@ -24,14 +24,15 @@ import time
 import tempfile
 import sys
 
-import third_party
+# 3rd party libraries
 import dns.resolver
+
 import conn_quality
 import nameserver
 import util
 
 NS_CACHE_SLACK = 1.7
-CACHE_VER = 1
+CACHE_VER = 2
 MAX_CONGESTION_MULTIPLIER = 5
 PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 3
 

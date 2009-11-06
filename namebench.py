@@ -25,6 +25,7 @@ VERSION = '0.9.2'
 
 import os
 import sys
+import platform
 
 # Check before we start importing internal dependencies
 if sys.version < '2.4':
@@ -34,11 +35,15 @@ if sys.version < '2.4':
 elif sys.version >= '3.0':
   print '* namebench is currently incompatible with Python 3.0 - trying anyways'
 
-import platform
-from lib import cli
-from lib import config
+# See if a third_party library exists -- use it if so.
+try:
+  import third_party
+except ImportError:
+  pass
 
 
+from libnamebench import cli
+from libnamebench import config
 
 if __name__ == '__main__':
   (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
@@ -58,11 +63,14 @@ if __name__ == '__main__':
   if use_tk:
     print '- Will try to use Tk GUI'
     try:
-      from lib import tk
-      interface = tk.NameBenchGui
+      import Tkinter
     except ImportError:
       print '- Python TK libraries are unavailable (please install for a proper GUI)'
-      interface = cli.NameBenchCli
+      use_tk = False
+
+  if use_tk:
+    from libnamebench import tk
+    interface = tk.NameBenchGui
   else:
     interface = cli.NameBenchCli
 
