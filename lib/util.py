@@ -63,4 +63,3 @@ def ExtractIPTuplesFromString(string):
       valid_ips.append((ip,ip))
   return valid_ips
 
-  

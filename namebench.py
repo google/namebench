@@ -24,9 +24,21 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 VERSION = '0.9.2'
 
 import os
+import sys
+
+# Check before we start importing internal dependencies
+if sys.version < '2.4':
+  your_version = sys.version.split(' ')[0]
+  print '* Your Python version (%s) is too old! Please upgrade to 2.6+!' % your_version
+  sys.exit(1)
+elif sys.version >= '3.0':
+  print '* namebench is currently incompatible with Python 3.0 - trying anyways'
+
 import platform
 from lib import cli
 from lib import config
+
+
 
 if __name__ == '__main__':
   (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
