@@ -61,11 +61,11 @@ if __name__ == '__main__':
       use_tk = True
 
   if use_tk:
-    print '- Will try to use Tk GUI'
     try:
       import Tkinter
     except ImportError:
-      print '- Python TK libraries are unavailable (please install for a proper GUI)'
+      if len(sys.argv) == 1:
+        print '- python-tk libraries are missing, falling back to command-line interface.\n'
       use_tk = False
 
   if use_tk:
