@@ -13,9 +13,10 @@
 # limitations under the License.
 
 
-"""distutils configuration."""
+"""distutils configuration: python setup.py install"""
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
+
 
 from namebench import VERSION
 from distutils.core import setup
@@ -26,17 +27,25 @@ setup(name='namebench',
       author='Thomas Stromberg',
       author_email='tstromberg@google.com',
       url='http://namebench.googlecode.com/',
-      packages=('libnamebench',),
-      platforms=('Any',),
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'Environment :: Console',
+          'Intended Audience :: End Users/Desktop',
+          'Intended Audience :: System Administrators',
+          'License :: OSI Approved :: Apache 2.0',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: POSIX',
+          'Programming Language :: Python',
+          'Topic :: Networking',
+      ],
+      packages=['libnamebench'],
+      platforms=['Any'],
       requires=['graphy', 'dnspython', 'jinja2'],
       license='Apache 2.0',
-      scripts=['namebench.py'],
-      package_data = {'libnamebench': ['data/alexa-top-10000-global.txt',
-                                    'templates/ascii.tmpl',
-                                    'templates/html.tmpl',
-                                    'namebench.cfg']},
-#      package_data=[('data', ['data/alexa-top-10000-global.txt']),
-#                  ('templates', ['templates/ascii.tmpl',
-#                                 'templates/html.tmpl']),
-#                  ('config', ['namebench.cfg'])]
-      )
+      scripts=['namebench.py'],      
+      data_files=[
+          ('namebench', ['namebench.cfg']),
+          ('namebench/data', ['data/alexa-top-10000-global.txt'])
+      ]
+)
