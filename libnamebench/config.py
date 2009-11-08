@@ -36,8 +36,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   Returns: tuple of (OptionParser object, args)
   """
   h = history_parser.HistoryParser()
-  import_types = [x[0] for x in h.GetTypes()]
-
+  import_types = sorted(h.GetTypes().keys())
   parser = optparse.OptionParser()
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
                     help='Number of test runs to perform on each nameserver.')
