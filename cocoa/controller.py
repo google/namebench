@@ -33,22 +33,24 @@ import re
 
 # TODO(tstromberg): Research best practices for bundling cocoa frontends.
 pwd = os.getcwd()
-if 'namebench/cocoa/' in pwd:
+if 'namebench/cocoa' in pwd:
   NSLog("Enabling development mode resource hack")
-  RSRC_DIR = pwd[0:pwd.index('/cocoa/')]
+  RSRC_DIR = pwd[0:pwd.index('/cocoa')]
   sys.path.append(RSRC_DIR)
 else:
   RSRC_DIR = os.path.dirname(__file__)
 
 NSLog("Resource directory is %s" % RSRC_DIR)
-from lib import config
-from lib import nameserver_list
-from lib import third_party
-from lib import benchmark
-from lib import util
-from lib import history_parser
+print sys.path
+import third_party
+from libnamebench import base_ui
+from libnamebench import config
+from libnamebench import nameserver_list
+from libnamebench import benchmark
+from libnamebench import util
+from libnamebench import history_parser
 
-class controller(NSWindowController):
+class controller(NSWindowController, base_ui.BaseUI):
   """Controller class associated with the main window."""
   nameserver_form = IBOutlet()
   include_global = IBOutlet()
@@ -57,33 +59,32 @@ class controller(NSWindowController):
   selection_mode = IBOutlet()
   num_tests = IBOutlet()
   num_runs = IBOutlet()
-
   status = IBOutlet()
   spinner = IBOutlet()
 
   def awakeFromNib(self):
     """Initializes our class, called automatically by Cocoa"""
 
-    conf_file = os.path.join(RSRC_DIR, 'namebench.cfg')
+    self.resource_dir = RSRC_DIR
+    conf_file = os.path.join(self.resource_dir, 'namebench.cfg')
     NSLog("Using configuration: %s" % conf_file)
     (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
-    self.imported_records = None
-    self.updateStatus('Discovering sources')
-    self.discoverSources()
-    self.updateStatus('Populating Form...')
+    self.UpdateStatus('Discovering sources')
+    self.DiscoverSources()
+    self.UpdateStatus('Populating Form...')
     self.setFormDefaults()
-    self.updateStatus('Ready')
+    self.UpdateStatus('Ready')
 
   @IBAction
   def startJob_(self, sender):
     """Trigger for the 'Start Benchmark' button, starts benchmark thread."""
     self.ProcessForm()
-    self.updateStatus('Starting benchmark thread')
+    self.UpdateStatus('Starting benchmark thread')
     t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
     t.start()
 
-  def updateStatus(self, message, count=None, total=None, error=False):
+  def UpdateStatus(self, message, count=None, total=None, error=False):
     """Update the status message at the bottom of the window."""
     if error:
       return self.displayError("Error", message)
@@ -99,38 +100,36 @@ class controller(NSWindowController):
 
   def ProcessForm(self):
     """Parse the form fields and populate class variables."""
-    self.updateStatus('Processing form inputs')
-    self.primary = self.supplied_nss
+    self.UpdateStatus('Processing form inputs')
+    self.primary = self.supplied_ns
 
     if not int(self.include_global.stringValue()):
-      self.updateStatus('Not using primary')
+      self.UpdateStatus('Not using primary')
     else:
       self.primary.extend(self.global_ns)
     if not int(self.include_regional.stringValue()):
-      self.updateStatus('Not using secondary')
+      self.UpdateStatus('Not using secondary')
       self.secondary = []
     else:
       self.secondary = self.regional_ns
 
-    self.select_mode = self.selection_mode.titleOfSelectedItem().lower()
-    self.imported_records = self.GetSourceData(self.data_source.titleOfSelectedItem())
-    self.updateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
+    self.options.select_mode = self.selection_mode.titleOfSelectedItem().lower()
+    self.options.data_source = self.ParseSourceSelection(self.data_source.stringValue())    
+    self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     self.options.test_count = int(self.num_tests.stringValue())
     self.options.run_count = int(self.num_runs.stringValue())
-    self.updateStatus("%s tests, %s runs" % (self.options.test_count, self.options.run_count))
+    self.UpdateStatus("%s tests, %s runs" % (self.options.test_count, self.options.run_count))
 
   def benchmarkThread(self):
     """Run the benchmarks, designed to be run in a thread."""
     pool = NSAutoreleasePool.alloc().init()
     self.spinner.startAnimation_(self)
-    self.updateStatus('Preparing benchmark')
-    self.PrepareBenchmark(self)
-    self.RunBenchmark(self)
+    self.UpdateStatus('Preparing benchmark')
+    self.PrepareBenchmark()
+    self.RunBenchmark()
     self.spinner.stopAnimation_(self)
     pool.release()
-
-
 
   def displayError(self, msg, details):
     """Display an alert drop-down message"""
@@ -139,7 +138,6 @@ class controller(NSWindowController):
     alert.setMessageText_(msg)
     alert.setInformativeText_(details)
     buttonPressed = alert.runModal()
-
 
   def setFormDefaults(self):
     """Set up the form with sane initial values."""

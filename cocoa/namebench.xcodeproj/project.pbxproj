@@ -33,7 +33,7 @@
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* namebench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = namebench.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCC47242107F4BB1009BBD14 /* controller.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = controller.py; sourceTree = "<group>"; };
-		DCDB6B57108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Crystal_Clear_app_linneighborhood.icns; path = ../icons/Crystal_Clear_app_linneighborhood.icns; sourceTree = SOURCE_ROOT; };
+		DCDB6B57108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Crystal_Clear_app_linneighborhood.icns; path = ../third_party/Crystal_Clear/Crystal_Clear_app_linneighborhood.icns; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
