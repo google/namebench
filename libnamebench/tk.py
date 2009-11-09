@@ -102,7 +102,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.DiscoverSources()
     source_titles = [history_parser.sourceToTitle(x) for x in self.sources]
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
-    data_source.configure(width=40)
+    data_source.configure(width=35)
     data_source.grid(row=6, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
@@ -114,7 +114,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     Label(inner_frame, text="Number of runs").grid(row=7, column=1, sticky=W)
 
     selection_mode = OptionMenu(inner_frame, self.selection_mode, "Weighted", "Random", "Chunk")
-    selection_mode.configure(width=40)
+    selection_mode.configure(width=35)
     selection_mode.grid(row=8, column=0, sticky=W)
     self.selection_mode.set('Weighted')
 
