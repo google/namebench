@@ -1,85 +1,40 @@
 <html>
 <head><title>namebench: {{ timestamp }}</title></head>
 <style type-"text/css">
-body {
-  font-family: Helvetica, Arial, sans-serif;
-}
-h2 {
-	padding-top: 0.5em;
-	font-size: 1.1em;
-}
-div.nsdetails {
-	display: block;
-	background-color:  #C2CFF1;
-	border-radius: .5em;
-	-moz-border-radius: .5em;
-	-webkit-border-radius: .5em;
-	padding-left:  3px;
-	padding-bottom: 3px;
-	padding-right:  3px;
-	margin-left: 1em;
-	width: 900px
-}
-table.nstable {
-	width:  100%;
-	border-collapse:  collapse;	
-}
-thead {
-	font-weight:  strong;
-}
-tr {
-	vertical-align:  top;
-}
-ul.warnings {
-	padding:  0;
-	margin:  0;
-	margin-left: 0.4em;
-	list-style-position:  inside;
-}
-.warnings li {
-}
-td {
-	padding:  3px;
-	font-size: small;
-	border-right:  1px solid #C2CFF1;
-}
-.even {
-	background-color: #fff
-}
-.odd {
-	background-color: #ebeff9;
-}
-.disabled {
-	background-color:  #333;
-	border-bottom: 1px solid #666;
-	color: #fff;
-}
+  {% include "style.css" %}
 </style>
 <body>
 
-<h2>Recommended configuration (fastest + nearest)</h2>
+<div id="big_summary" class="greybox">
+	In this test, <strong>{{ best.name }}</strong> is
+	<h1>{{ "%0.1f"|format(comparison.percent) }}% <span id="sumverb">Faster</span></h1>
+	faster than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}
+</div>
 
-<ul class="recommended">
-{% for ns in recommended %}
-  <li>
-  <strong>
-  {% if loop.index == 1 %}Primary{% elif loop.index == 2 %}Secondary{% else %}Tertiary{% endif %}
-  :</strong> {{ ns.ip }}
-  </li>
-{% endfor %}
-</ul>
+<div id="recommended_config" class="greybox">
+	<h4>Recommended configuration (fastest + nearest)</h4>
+	<table>
+	{% for ns in recommended %}
+	<tr>
+	  <td>{% if loop.index == 1 %}Primary{% elif loop.index == 2 %}Secondary{% else %}Tertiary{% endif %} Server</td>
+    <td><input type="text" disabled=1 value="{{ ns.ip }}"></td><td class="rec_name">{% if ns.name != ns.ip %}{{ ns.name }}{% endif %}</td>
+	</tr>
+{% endfor %}	
+  </table>
+</div>
 
-<h2>Nameserver Details</h2>
+<h2>Tested DNS Servers</h2>
 
-<div class="nsdetails">
-<table class="nstable">
+<div id="nsdetails" class="section">
+<table id="nstable">
 <thead>
 <tr>
   <td nowrap="nowrap">IP</td>
   <td nowrap="nowrap">Descr.</td>
   <td nowrap="nowrap">Hostname</td>
   <td nowrap="nowrap">Avg (ms)</td>
-  <td nowrap="nowrap">Errs</td>
+  <td nowrap="nowrap">Err #</td>
+  <td nowrap="nowrap">NX #</td>
   <td>Notes</td>
 </tr>
 </thead>
@@ -89,6 +44,7 @@ td {
   <td>{{ row.0.name }}</td>
   <td>{{ row.0.hostname }}</td>
   <td>{{ "%0.2f"|format(row.1) }}</td>
+  <td>{{ row.3 }}</td>
   <td>{{ row.3 }}</td>
   <td><ul class="warnings">
 	{% if row.0.disabled %}
@@ -104,20 +60,37 @@ td {
 </table>
 </div>
 
+<h2>Graphs</h2>
+
+<div id="graphs" class="section">
 <h2>Mean Response Duration</h2>
-<img src="{{ mean_duration_url }}">
+<img src="{{ mean_duration_url }}" alt="Mean Duration Graph">
 
-<h2>Fastest Individual Response Duration</h2>
-<img src="{{ min_duration_url }}">
+<h3>Fastest Individual Response Duration</h3>
+<img src="{{ min_duration_url }}" alt="Fastest Response Graph">
 
-<h2>Response Distribution Chart (First 200ms)</h2>
+<h3>Response Distribution Chart (First 200ms)</h3>
 
-<img src="{{ distribution_url_200 }}">
+<img src="{{ distribution_url_200 }}" alt="Response Distribution Graph (first 200ms)">
 
-<h2>Response Distribution Chart (Full)</h2>
+<h3>Response Distribution Chart (Full)</h3>
 
-<img src="{{ distribution_url }}">
+<img src="{{ distribution_url }}" alt="Response Distribution Graph (full)">
+</div>
+
+{% if config %}
+<h2>Configuration</h2>
 
 
+<div id="config" class="section">
+<table id="configtable">
+	<thead><tr><td>Name</td><td>Value</td></tr></thead>
+	{% for item in config %}
+	  <tr><td>{{ item.0 }}</td><td>{{ item.1 }}</td></tr>
+	{% endfor %}
+</table>
+</div>
+{% endif %}
 </body>
 </html>
+

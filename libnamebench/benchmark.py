@@ -206,7 +206,7 @@ class Benchmark(object):
       chart.append((ns.name, textbar, overall_mean))
     return chart
 
-  def CreateReport(self, format='ascii', output_fp=None):
+  def CreateReport(self, format='ascii', config=None, output_fp=None):
     lowest_latency = self._LowestLatencyAsciiChart()
     mean_duration = self._MeanRequestAsciiChart()
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
@@ -220,6 +220,7 @@ class Benchmark(object):
                                                         scale=200)
     distribution_url = charts.DistributionLineGraph(self.DigestedResults())
 
+
     best = self.BestOverallNameServer()
     nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
     recommended = [best] + nearest
@@ -229,12 +230,38 @@ class Benchmark(object):
       if ns.disabled:
         nameserver_details.append((ns, 0.0, [], '1'))
 
+    system_primary = util.InternalNameServers()[0]
+    if len(nameserver_details) > 1:   
+      comparison_record = [x for x in nameserver_details if x[0].ip == system_primary and x[0] != best]
+      if not comparison_record:
+        comparison_record = [x for x in nameserver_details if x[0].is_primary and x[0] != best]
+      comparison = {
+        'percent': ((comparison_record[0][1] / nameserver_details[0][1])-1) * 100,
+        'ns': comparison_record[0][0]
+      }
+    else:
+      comparison = {
+        'percent': 0,
+        'ns': nameserver_details[0][0]
+      }
+      
+    if config:
+      keys = [x for x in dir(config) if not x.startswith('_') and x != 'config' ]
+      config_items = []
+      for key in keys:
+        config_items.append((key, getattr(config, key)))
+      config = sorted(config_items)
+      
     env = jinja2.Environment(loader=jinja2.PackageLoader('namebench',
                                                          'templates'))
     template = env.get_template('%s.tmpl' % format)
     rendered = template.render(
+        system_primary=system_primary,
         timestamp = datetime.datetime.now(),
         lowest_latency=lowest_latency,
+        best=best,
+        comparison=comparison,
+        config=config,
         mean_duration=mean_duration,
         nameserver_details=nameserver_details,
         mean_duration_url=mean_duration_url,
