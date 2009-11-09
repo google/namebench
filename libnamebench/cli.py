@@ -58,7 +58,7 @@ class NameBenchCli(object):
     include_internal = True
     if self.options.only:
       include_internal = False
-      if not self.global_ns:
+      if not self.supplied_ns:
         print 'If you use --only, you must provide nameservers to use.'
         sys.exit(1)
 
@@ -125,7 +125,7 @@ class NameBenchCli(object):
       f = open(self.options.output_file, 'w')
       print '* Saving report to %s (%s)' % (self.options.output_file,
                                             self.options.output_format)
-      f.write(bmark.CreateReport(format=self.options.output_format))
+      f.write(bmark.CreateReport(format=self.options.output_format, config=self.options))
       f.close()
 
     if self.options.csv_file:
