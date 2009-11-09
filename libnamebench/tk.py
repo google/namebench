@@ -30,7 +30,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
 
   def __init__(self, primary, secondary, options, status_callback=None,
                runstate_callback=None, history_parser=None):
-    self.msg('created workerthread')
+    self.UpdateStatus('created workerthread')
     threading.Thread.__init__(self)
     self.runstate_callback = runstate_callback
     self.status_callback = status_callback
@@ -73,55 +73,62 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.use_global = IntVar()
     self.use_regional = IntVar()
 
+#    self.master = Tk()
     self.master.title("namebench")
-    x_padding = 12
+    outer_frame = Frame(self.master)
+    outer_frame.grid(row=0, padx=16, pady=16)
+    inner_frame = Frame(outer_frame, relief=GROOVE, bd=2, padx=12, pady=12)
+    inner_frame.grid(row=0, columnspan=2)
+    Label(inner_frame, text="Nameservers").grid(row=0, columnspan=2, sticky=W)
 
-    Label(self.master, text="Nameservers").grid(row=0, columnspan=2, sticky=W, padx=x_padding)
-
-    nameservers = Entry(self.master, bg="white", textvariable=self.nameserver_form, width=70)
-    nameservers.grid(row=1, columnspan=2, sticky=W, padx=x_padding+4)
+    nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=65)
+    nameservers.grid(row=1, columnspan=2, sticky=W)
     self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
-    global_button = Checkbutton(self.master, text="Include global DNS providers (OpenDNS, UltraDNS)", variable=self.use_global)
-    global_button.grid(row=2, columnspan=2, sticky=W, padx=x_padding)
+    global_button = Checkbutton(inner_frame, text="Include global DNS providers (OpenDNS, UltraDNS)", variable=self.use_global)
+    global_button.grid(row=2, columnspan=2, sticky=W)
     global_button.toggle()
 
-    regional_button = Checkbutton(self.master, text="Include best available regional DNS services", variable=self.use_regional)
-    regional_button.grid(row=3, columnspan=2, sticky=W, padx=x_padding)
+    regional_button = Checkbutton(inner_frame, text="Include best available regional DNS services", variable=self.use_regional)
+    regional_button.grid(row=3, columnspan=2, sticky=W)
     regional_button.toggle()
 
-    Label(self.master, text="_" * 70).grid(row=4, columnspan=2)
+    separator = Frame(inner_frame, height=2, width=515, bd=1, relief=SUNKEN)
+    separator.grid(row=4, padx=5, pady=5, columnspan=2)
 
-    Label(self.master, text="Benchmark Data Source").grid(row=5, column=0, sticky=W, padx=x_padding)
-    Label(self.master, text="Number of tests").grid(row=5, column=1, sticky=W, padx=x_padding)
+    Label(inner_frame, text="Benchmark Data Source").grid(row=5, column=0, sticky=W)
+    Label(inner_frame, text="Number of tests").grid(row=5, column=1, sticky=W)
 
     self.DiscoverSources()
     source_titles = [history_parser.sourceToTitle(x) for x in self.sources]
-    data_source = OptionMenu(self.master, self.data_source, *source_titles)
-    data_source.grid(row=6, column=0, sticky=W, padx=x_padding)
-    self.data_source.set('Alexa Top 10000')
+    data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
+    data_source.configure(width=40)
+    data_source.grid(row=6, column=0, sticky=W)
+    self.data_source.set(source_titles[0])
 
-    num_tests = Entry(self.master, bg="white", textvariable=self.num_tests)
-    num_tests.grid(row=6, column=1, sticky=W, padx=x_padding+4)
+    num_tests = Entry(inner_frame, bg="white", textvariable=self.num_tests)
+    num_tests.grid(row=6, column=1, sticky=W,)
     self.num_tests.set(self.options.test_count)
 
-    Label(self.master, text="Benchmark Data Selection").grid(row=7, column=0, sticky=W, padx=x_padding)
-    Label(self.master, text="Number of runs").grid(row=7, column=1, sticky=W, padx=x_padding)
+    Label(inner_frame, text="Benchmark Data Selection").grid(row=7, column=0, sticky=W)
+    Label(inner_frame, text="Number of runs").grid(row=7, column=1, sticky=W)
 
-    selection_mode = OptionMenu(self.master, self.selection_mode, "Weighted", "Random", "Chunk")
-    selection_mode.grid(row=8, column=0, sticky=W, padx=x_padding)
+    selection_mode = OptionMenu(inner_frame, self.selection_mode, "Weighted", "Random", "Chunk")
+    selection_mode.configure(width=40)
+    selection_mode.grid(row=8, column=0, sticky=W)
     self.selection_mode.set('Weighted')
 
-    num_runs = Entry(self.master, bg="white", textvariable=self.num_runs)
-    num_runs.grid(row=8, column=1, sticky=W, padx=x_padding+4)
+    num_runs = Entry(inner_frame, bg="white", textvariable=self.num_runs)
+    num_runs.grid(row=8, column=1, sticky=W)
     self.num_runs.set(self.options.run_count)
 
-    self.button = Button(self.master, command=self.StartJob)
-    status = Label(self.master, textvariable=self.status)
-    status.grid(row=15, sticky=W, padx=x_padding, pady=8, column=0)
-    self.button.grid(row=15, sticky=E, column=1, padx=x_padding, pady=8)
+    self.button = Button(outer_frame, command=self.StartJob)
+    status = Label(outer_frame, text='...', textvariable=self.status)
+    status.grid(row=15, sticky=W, column=0)
+    self.button.grid(row=15, sticky=E, column=1)
     self.UpdateRunState(running=True)
     self.UpdateRunState(running=False)
+    self.UpdateStatus('Ready')
 
 
   def UpdateStatus(self, message, count=None, total=None, error=None):
@@ -139,8 +146,6 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.status.set(state)
 
   def UpdateRunState(self, running=True):
-    print '* UpdateRunState: %s' % running
-
     if running:
       self.button.config(state=DISABLED)
       self.button.config(text='Running')
@@ -148,7 +153,6 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     else:
       self.button.config(state=NORMAL)
       self.button.config(text='Start Benchmark')
-      self.UpdateStatus('Ready!')
 
   def StartJob(self):
     """Events that get called when the Start button is pressed."""

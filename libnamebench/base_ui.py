@@ -87,20 +87,20 @@ class BaseUI(object):
     output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%m')
     output_base = output_base.replace(':', '').replace(' ', '_')
     self.html_path = os.path.join(output_dir, '%s.html' % output_base)
-    self.UpdateStatus('Saving report to %s' % self.html_path)
+    self.UpdateStatus('Saving HTML report')
     f = open(self.html_path, 'w')
     self.bmark.CreateReport(format='html', output_fp=f)
     f.close()
 
     self.csv_path = os.path.join(output_dir, '%s.csv' % output_base)
-    self.UpdateStatus('Saving detailed results to %s' % self.csv_path)
+    self.UpdateStatus('Saving query details (CSV)')
     self.bmark.SaveResultsToCsv(self.csv_path)
     self.UpdateStatus('Reports saved.')
 
   def DisplayHtmlReport(self):
-    self.UpdateStatus('Preparing to display %s' % self.html_path)
+    self.UpdateStatus('Preparing to displayHTML report')
     url = 'file://%s' % urllib.quote(self.html_path)
-    self.UpdateStatus('Opening %s' % url)
+    self.UpdateStatus('Opening HTML report')
     webbrowser.open(url)
 
   def DiscoverSources(self):
