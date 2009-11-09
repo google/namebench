@@ -17,6 +17,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import os
+import sys
 import threading
 from Tkinter import *
 
@@ -24,6 +25,9 @@ import base_ui
 import history_parser
 import util
 
+def closedWindowHandler():
+  print 'Au revoir, mes amis!'
+  sys.exit(1)
 
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
@@ -49,7 +53,10 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
     if self.runstate_callback:
       self.runstate_callback(running=False)
 
+
 class NameBenchGui(Frame, base_ui.BaseUI):
+  """The main Tk GUI class."""
+    
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
     self.options = options
     self.supplied_ns = supplied_ns
@@ -57,6 +64,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.regional_ns = regional_ns
     self.version = version
     Frame.__init__(self)
+    self.master.protocol('WM_DELETE_WINDOW', closedWindowHandler)
 
   def Execute(self):
     """Called by namebench.py, begins the UI drawing process."""
@@ -74,7 +82,6 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.use_global = IntVar()
     self.use_regional = IntVar()
 
-#    self.master = Tk()
     self.master.title("namebench")
     outer_frame = Frame(self.master)
     outer_frame.grid(row=0, padx=16, pady=16)
@@ -143,8 +150,8 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     else:
       state = message
 
-    print "> " % state
-    self.status.set(state)
+    print "> %s" % state
+    self.status.set(state[0:60])
 
   def UpdateRunState(self, running=True):
     if running:
