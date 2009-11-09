@@ -72,10 +72,12 @@ class BaseUI(object):
       global_path = '%s/data/alexa-top-10000-global.txt' % self.resource_dir
       self.bmark.CreateTestsFromFile(global_path,
                                      select_mode=self.options.select_mode)
+    self.UpdateStatus('Benchmark preparation is complete.')
 
   def RunBenchmark(self):
-    self.UpdateStatus('Running...')
+    self.UpdateStatus('Running the benchmark')
     self.bmark.Run()
+    self.UpdateStatus('Calculating the best nameserver')
     best = self.bmark.BestOverallNameServer()
     self.CreateReports()
     self.DisplayHtmlReport()

@@ -44,6 +44,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
     if self.runstate_callback:
       self.runstate_callback(running=True)
     self.PrepareBenchmark()
+    self.UpdateStatus('Here comes the pain...')
     self.RunBenchmark()
     if self.runstate_callback:
       self.runstate_callback(running=False)
@@ -142,7 +143,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     else:
       state = message
 
-    print state
+    print "> " % state
     self.status.set(state)
 
   def UpdateRunState(self, running=True):
