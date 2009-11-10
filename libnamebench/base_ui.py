@@ -32,7 +32,7 @@ RSRC_DIR = None
 def GenerateOutputFilename(extension):
 #  output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
   output_dir = tempfile.gettempdir()
-  output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%m')
+  output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%M')
   output_base = output_base.replace(':', '').replace(' ', '_')
   return os.path.join(output_dir, '%s.%s' % (output_base, extension))
 
