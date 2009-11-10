@@ -47,7 +47,7 @@ WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 2
-MAX_SHARING_DELTA_MS = 240
+MAX_SHARING_DELTA_MS = 298
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 2.25
@@ -59,7 +59,8 @@ class NameServer(object):
   def __init__(self, ip, name=None, internal=False, primary=False):
     self.name = name
     self.ip = ip
-    self.is_internal = internal
+    self.is_system = internal
+    self.system_position = None
     self.is_primary = primary
     self.timeout = 60
     self.health_timeout = 30
@@ -323,7 +324,7 @@ class NameServer(object):
     self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
-      self.disabled = 'Failed shared-cache check: %s' % warning
+      self.disabled = 'Failed shared-cache: %s' % warning
     else:
       delta = abs(other_ttl - response.answer[0].ttl)
       if delta > 0:
@@ -355,7 +356,7 @@ class NameServer(object):
       if warning:
         self.warnings.append(warning)
       if is_broken:
-        self.disabled = 'Failed health check: %s' % warning
+        self.disabled = 'Failed: %s' % warning
         break
     return self.disabled
 

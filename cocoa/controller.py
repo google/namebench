@@ -83,7 +83,11 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.UpdateStatus('Starting benchmark thread')
     t = NSThread.alloc().initWithTarget_selector_object_(self, self.benchmarkThread, None)
     t.start()
-
+    
+  # TODO(tstromberg): Hook this method in
+  def applicationShouldTerminateAfterLastWindowClosed_(self, sender):
+    return True
+        
   def UpdateStatus(self, message, count=None, total=None, error=False):
     """Update the status message at the bottom of the window."""
     if error:

@@ -6,7 +6,7 @@
 <body>
 
 <div id="big_summary" class="greybox">
-	In this test, <strong>{{ best.name }}</strong> is
+	In this test, <strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is
 	<h1>{{ "%0.1f"|format(comparison.percent) }}% <span id="sumverb">Faster</span></h1>
 	faster than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}
 </div>
@@ -39,7 +39,7 @@
 </tr>
 </thead>
 {% for row in nameserver_details %}
-<tr class="{% if row.0.disabled %}disabled{% else %}{{ loop.cycle('odd', 'even')}}{% endif %}">
+<tr class="{% if row.0.disabled %}disabled{% else %}{{ loop.cycle('odd', 'even')}}{% endif %} {% if row.0.system_position == 0 %}primary_row{% endif %}">
   <td>{{ row.0.ip }}</td>
   <td>{{ row.0.name }}</td>
   <td>{{ row.0.hostname }}</td>
@@ -47,12 +47,14 @@
   <td>{{ row.3 }}</td>
   <td>{{ row.3 }}</td>
   <td><ul class="warnings">
+	{% if row.0.system_position == 0 %}<li>Your current primary DNS server</li>{% endif %}
 	{% if row.0.disabled %}
-	    <li><strong>{{ row.0.disabled }}</strong></li>
-	{% endif %}
-  	{% for warning in row.0.warnings %}
-		<li>{{ warning }}</li>
-    {% endfor %}
+	    <li><strong>{{ row.0.disabled|e }}</strong></li>
+	{% else %}
+    	{% for warning in row.0.warnings %}
+    		<li>{{ warning|e }}</li>
+        {% endfor %}
+    {% endif %}
 	</ul>
   </td>
 </tr>

@@ -31,6 +31,9 @@ import history_parser
 import nameserver_list
 import conn_quality
 
+# TODO(tstromberg): Migrate this class to using base_ui.BaseUI for less code
+# duplication.
+
 class NameBenchCli(object):
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
     self.options = options

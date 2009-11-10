@@ -230,11 +230,18 @@ class Benchmark(object):
       if ns.disabled:
         nameserver_details.append((ns, 0.0, [], '1'))
 
-    system_primary = util.InternalNameServers()[0]
-    if len(nameserver_details) > 1:   
-      comparison_record = [x for x in nameserver_details if x[0].ip == system_primary and x[0] != best]
+    builtin_servers = util.InternalNameServers()
+    system_primary = builtin_servers[0]
+    if len(nameserver_details) > 1:
+      other_records = [ x for x in nameserver_details if x[0] != best and x[1] > 0]
+      # First try to compare against our primary DNS
+      comparison_record = [x for x in other_records if x[0].system_position == 0]
+      # Then the fastest "primary"
       if not comparison_record:
-        comparison_record = [x for x in nameserver_details if x[0].is_primary and x[0] != best]
+        comparison_record = [x for x in other_records if x[0].is_primary]
+      # Fall back to the second fastest of any type.
+      if not comparison_record:
+        comparison_record = other_records
       comparison = {
         'percent': ((comparison_record[0][1] / nameserver_details[0][1])-1) * 100,
         'ns': comparison_record[0][0]

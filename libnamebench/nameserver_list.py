@@ -83,8 +83,9 @@ class NameServers(list):
 
 
     self.ApplyCongestionFactor()
-
     super(NameServers, self).__init__()
+    self.system_nameservers = util.InternalNameServers()
+    
     for (ip, name) in nameservers:
       self.AddServer(ip, name, primary=True)
 
@@ -93,8 +94,8 @@ class NameServers(list):
         self.AddServer(ip, name, primary=False)
 
     if include_internal:
-      for ip in util.InternalNameServers():
-        self.AddServer(ip, 'SYS-%s' % ip, internal=True, primary=True)
+      for ip in self.system_nameservers:
+        self.AddServer(ip, 'SYS-%s' % ip, primary=True)
 
 
   @property
@@ -123,13 +124,17 @@ class NameServers(list):
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
-  def AddServer(self, ip, name, primary=False, internal=False):
+  def AddServer(self, ip, name, primary=False):
     """Add a server to the list given an IP and name."""
-    ns = nameserver.NameServer(ip, name=name, primary=primary,
-                               internal=internal)
+    
+    ns = nameserver.NameServer(ip, name=name, primary=primary)
+    if ip in self.system_nameservers:
+      ns.is_system = True
+      ns.system_position = self.system_nameservers.index(ip)
+
     ns.timeout = self.timeout
     # Give them a little extra love for the road.
-    if primary or internal:
+    if ns.is_primary or ns.is_system:
       ns.health_timeout = self.health_timeout * PRIMARY_HEALTH_TIMEOUT_MULTIPLIER
     else:
       ns.health_timeout = self.health_timeout
@@ -300,6 +305,8 @@ class NameServers(list):
   def RunCacheCollusionThreads(self, other_ns, test_servers):
     """Schedule and manage threading for cache collusion checks."""
 
+    # TODO(tstromberg): Investigate issues with long initial
+    # health-check runs.
     threads = []
     thread_count = self.thread_count
     for chunk in util.SplitSequence(test_servers, thread_count):
@@ -317,7 +324,12 @@ class NameServers(list):
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
         faster.warnings.append('shares cache with %s' % slower.ip)
-        slower.disabled = 'Slower replica of %s' % faster.ip
+        # Do not disable our current primary DNS server
+        if slower.system_position == 0:
+          faster.disabled = 'Replica of current primary DNS server'
+          slower.warnings.append('shares cache with faster %s' % faster.ip)
+        else:
+          slower.disabled = 'Slower replica of %s' % faster.ip
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
 

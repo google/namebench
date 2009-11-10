@@ -52,6 +52,13 @@ ul.warnings {
 .odd {
 	background-color: #ebeff9;
 }
+
+.primary_row {
+  font-weight: bold;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+
 .disabled {
 	background-color:  #333;
 	border-bottom: 1px solid #666;

@@ -91,7 +91,7 @@ class BaseUI(object):
     self.html_path = os.path.join(output_dir, '%s.html' % output_base)
     self.UpdateStatus('Saving HTML report')
     f = open(self.html_path, 'w')
-    self.bmark.CreateReport(format='html', output_fp=f)
+    self.bmark.CreateReport(format='html', output_fp=f, config=self.options)
     f.close()
 
     self.csv_path = os.path.join(output_dir, '%s.csv' % output_base)
