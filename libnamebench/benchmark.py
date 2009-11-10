@@ -233,7 +233,7 @@ class Benchmark(object):
     builtin_servers = util.InternalNameServers()
     system_primary = builtin_servers[0]
     if len(nameserver_details) > 1:
-      other_records = [ x for x in nameserver_details if x[0] != best and x[1] > 0]
+      other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled ]
       # First try to compare against our primary DNS
       comparison_record = [x for x in other_records if x[0].system_position == 0]
       # Then the fastest "primary"

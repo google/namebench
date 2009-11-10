@@ -7,8 +7,8 @@
 
 <div id="big_summary" class="greybox">
 	In this test, <strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is
-	<h1>{{ "%0.1f"|format(comparison.percent) }}% <span id="sumverb">Faster</span></h1>
-	faster than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}
+	<h1>{{ "%0.0f"|format(comparison.percent) }}% <span id="sumverb">Faster</span></h1>
+	than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}
 </div>
 
 <div id="recommended_config" class="greybox">

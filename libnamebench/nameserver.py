@@ -47,7 +47,7 @@ WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 2
-MAX_SHARING_DELTA_MS = 298
+MAX_SHARING_DELTA_MS = 120
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 2.25
@@ -125,7 +125,7 @@ class NameServer(object):
         success = True
       except IndexError, exc:
         print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
-        time.sleep(1)
+        time.sleep(2)
         success = False
     if not success:
       raise ValueError('Unable to create UDP packet')
@@ -283,8 +283,13 @@ class NameServer(object):
 
     return (response, is_broken, warning, duration)
 
-  def TestWildcardCaching(self):
-    return self.QueryWildcardCache(save=True)[1:]
+  def StoreWildcardCache(self):
+    (is_broken, warning, duration) = self.QueryWildcardCache(save=True)[1:]
+    if warning:
+      self.warnings.append(warning)
+    if is_broken:
+      self.disabled = 'Failed: %s' % warning
+    self.checks.append(('wildcard store', is_broken, warning, duration))
 
   def TestSharedCache(self, other_ns):
     """Is this nameserver sharing a cache with another nameserver?
@@ -345,7 +350,6 @@ class NameServer(object):
     tests = [self.TestWwwGoogleComResponse,
              self.TestGoogleComResponse,
              self.TestNegativeResponse,
-             self.TestWildcardCaching,
              self.TestWwwPaypalComResponse]
     self.checks = []
     self.warnings = []
