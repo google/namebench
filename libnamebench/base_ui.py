@@ -29,6 +29,12 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 # Hack to locate the Alexa data
 RSRC_DIR = None
 
+def GenerateOutputFilename(extension):
+#  output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
+  output_dir = tempfile.gettempdir()
+  output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%m')
+  output_base = output_base.replace(':', '').replace(' ', '_')
+  return os.path.join(output_dir, '%s.%s' % (output_base, extension))
 
 class BaseUI(object):
   """Common methods for UI implementations."""
@@ -85,16 +91,13 @@ class BaseUI(object):
 
   def CreateReports(self):
     """Create CSV & HTML reports for the latest run."""
-    output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
-    output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%m')
-    output_base = output_base.replace(':', '').replace(' ', '_')
-    self.html_path = os.path.join(output_dir, '%s.html' % output_base)
+    self.html_path = GenerateOutputFilename('html')
     self.UpdateStatus('Saving HTML report')
     f = open(self.html_path, 'w')
     self.bmark.CreateReport(format='html', output_fp=f, config=self.options)
     f.close()
 
-    self.csv_path = os.path.join(output_dir, '%s.csv' % output_base)
+    self.csv_path = GenerateOutputFilename('csv')
     self.UpdateStatus('Saving query details (CSV)')
     self.bmark.SaveResultsToCsv(self.csv_path)
     self.UpdateStatus('Reports saved.')

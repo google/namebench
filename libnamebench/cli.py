@@ -23,8 +23,8 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
 import sys
-import tempfile
 
+import base_ui
 import benchmark
 import config
 import history_parser
@@ -124,14 +124,25 @@ class NameBenchCli(object):
     bmark.Run()
     print ''
     print bmark.CreateReport(format='ascii')
+
     if self.options.output_file:
-      f = open(self.options.output_file, 'w')
-      print '* Saving report to %s (%s)' % (self.options.output_file,
-                                            self.options.output_format)
-      f.write(bmark.CreateReport(format=self.options.output_format, config=self.options))
-      f.close()
+      filename = self.options.output_file
+    else:
+      if self.options.output_format == 'ascii':
+        extension = 'txt'
+      else:
+        extension = self.options.output_format
+      filename = base_ui.GenerateOutputFilename(extension)
+
+    f = open(filename, 'w')
+    print '* Saving %s summary report to %s' % (self.options.output_format, filename)
+    f.write(bmark.CreateReport(format=self.options.output_format, config=self.options))
+    f.close()
 
     if self.options.csv_file:
-      print ''
-      print '* Saving request details to %s' % self.options.csv_file
-      bmark.SaveResultsToCsv(self.options.output_file)
+      csv_filename = self.options.csv_file
+    else:
+      csv_filename = base_ui.GenerateOutputFilename('csv')
+    print '* Saving request details to %s' % csv_filename
+    bmark.SaveResultsToCsv(csv_filename)
+
