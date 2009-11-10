@@ -19,7 +19,7 @@
 	  <td>{% if loop.index == 1 %}Primary{% elif loop.index == 2 %}Secondary{% else %}Tertiary{% endif %} Server</td>
     <td><input type="text" disabled=1 value="{{ ns.ip }}"></td><td class="rec_name">{% if ns.name != ns.ip %}{{ ns.name }}{% endif %}</td>
 	</tr>
-{% endfor %}	
+{% endfor %}
   </table>
 </div>
 
@@ -45,7 +45,7 @@
   <td>{{ row.0.hostname }}</td>
   <td>{{ "%0.2f"|format(row.1) }}</td>
   <td>{{ row.3 }}</td>
-  <td>{{ row.3 }}</td>
+  <td>{{ row.4 }}</td>
   <td><ul class="warnings">
 	{% if row.0.system_position == 0 %}<li>Your current primary DNS server</li>{% endif %}
 	{% if row.0.disabled %}

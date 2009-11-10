@@ -150,17 +150,20 @@ class Benchmark(object):
     for ns in self.results:
       record_count = 0
       failure_count = 0
+      nx_count = 0
       run_averages = []
 
       for test_run in self.results[ns]:
         record_count += len(test_run)
-        failure_count += len([x[3] for x in test_run if x[3] == -1])
+        # x: record, req_type, duration, response
+        failure_count += len([x for x in test_run if not x[3]])
+        nx_count += len([x for x in test_run if x[3] and not x[3].answer])
         duration = sum([x[2] for x in test_run])
         run_averages.append(duration / len(test_run))
 
       # This appears to be a safe use of averaging averages
       overall_average = util.CalculateListAverage(run_averages)
-      yield (ns, overall_average, run_averages, failure_count)
+      yield (ns, overall_average, run_averages, failure_count, nx_count)
 
   def FastestNameServerResult(self):
     """Process all runs for all hosts, yielding an average for each host."""
@@ -201,7 +204,7 @@ class Benchmark(object):
     max_result = sorted_averages[-1][1]
     chart = []
     for result in sorted_averages:
-      (ns, overall_mean, unused_run_means, failure_count) = result
+      (ns, overall_mean, unused_run_means, failure_count, nx_count) = result
       textbar = util.DrawTextBar(overall_mean, max_result)
       chart.append((ns.name, textbar, overall_mean))
     return chart
@@ -232,8 +235,9 @@ class Benchmark(object):
 
     builtin_servers = util.InternalNameServers()
     system_primary = builtin_servers[0]
-    if len(nameserver_details) > 1:
-      other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled ]
+    other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled ]
+
+    if other_records:
       # First try to compare against our primary DNS
       comparison_record = [x for x in other_records if x[0].system_position == 0]
       # Then the fastest "primary"
@@ -251,14 +255,14 @@ class Benchmark(object):
         'percent': 0,
         'ns': nameserver_details[0][0]
       }
-      
+
     if config:
       keys = [x for x in dir(config) if not x.startswith('_') and x != 'config' ]
       config_items = []
       for key in keys:
         config_items.append((key, getattr(config, key)))
       config = sorted(config_items)
-      
+
     env = jinja2.Environment(loader=jinja2.PackageLoader('namebench',
                                                          'templates'))
     template = env.get_template('%s.tmpl' % format)
