@@ -44,7 +44,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     help='Config file to use.')
   parser.add_option('-o', '--output', dest='output_file', default=None,
                     help='Filename to write output to')
-  parser.add_option('-f', '--format', dest='output_format', default='ascii',
+  parser.add_option('-f', '--format', dest='output_format', default='html',
                     help='Output format for file (ascii, html)')
   parser.add_option('-c', '--csv_output', dest='csv_file', default=None,
                     help='Filename to write CSV output to')
