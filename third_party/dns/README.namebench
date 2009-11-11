@@ -1,0 +1,29 @@
+This is the standard 1.7.0 version of namebench, save for this reliability fix:
+
+
+Index: entropy.py
+===================================================================
+--- entropy.py	(revision 293)
++++ entropy.py	(working copy)
+@@ -48,15 +48,18 @@
+     def stir(self, entropy):
+         bytes = [ord(c) for c in self.pool]
+         for c in entropy:
+-            if self.pool_index == self.hash_len:
++            if self.pool_index == self.hash_len or self.pool_index >= len(bytes):
+                 self.pool_index = 0
+             b = ord(c) & 0xff
+-            bytes[self.pool_index] ^= b
++            try:
++                bytes[self.pool_index] ^= b
++            except IndexError:
++                print "[stir] pool index: %s len bytes: %s" % (self.pool_index, len(bytes))
+             self.pool_index += 1
+         self.pool = ''.join([chr(c) for c in bytes])
+ 
+     def random_8(self):
+-        if self.digest is None or self.next_byte == self.hash_len:
++        if self.digest is None or self.next_byte == self.hash_len or self.next_byte >= len(self.digest):
+             self.hash.update(self.pool)
+             self.digest = self.hash.digest()
+             self.stir(self.digest)
