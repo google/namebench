@@ -75,8 +75,9 @@ class BaseUI(object):
       test_data = self.hparser.GenerateTestData(hosts)
       self.bmark.CreateTests(test_data, select_mode=self.options.select_mode)
     else:
-      global_path = '%s/data/alexa-top-10000-global.txt' % self.resource_dir
-      self.bmark.CreateTestsFromFile(global_path,
+      # The Alexa data (by default)
+      data_path = os.path.join(self.resource_dir, self.options.data_file)
+      self.bmark.CreateTestsFromFile(data_path,
                                      select_mode=self.options.select_mode)
     self.UpdateStatus('Benchmark preparation is complete.')
 
@@ -92,12 +93,13 @@ class BaseUI(object):
   def CreateReports(self):
     """Create CSV & HTML reports for the latest run."""
     self.html_path = GenerateOutputFilename('html')
+    self.csv_path = GenerateOutputFilename('csv')
+
     self.UpdateStatus('Saving HTML report')
     f = open(self.html_path, 'w')
-    self.bmark.CreateReport(format='html', output_fp=f, config=self.options)
+    self.bmark.CreateReport(format='html', output_fp=f, config=self.options, csv_path=self.csv_path)
     f.close()
 
-    self.csv_path = GenerateOutputFilename('csv')
     self.UpdateStatus('Saving query details (CSV)')
     self.bmark.SaveResultsToCsv(self.csv_path)
     self.UpdateStatus('Reports saved.')

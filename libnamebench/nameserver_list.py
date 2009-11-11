@@ -18,6 +18,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import operator
 import os
+import random
 import pickle
 import threading
 import time
@@ -60,7 +61,7 @@ class TestNameServersThread(threading.Thread):
         continue
       if self.store_wildcard:
         self.results.append(ns.StoreWildcardCache())
-      if self.compare_cache:
+      elif self.compare_cache:
         self.results.append(ns.TestSharedCache(self.compare_cache))
       else:
         self.results.append(ns.CheckHealth())
@@ -251,6 +252,7 @@ class NameServers(list):
     secondary_ips = [x.ip for x in self.secondaries]
     checksum = hash(str(sorted(secondary_ips)))
     basefile = '.'.join(map(str, ('namebench', CACHE_VER, len(secondary_ips),
+                                  self.num_servers,
                                   self.requested_health_timeout, checksum)))
     return os.path.join(self.cache_dir, basefile)
 
@@ -290,7 +292,7 @@ class NameServers(list):
     self.RunWildcardStoreThreads()
     # Give the TTL a chance to decrement
     self.msg("Waiting for nameservers TTL's to decrement")
-    time.sleep(3)
+    time.sleep(4)
     tested = []
     ns_by_fastest = [x for x in self.SortByFastest() if not x.disabled]
     for (index, other_ns) in enumerate(ns_by_fastest):
@@ -342,24 +344,30 @@ class NameServers(list):
       thread.join()
       results.extend(thread.results)
 
-    # To avoid concurrancy issues, we don't modify the other ns in the thread.
+    # TODO(tstromberg): Comparing fast/slow at this point is stupid. Move it
+    # till after these checks have completed.
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
-        faster.warnings.append('shares cache with %s' % slower.ip)
         # Do not disable our current primary DNS server
         if slower.system_position == 0:
-          faster.disabled = 'Replica of current primary DNS server'
+          faster.disabled = 'Shares-cache with current primary DNS server'
           slower.warnings.append('shares cache with faster %s' % faster.ip)
+        elif slower.is_primary and not faster.is_primary:
+          faster.disabled = 'Shares cache wth %s [%s]' % (slower.name, slower.ip)
+          slower.warnings.append('shares cache with %s' % faster.ip)
         else:
-          slower.disabled = 'Slower replica of %s' % faster.ip
+          slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
+          faster.warnings.append('shares cache with %s' % slower.ip)
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
 
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
-    for (index, chunk) in enumerate(util.SplitSequence(self, self.thread_count)):
+    servers = list(self)
+    random.shuffle(servers)
+    for (index, chunk) in enumerate(util.SplitSequence(servers, self.thread_count)):
       self.msg('Launching health check threads', count=index+1, total=self.thread_count)
       thread = TestNameServersThread(chunk)
       thread.start()
@@ -368,3 +376,6 @@ class NameServers(list):
     for (index, thread) in enumerate(threads):
       self.msg('Waiting for health check threads', index+1, len(threads))
       thread.join()
+    
+    healthy = [x for x in self if not x.disabled]
+    self.msg('%s of %s name servers are healthy' % (len(healthy), len(self)))

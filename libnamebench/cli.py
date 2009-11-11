@@ -90,21 +90,22 @@ class NameBenchCli(object):
   def PrepareBenchmark(self, nameservers):
     if self.options.import_file:
       importer = history_parser.HistoryParser()
-      history = importer.Parse(self.options.import_file)
-      if history:
-        print '- Imported %s records from %s' % (len(history), self.options.import_file)
+      test_data = importer.GenerateTestDataFromInput(self.options.import_file)
+      if test_data:
+        print '- Imported %s records from %s' % (len(test_data), self.options.import_file)
       else:
         print '- Could not import anything from %s' % self.options.import_file
         sys.exit(2)
     else:
-      history = None
+      test_data = None
 
     bmark = benchmark.Benchmark(nameservers,
                                 run_count=self.options.run_count,
                                 test_count=self.options.test_count,
                                 status_callback=self.msg)
-    if history:
-      bmark.CreateTests(history, select_mode=self.options.select_mode)
+    if test_data:
+      bmark.CreateTests(test_data, select_mode=self.options.select_mode)
+      self.options.data_file = None
     else:
       bmark.CreateTestsFromFile(self.options.data_file, select_mode=self.options.select_mode)
 
@@ -134,15 +135,16 @@ class NameBenchCli(object):
         extension = self.options.output_format
       filename = base_ui.GenerateOutputFilename(extension)
 
-    f = open(filename, 'w')
-    print '* Saving %s summary report to %s' % (self.options.output_format, filename)
-    f.write(bmark.CreateReport(format=self.options.output_format, config=self.options))
-    f.close()
-
     if self.options.csv_file:
       csv_filename = self.options.csv_file
     else:
       csv_filename = base_ui.GenerateOutputFilename('csv')
+
+    f = open(filename, 'w')
+    print '* Saving %s summary report to %s' % (self.options.output_format, filename)
+    f.write(bmark.CreateReport(format=self.options.output_format, config=self.options, csv_path=csv_filename))
+    f.close()
+
     print '* Saving request details to %s' % csv_filename
     bmark.SaveResultsToCsv(csv_filename)
 

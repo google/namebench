@@ -34,17 +34,17 @@
   <td nowrap="nowrap">Hostname</td>
   <td nowrap="nowrap">Avg (ms)</td>
   <td nowrap="nowrap">Err #</td>
-  <td nowrap="nowrap">NX #</td>
+  <td nowrap="nowrap">NoAns #</td>
   <td>Notes</td>
 </tr>
 </thead>
 {% for row in nameserver_details %}
-<tr class="{% if row.0.disabled %}disabled{% else %}{{ loop.cycle('odd', 'even')}}{% endif %} {% if row.0.system_position == 0 %}primary_row{% endif %}">
+<tr class="{% if row.0.disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.0.system_position == 0 %} primary_row{% endif %}{% if row.3 > 1 %} unhealthy_host{% endif %}">
   <td>{{ row.0.ip }}</td>
   <td>{{ row.0.name }}</td>
   <td>{{ row.0.hostname }}</td>
   <td>{{ "%0.2f"|format(row.1) }}</td>
-  <td>{{ row.3 }}</td>
+  <td {% if row.3 != 0 %}class="error_count"{% endif %}>{{ row.3 }}</td>
   <td>{{ row.4 }}</td>
   <td><ul class="warnings">
 	{% if row.0.system_position == 0 %}<li>Your current primary DNS server</li>{% endif %}
@@ -79,6 +79,14 @@
 
 <img src="{{ distribution_url }}" alt="Response Distribution Graph (full)">
 </div>
+
+{% if csv_link %}
+<h2>Query Details</h2>
+
+<div id="details" class="section">
+View the details in <a href="{{ csv_link }}">Comma Separated Values (csv)</a> format.
+</div>
+{% endif %}
 
 {% if config %}
 <h2>Configuration</h2>

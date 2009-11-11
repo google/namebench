@@ -24,6 +24,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import csv
 import datetime
 import operator
+import os.path
 import random
 import sys
 import math
@@ -209,7 +210,8 @@ class Benchmark(object):
       chart.append((ns.name, textbar, overall_mean))
     return chart
 
-  def CreateReport(self, format='ascii', config=None, output_fp=None):
+  def CreateReport(self, format='ascii', config=None, output_fp=None,
+                   csv_path=None):
     lowest_latency = self._LowestLatencyAsciiChart()
     mean_duration = self._MeanRequestAsciiChart()
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
@@ -222,8 +224,6 @@ class Benchmark(object):
     distribution_url_200 = charts.DistributionLineGraph(self.DigestedResults(),
                                                         scale=200)
     distribution_url = charts.DistributionLineGraph(self.DigestedResults())
-
-
     best = self.BestOverallNameServer()
     nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
     recommended = [best] + nearest
@@ -255,13 +255,12 @@ class Benchmark(object):
         'percent': 0,
         'ns': nameserver_details[0][0]
       }
-
-    if config:
-      keys = [x for x in dir(config) if not x.startswith('_') and x != 'config' ]
-      config_items = []
-      for key in keys:
-        config_items.append((key, getattr(config, key)))
-      config = sorted(config_items)
+    
+    # Fragile, makes assumption about the CSV being in the same path as the HTML file
+    if csv_path:
+      csv_link = os.path.basename(csv_path)
+    else:
+      csv_link = None
 
     env = jinja2.Environment(loader=jinja2.PackageLoader('namebench',
                                                          'templates'))
@@ -272,20 +271,32 @@ class Benchmark(object):
         lowest_latency=lowest_latency,
         best=best,
         comparison=comparison,
-        config=config,
+        config=self.FilteredConfig(config),
         mean_duration=mean_duration,
         nameserver_details=nameserver_details,
         mean_duration_url=mean_duration_url,
         min_duration_url=min_duration_url,
         distribution_url=distribution_url,
         distribution_url_200=distribution_url_200,
-        recommended=recommended
+        recommended=recommended,
+        csv_link=csv_link
     )
 
     if output_fp:
       output_fp.write(rendered)
     else:
       return rendered
+
+  def FilteredConfig(self, config):
+    """Generate a watered down config listing for our report."""
+    keys = [x for x in dir(config) if not x.startswith('_') and x != 'config' ]
+    config_items = []
+    for key in keys:
+      value = getattr(config, key)
+      # > values are ConfigParser internals. None values are just noise.
+      if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
+        config_items.append((key, value))
+    return sorted(config_items)
 
   def DigestedResults(self):
     """Return a tuple of nameserver and all associated durations."""

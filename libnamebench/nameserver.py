@@ -18,6 +18,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
 import time
+import traceback
 import random
 
 import sys
@@ -46,12 +47,11 @@ WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
 WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
-MIN_SHARING_DELTA_MS = 2
-MAX_SHARING_DELTA_MS = 120
+MIN_SHARING_DELTA_MS = 3
+MAX_SHARING_DELTA_MS = 90
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 2.25
-CHECK_DURATION_MAX_COUNT = 9
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -74,7 +74,7 @@ class NameServer(object):
 
   @property
   def check_duration(self):
-    return sum([x[3] for x in self.checks[0:CHECK_DURATION_MAX_COUNT]])
+    return sum([x[3] for x in self.checks])
 
   @property
   def failure(self):
@@ -114,22 +114,8 @@ class NameServer(object):
     return self.__str__()
 
   def CreateRequest(self, record, request_type, return_type):
-    """Work around a bug in dns/entropy.py that causes IndexErrors."""
-    tries = 0
-    success = False
-    request = None
-    while not success and tries < 5:
-      tries += 1
-      try:
-        request = dns.message.make_query(record, request_type, return_type)
-        success = True
-      except IndexError, exc:
-        print 'Waiting for entropy (%s, tries=%s)' % (exc, tries)
-        time.sleep(2)
-        success = False
-    if not success:
-      raise ValueError('Unable to create UDP packet')
-    return request
+    """Function to work around any dnspython make_query quirks."""
+    return dns.message.make_query(record, request_type, return_type)
 
   def Query(self, request, timeout):
     return dns.query.udp(request, self.ip, timeout, 53)
@@ -185,7 +171,7 @@ class NameServer(object):
 
     return (response, util.SecondsToMilliseconds(duration), exc)
 
-  def TestAnswers(self, record_type, record, expected):
+  def TestAnswers(self, record_type, record, expected, fatal=True):
     """Test to see that an answer returns correct IP's.
 
     Args:
@@ -205,8 +191,11 @@ class NameServer(object):
       is_broken = True
       warning = exc.__class__
     elif not response.answer:
-      is_broken = True
-      warning = 'No answer'
+      if fatal:
+        is_broken = True
+      # Avoid preferring broken DNS servers that respond quickly
+      duration = self.health_timeout
+      warning = 'No answer for %s' % record
     else:
       for a in response.answer:
         failed = True
@@ -241,7 +230,8 @@ class NameServer(object):
     return self.TestAnswers('A', 'www.paypal.com.', WWW_PAYPAL_RESPONSE)
 
   def TestWwwTpbOrgResponse(self):
-    return self.TestAnswers('A', 'www.thepiratebay.org.', WWW_TPB_RESPONSE)
+    return self.TestAnswers('A', 'www.thepiratebay.org.', WWW_TPB_RESPONSE,
+                            fatal=False)
 
   def TestNegativeResponse(self):
     """Test for NXDOMAIN hijaaking."""
@@ -288,8 +278,10 @@ class NameServer(object):
     if warning:
       self.warnings.append(warning)
     if is_broken:
-      self.disabled = 'Failed: %s' % warning
-    self.checks.append(('wildcard store', is_broken, warning, duration))
+      self.disabled = 'Failed CacheWildcard: %s' % warning
+    
+    # Is this really a good idea to count?
+    #self.checks.append(('wildcard store', is_broken, warning, duration))
 
   def TestSharedCache(self, other_ns):
     """Is this nameserver sharing a cache with another nameserver?
@@ -326,21 +318,38 @@ class NameServer(object):
       )
       if is_broken:
         sys.stdout.write('o')
-    self.checks.append((cache_id, is_broken, warning, duration))
+        
+    # Is this really a good idea to count?
+    #self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
       self.disabled = 'Failed shared-cache: %s' % warning
     else:
-      delta = abs(other_ttl - response.answer[0].ttl)
+      my_ttl = response.answer[0].ttl
+      delta = abs(other_ttl - my_ttl)
       if delta > 0:
+        if my_ttl < other_ttl:
+          upstream = self
+          upstream_ttl = my_ttl
+          downstream_ttl = other_ttl
+          downstream = other_ns
+        else:
+          upstream = other_ns
+          downstream = self
+          upstream_ttl = other_ttl
+          downstream_ttl = my_ttl
+
+        
         if other_ns.check_duration > self.check_duration:
           slower = other_ns
           faster = self
         else:
           slower = self
           faster = other_ns
-
+        
         if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
+          print "%s [%s] -> %s [%s] for %s" % (downstream, downstream_ttl,
+                                                         upstream, upstream_ttl, cache_id)
           return (True, slower, faster)
 
     return (False, None, None)
@@ -350,7 +359,8 @@ class NameServer(object):
     tests = [self.TestWwwGoogleComResponse,
              self.TestGoogleComResponse,
              self.TestNegativeResponse,
-             self.TestWwwPaypalComResponse]
+             self.TestWwwPaypalComResponse,
+             self.TestWwwTpbOrgResponse]
     self.checks = []
     self.warnings = []
 
@@ -358,9 +368,13 @@ class NameServer(object):
       (is_broken, warning, duration) = test()
       self.checks.append((test.__name__, is_broken, warning, duration))
       if warning:
-        self.warnings.append(warning)
+#        print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
+        self.warnings.append('%s: %s' % (test.__name__, warning))
       if is_broken:
-        self.disabled = 'Failed: %s' % warning
+        self.disabled = 'Failed %s: %s' % (test.__name__, warning)
         break
+    
+#    if self.warnings:
+#      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
     return self.disabled
 

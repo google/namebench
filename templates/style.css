@@ -55,8 +55,9 @@ ul.warnings {
 
 .primary_row {
   font-weight: bold;
-  border-top: 1px solid #999;
-  border-bottom: 1px solid #000;
+  background-color: #FFFFEE;
+  border-top: 1px solid #EEEE00;
+  border-bottom: 1px solid #EEEE00;
 }
 
 .disabled {
@@ -89,10 +90,11 @@ ul.warnings {
 
 h1 {
 	color: #00CC33;
-	font-size: 80px;
+	font-size: 86px;
 	text-shadow: 3px 3px #eee;
-	padding:  0;;
-	margin: 0;
+        margin: 0;
+        margin-top: 0.2em;
+        margin-bottom: 0.2em;
 }
 
 #sumverb {
@@ -137,4 +139,9 @@ h2:before {
 
 input[type=text] {
   color: #000;
+}
+
+.normal .error_count {
+  background-color: #900;
+  color: #fff;
 }
