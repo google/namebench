@@ -155,11 +155,15 @@ class NameBenchGui(Frame, base_ui.BaseUI):
 
   def UpdateRunState(self, running=True):
     if running:
+      self.UpdateStatus('disabling button')
       self.button.config(state=DISABLED)
+      self.UpdateStatus('Changing button text')
       self.button.config(text='Running')
       self.UpdateStatus('Running...')
     else:
+      self.UpdateStatus('enabling button')
       self.button.config(state=NORMAL)
+      self.UpdateStatus('Changing button text')
       self.button.config(text='Start Benchmark')
 
   def StartJob(self):
