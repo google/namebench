@@ -80,6 +80,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.data_source = StringVar()
     self.selection_mode = StringVar()
     self.use_global = IntVar()
+    self.broken_tk = False
     self.use_regional = IntVar()
 
     self.master.title("namebench")
@@ -154,17 +155,29 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.status.set(state[0:60])
 
   def UpdateRunState(self, running=True):
+    # try/except blocks added to work around broken Tcl/Tk libraries
+    # shipped with Fedora 11 (not thread-safe).
+    # See http://code.google.com/p/namebench/issues/detail?id=23'
+    if self.broken_tk:
+      return
+    
     if running:
       self.UpdateStatus('disabling button')
-      self.button.config(state=DISABLED)
-      self.UpdateStatus('Changing button text')
-      self.button.config(text='Running')
+      try:
+        self.button.config(state=DISABLED)
+        self.UpdateStatus('Changing button text')
+        self.button.config(text='Running')
+      except TclError:
+        self.broken_tk = True
+        self.UpdateStatus('Unable to disable button due to broken Tk library')
       self.UpdateStatus('Running...')
     else:
-      self.UpdateStatus('enabling button')
-      self.button.config(state=NORMAL)
-      self.UpdateStatus('Changing button text')
-      self.button.config(text='Start Benchmark')
+      try:
+        self.button.config(state=NORMAL)
+        self.UpdateStatus('Changing button text')
+        self.button.config(text='Start Benchmark')
+      except TclError:
+        pass
 
   def StartJob(self):
     """Events that get called when the Start button is pressed."""
