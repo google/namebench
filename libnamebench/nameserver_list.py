@@ -169,6 +169,7 @@ class NameServers(list):
     self.seen_names.add(ns.name)
 
   def ApplyCongestionFactor(self):
+    self.msg('Checking connection quality...')
     cq = conn_quality.ConnectionQuality()
     (intercepted, congestion, duration) = cq.CheckConnectionQuality()
     if intercepted:
