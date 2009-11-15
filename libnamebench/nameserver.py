@@ -278,6 +278,8 @@ class NameServer(object):
     if warning:
       self.warnings.append(warning)
     if is_broken:
+      if self.is_system:
+        print 'Ouch, %s failed StoreWildcardCache' % self
       self.disabled = 'Failed CacheWildcard: %s' % warning
     
     # Is this really a good idea to count?
@@ -323,6 +325,8 @@ class NameServer(object):
     #self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
+      if self.is_system:
+        print 'Ouch, %s failed TestSharedCache' % self      
       self.disabled = 'Failed shared-cache: %s' % warning
     else:
       my_ttl = response.answer[0].ttl
@@ -368,7 +372,8 @@ class NameServer(object):
       (is_broken, warning, duration) = test()
       self.checks.append((test.__name__, is_broken, warning, duration))
       if warning:
-#        print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
+        if self.is_system:
+          print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
         self.warnings.append('%s: %s' % (test.__name__, warning))
       if is_broken:
         self.disabled = 'Failed %s: %s' % (test.__name__, warning)
