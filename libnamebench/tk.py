@@ -19,6 +19,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import os
 import sys
 import threading
+import tkFont
 from Tkinter import *
 
 import base_ui
@@ -88,10 +89,18 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     outer_frame.grid(row=0, padx=16, pady=16)
     inner_frame = Frame(outer_frame, relief=GROOVE, bd=2, padx=12, pady=12)
     inner_frame.grid(row=0, columnspan=2)
-    Label(inner_frame, text="Nameservers").grid(row=0, columnspan=2, sticky=W)
+    status = Label(outer_frame, text='...', textvariable=self.status)
+    status.grid(row=15, sticky=W, column=0)
+    
+    bold_font = tkFont.Font(font=status['font'])
+    bold_font['weight'] = 'bold'
+    
+    ns_label = Label(inner_frame, text="Nameservers")
+    ns_label.grid(row=0, columnspan=2, sticky=W)
+    ns_label['font'] = bold_font
 
     nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=65)
-    nameservers.grid(row=1, columnspan=2, sticky=W)
+    nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
     global_button = Checkbutton(inner_frame, text="Include global DNS providers (OpenDNS, UltraDNS)", variable=self.use_global)
@@ -105,8 +114,13 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     separator = Frame(inner_frame, height=2, width=515, bd=1, relief=SUNKEN)
     separator.grid(row=4, padx=5, pady=5, columnspan=2)
 
-    Label(inner_frame, text="Benchmark Data Source").grid(row=5, column=0, sticky=W)
-    Label(inner_frame, text="Number of tests").grid(row=5, column=1, sticky=W)
+    ds_label = Label(inner_frame, text="Benchmark Data Source")
+    ds_label.grid(row=5, column=0, sticky=W)
+    ds_label['font'] = bold_font
+    
+    numtests_label = Label(inner_frame, text="Number of tests")
+    numtests_label.grid(row=5, column=1, sticky=W)
+    numtests_label['font'] = bold_font
 
     self.DiscoverSources()
     source_titles = [history_parser.sourceToTitle(x) for x in self.sources]
@@ -116,11 +130,16 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.data_source.set(source_titles[0])
 
     num_tests = Entry(inner_frame, bg="white", textvariable=self.num_tests)
-    num_tests.grid(row=6, column=1, sticky=W,)
+    num_tests.grid(row=6, column=1, sticky=W, padx=4)
     self.num_tests.set(self.options.test_count)
 
-    Label(inner_frame, text="Benchmark Data Selection").grid(row=7, column=0, sticky=W)
-    Label(inner_frame, text="Number of runs").grid(row=7, column=1, sticky=W)
+    bds_label = Label(inner_frame, text="Benchmark Data Selection")
+    bds_label.grid(row=7, column=0, sticky=W)
+    bds_label['font'] = bold_font
+    
+    num_runs_label = Label(inner_frame, text="Number of runs")
+    num_runs_label.grid(row=7, column=1, sticky=W)
+    num_runs_label['font'] = bold_font
 
     selection_mode = OptionMenu(inner_frame, self.selection_mode, "Weighted", "Random", "Chunk")
     selection_mode.configure(width=35)
@@ -128,13 +147,11 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     self.selection_mode.set('Weighted')
 
     num_runs = Entry(inner_frame, bg="white", textvariable=self.num_runs)
-    num_runs.grid(row=8, column=1, sticky=W)
+    num_runs.grid(row=8, column=1, sticky=W, padx=4)
     self.num_runs.set(self.options.run_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
-    status = Label(outer_frame, text='...', textvariable=self.status)
-    status.grid(row=15, sticky=W, column=0)
-    self.button.grid(row=15, sticky=E, column=1)
+    self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
     self.UpdateRunState(running=True)
     self.UpdateRunState(running=False)
     self.UpdateStatus('Ready')
