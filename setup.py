@@ -20,6 +20,11 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 from namebench import VERSION
 from distutils.core import setup
+try:
+    import py2exe
+except ImportError:
+    pass
+
 setup(name='namebench',
       version=VERSION,
       py_modules=['namebench'],
@@ -39,9 +44,9 @@ setup(name='namebench',
           'Programming Language :: Python',
           'Topic :: Networking',
       ],
-      packages=['libnamebench'],
+      packages=['libnamebench', 'third_party/dns', 'third_party/graphy', 'third_party/jinja2'],
       platforms=['Any'],
-      requires=['graphy', 'dnspython', 'jinja2'],
+#      requires=['graphy', 'dnspython', 'jinja2'],
       license='Apache 2.0',
       scripts=['namebench.py'],      
       data_files=[
