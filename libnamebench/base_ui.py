@@ -106,7 +106,10 @@ class BaseUI(object):
 
   def DisplayHtmlReport(self):
     self.UpdateStatus('Preparing to displayHTML report')
-    url = 'file://%s' % urllib.quote(self.html_path)
+    print self.html_path
+    # All this garbage is to make Windows happy
+    url = 'file://%s' % urllib.quote(self.html_path.replace('\\', '/')).replace('%3A', ':')
+    print url
     self.UpdateStatus('Opening HTML report')
     webbrowser.open(url)
 
