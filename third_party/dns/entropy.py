@@ -64,7 +64,18 @@ class EntropyPool(object):
             self.digest = self.hash.digest()
             self.stir(self.digest)
             self.next_byte = 0
-        value = ord(self.digest[self.next_byte])
+
+	# I'm not sure why the if statement above isn't triggering here.
+	try:
+            value = ord(self.digest[self.next_byte])
+	except IndexError:
+	    print "forcing stir [dlen=%s next=%s]" % (len(self.digest), self.next_byte)
+            self.hash.update(self.pool)
+            self.digest = self.hash.digest()
+            self.stir(self.digest)
+            self.next_byte = 0
+            value = ord(self.digest[self.next_byte])
+	    
         self.next_byte += 1
         return value
 
