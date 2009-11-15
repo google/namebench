@@ -91,7 +91,6 @@ class NameServers(list):
     self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
     self.system_nameservers = util.InternalNameServers()
-    
     for (ip, name) in nameservers:
       self.AddServer(ip, name, primary=True)
 
@@ -136,11 +135,12 @@ class NameServers(list):
     ns = nameserver.NameServer(ip, name=name, primary=primary)
     if ip in self.system_nameservers:
       ns.is_system = True
+      ns.is_primary = True
       ns.system_position = self.system_nameservers.index(ip)
 
     ns.timeout = self.timeout
     # Give them a little extra love for the road.
-    if ns.is_primary or ns.is_system:
+    if ns.is_primary:
       ns.health_timeout = self.health_timeout * PRIMARY_HEALTH_TIMEOUT_MULTIPLIER
     else:
       ns.health_timeout = self.health_timeout
@@ -164,6 +164,7 @@ class NameServers(list):
           ns.name = new_name
           break
 
+#    print "Adding: %s [%s]" % (ns.name, ns.ip)
     super(NameServers, self).append(ns)
     self.seen_ips.add(ns.ip)
     self.seen_names.add(ns.name)
