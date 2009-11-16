@@ -374,7 +374,7 @@ class NameServer(object):
       if warning:
         if self.is_system:
           print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
-        self.warnings.append('%s: %s' % (test.__name__, warning))
+        self.warnings.append(warning)
       if is_broken:
         self.disabled = 'Failed %s: %s' % (test.__name__, warning)
         break
