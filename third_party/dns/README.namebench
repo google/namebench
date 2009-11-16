@@ -1,11 +1,10 @@
 This is the standard 1.7.0 version of namebench, save for this reliability fix:
 
-
 Index: entropy.py
 ===================================================================
---- entropy.py	(revision 293)
-+++ entropy.py	(working copy)
-@@ -48,15 +48,18 @@
+--- entropy.py	(.../lib/third_party/dns/entropy.py)	(revision 200)
++++ entropy.py	(.../third_party/dns/entropy.py)	(working copy)
+@@ -48,20 +48,34 @@
      def stir(self, entropy):
          bytes = [ord(c) for c in self.pool]
          for c in entropy:
@@ -27,3 +26,20 @@ Index: entropy.py
              self.hash.update(self.pool)
              self.digest = self.hash.digest()
              self.stir(self.digest)
+             self.next_byte = 0
+-        value = ord(self.digest[self.next_byte])
++
++	# I'm not sure why the if statement above isn't triggering here.
++	try:
++            value = ord(self.digest[self.next_byte])
++	except IndexError:
++	    print "forcing stir [dlen=%s next=%s]" % (len(self.digest), self.next_byte)
++            self.hash.update(self.pool)
++            self.digest = self.hash.digest()
++            self.stir(self.digest)
++            self.next_byte = 0
++            value = ord(self.digest[self.next_byte])
++	    
+         self.next_byte += 1
+         return value
+ 
