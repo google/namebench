@@ -11,7 +11,7 @@ h2 {
 h3 {
 	font-size: 0.9em;
 	padding-top:  0;
-	margin-top:  0;;
+	margin-top: 0;
 }
 
 #nsdetails {
@@ -24,7 +24,7 @@ h3 {
 	padding-bottom: 3px;
 	padding-right:  3px;
 	margin-left: 1em;
-	width: 900px
+	width: 880px
 }
 table#nstable {
 	width:  100%;
@@ -66,6 +66,10 @@ ul.warnings {
 	color: #fff;
 }
 
+#summary_container {
+  width: 938px;
+}
+
 .greybox {
 	border:  1px solid #bbb;
 	border-radius: .5em;
@@ -79,12 +83,12 @@ ul.warnings {
 #big_summary {
 	display: inline-table;
 	float:  left;
-	margin-right: 5.5em;
 	text-align:  center;
-	width: 25em;
+	width: 23em;
 }
 
 #recommended_config {
+        float: right;
 	display:  inline-table;
 }
 
@@ -112,7 +116,8 @@ h1 {
 .section {
 	margin-left:  1em;
 	padding: 1em;
-	background-color:  #fff;;
+	background-color:  #fff;
+        max-width: 910px;
 }
 
 #config {
@@ -145,3 +150,4 @@ input[type=text] {
   background-color: #900;
   color: #fff;
 }
+

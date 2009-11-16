@@ -5,6 +5,7 @@
 </style>
 <body>
 
+<div id="summary_container">
 <div id="big_summary" class="greybox">
 	In this test, <strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is
 	<h1>{{ "%0.0f"|format(comparison.percent) }}% <span id="sumverb">Faster</span></h1>
@@ -22,10 +23,12 @@
 {% endfor %}
   </table>
 </div>
+</div>
 
 <h2>Tested DNS Servers</h2>
 
-<div id="nsdetails" class="section">
+<div class="section">
+<div id="nsdetails">
 <table id="nstable">
 <thead>
 <tr>
@@ -33,19 +36,24 @@
   <td nowrap="nowrap">Descr.</td>
   <td nowrap="nowrap">Hostname</td>
   <td nowrap="nowrap">Avg (ms)</td>
-  <td nowrap="nowrap">Err #</td>
-  <td nowrap="nowrap">NoAns #</td>
+	<td nowrap="nowrap">Min</td>
+	<td nowrap="nowrap">Max</td>
+  <td nowrap="nowrap">Err</td>
+  <td nowrap="nowrap">NoAns</td>
   <td>Notes</td>
 </tr>
 </thead>
+{# (ns, overall_average, run_averages, fastest, slowest, failure_count, nx_count) #}
 {% for row in nameserver_details %}
-<tr class="{% if row.0.disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.0.system_position == 0 %} primary_row{% endif %}{% if row.3 > 1 %} unhealthy_host{% endif %}">
+<tr class="{% if row.0.disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.0.system_position == 0 %} primary_row{% endif %}{% if row.5 > 1 %} unhealthy_host{% endif %}">
   <td>{{ row.0.ip }}</td>
   <td>{{ row.0.name }}</td>
   <td>{{ row.0.hostname }}</td>
   <td>{{ "%0.2f"|format(row.1) }}</td>
-  <td {% if row.3 != 0 %}class="error_count"{% endif %}>{{ row.3 }}</td>
-  <td>{{ row.4 }}</td>
+  <td>{{ "%0.2f"|format(row.3) }}</td>
+  <td>{{ "%0.2f"|format(row.4) }}</td>
+  <td {% if row.5 != 0 %}class="error_count"{% endif %}>{{ row.5 }}</td>
+  <td>{{ row.6 }}</td>
   <td><ul class="warnings">
 	{% if row.0.system_position == 0 %}<li>Your current primary DNS server</li>{% endif %}
 	{% if row.0.disabled %}
@@ -60,6 +68,7 @@
 </tr>
 {% endfor %}
 </table>
+</div>
 </div>
 
 <h2>Graphs</h2>
