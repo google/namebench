@@ -34,6 +34,7 @@ import dns.exception
 import dns.query
 import dns.message
 import dns.name
+import dns.rcode
 import dns.rdataclass
 import dns.rdatatype
 import dns.reversename
@@ -224,7 +225,8 @@ class NameServer(object):
       answers = [' + '.join(map(str, x.items)) for x in response.answer]
       return ' -> '.join(answers)
     else:
-      return 'no answer'
+      return dns.rcode.to_text(response.rcode())
+
 
   def TestGoogleComResponse(self):
     return self.TestAnswers('A', 'google.com.', GOOGLE_CLASS_B)

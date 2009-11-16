@@ -30,7 +30,6 @@ import sys
 import math
 
 # external dependencies (from third_party)
-import dns.rcode
 import jinja2
 
 import charts
@@ -342,10 +341,8 @@ class Benchmark(object):
           if response:
             if response.answer:
               answer_count = len(response.answer)
-              answer_text = ns.ResponseToAscii(response)
               ttl = response.answer[0].ttl
-            else:
-              answer_text = dns.rcode.to_text(response.rcode())
+            answer_text = ns.ResponseToAscii(response)
           output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record,
                            req_type, duration, ttl, answer_count, answer_text])
     csv_file.close()
