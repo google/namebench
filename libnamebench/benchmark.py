@@ -159,26 +159,34 @@ class Benchmark(object):
         # x: record, req_type, duration, response
         failure_count += len([x for x in test_run if not x[3]])
         nx_count += len([x for x in test_run if x[3] and not x[3].answer])
-        duration = sum([x[2] for x in test_run])
+        duration = sum([x[2] for x in test_run])        
         run_averages.append(duration / len(test_run))
 
       # This appears to be a safe use of averaging averages
       overall_average = util.CalculateListAverage(run_averages)
-      yield (ns, overall_average, run_averages, failure_count, nx_count)
+      (fastest, slowest) = self.FastestAndSlowestDurationForNameServer(ns)
+      
+      yield (ns, overall_average, run_averages, fastest, slowest,
+             failure_count, nx_count)
+
+  def FastestAndSlowestDurationForNameServer(self, ns):
+    """For a given nameserver, find the fastest/slowest non-error durations."""
+  
+    fastest_duration = 2**32
+    slowest_duration = -1
+    for test_run_results in self.results[ns]:
+      for (host, type, duration, response) in test_run_results:
+        if response and response.answer:
+          if duration < fastest_duration:
+            fastest_duration = duration
+        if duration > slowest_duration:
+          slowest_duration = duration        
+    return (fastest_duration, slowest_duration)
 
   def FastestNameServerResult(self):
     """Process all runs for all hosts, yielding an average for each host."""
     # TODO(tstromberg): This should not count queries which failed.
-    fastest = []
-    for ns in self.results:
-      # It can't get any worse than this!
-      best_duration = util.SecondsToMilliseconds(ns.timeout)
-      for test_run_results in self.results[ns]:
-        for (host, type, duration, response) in test_run_results:
-          if response and response.answer:
-            if duration < best_duration:
-              best_duration = duration
-      fastest.append((ns, best_duration))
+    fastest = [(ns, self.FastestAndSlowestDurationForNameServer(ns)[0]) for ns in self.results] 
     return sorted(fastest, key=operator.itemgetter(1))
 
   def BestOverallNameServer(self):
@@ -205,7 +213,7 @@ class Benchmark(object):
     max_result = sorted_averages[-1][1]
     chart = []
     for result in sorted_averages:
-      (ns, overall_mean, unused_run_means, failure_count, nx_count) = result
+      (ns, overall_mean) = result[0:2]
       textbar = util.DrawTextBar(overall_mean, max_result)
       chart.append((ns.name, textbar, overall_mean))
     return chart
@@ -231,7 +239,7 @@ class Benchmark(object):
     nameserver_details = list(sorted_averages)
     for ns in self.nameservers:
       if ns.disabled:
-        nameserver_details.append((ns, 0.0, [], '1'))
+        nameserver_details.append((ns, 0.0, [], 0, 0, 0))
 
     builtin_servers = util.InternalNameServers()
     system_primary = builtin_servers[0]
