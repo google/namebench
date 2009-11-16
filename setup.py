@@ -67,7 +67,7 @@ setup(name='namebench',
       packages=packages,
       platforms=['Any'],
       license='Apache 2.0',
-      scripts=['namebench.py'],      
+      scripts=['namebench.py'],
       data_files=[
           ('namebench', ['namebench.cfg']),
           ('namebench/templates',
@@ -77,5 +77,15 @@ setup(name='namebench',
            ]
           ),
           ('namebench/data', ['data/alexa-top-10000-global.txt'])
-      ]
+      ],
+      
+      # py2exe specific garbarge below.
+      options={
+        'py2exe': {
+            # This gets.. weird.
+            'packages': ['third_party'],
+            'ignores': ['dns', 'jinja2', 'graphy'],
+        }
+      },
+      console=['namebench.py'],
 )
