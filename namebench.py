@@ -17,7 +17,7 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-VERSION = '0.9.2'
+VERSION = '0.9.3'
 
 import os
 import sys
