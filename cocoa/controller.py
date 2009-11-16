@@ -118,12 +118,12 @@ class controller(NSWindowController, base_ui.BaseUI):
       self.secondary = self.regional_ns
 
     self.options.select_mode = self.selection_mode.titleOfSelectedItem().lower()
-    self.options.data_source = self.ParseSourceSelection(self.data_source.stringValue())    
+    self.options.data_source = self.ParseSourceSelection(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     self.options.test_count = int(self.num_tests.stringValue())
     self.options.run_count = int(self.num_runs.stringValue())
-    self.UpdateStatus("%s tests, %s runs" % (self.options.test_count, self.options.run_count))
+    self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.data_source, self.options.select_mode, self.options.test_count, self.options.run_count))
 
   def benchmarkThread(self):
     """Run the benchmarks, designed to be run in a thread."""
