@@ -61,7 +61,7 @@ if __name__ == '__main__':
       import Tkinter
     except ImportError:
       if len(sys.argv) == 1:
-        print '- python-tk libraries are missing, falling back to command-line interface.\n'
+        print '- python-tk (tkinter) libraries are missing, falling back to command-line interface.\n'
       use_tk = False
 
   if use_tk:
