@@ -121,10 +121,13 @@ class BaseUI(object):
     self.UpdateStatus('All available sources have been parsed.')
 
   def ParseSourceSelection(self, selection):
+    self.UpdateStatus('Matching "%s" to %s' % (selection, self.sources))
     for source in self.sources:
-      if history_parser.sourceToTitle(source) == selection:
+      parsed_name = history_parser.sourceToTitle(source)
+      if parsed_name.lower() == selection.lower():
         src_type = source[0]
         self.UpdateStatus('Parsed source type to %s' % src_type)
         return src_type
-
+    self.UpdateStatus('Unable to match "%s" to a source type' % selection)
+    return None
 
