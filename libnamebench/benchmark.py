@@ -30,6 +30,11 @@ import sys
 import math
 
 # external dependencies (from third_party)
+try:
+  import third_party
+except ImportError:
+  pass
+
 import jinja2
 
 import charts
