@@ -20,6 +20,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import optparse
 import ConfigParser
 import history_parser
+import util
 
 def GetConfiguration(filename='namebench.cfg'):
   (options, args) = DefineAndParseOptions(filename=filename)
@@ -93,7 +94,7 @@ def ProcessConfigurationFile(options):
     regional_ns: A list of regional nameservers tuples.
   """
   config = ConfigParser.ConfigParser()
-  config.read(options.config)
+  config.read(util.FindDataFile(options.config))
   general = dict(config.items('general'))
 
   if options.only:

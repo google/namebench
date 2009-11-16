@@ -23,6 +23,12 @@ import random
 
 import sys
 
+# See if a third_party library exists -- use it if so.
+try:
+  import third_party
+except ImportError:
+  pass
+
 # external dependencies (from third_party)
 import dns.exception
 import dns.query

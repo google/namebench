@@ -18,6 +18,9 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import math
 import re
+import util
+import os.path
+import sys
 
 # third party lib
 import dns.resolver
@@ -66,3 +69,21 @@ def ExtractIPTuplesFromString(string):
       valid_ips.append((ip,ip))
   return valid_ips
 
+def FindDataFile(filename):
+  if os.path.exists(filename):
+    return filename
+  
+    
+  # If it's not a relative path, we can't do anything useful.
+  if os.path.isabs(filename):
+    return None
+  
+  other_places = (os.path.join(sys.prefix, 'namebench', filename),
+                  os.path.join(sys.prefix, filename),
+                  '/var/lib/namebench/%s' % filename,
+                  '/usr/local/etc/namebench/%s' % filename,
+                  '/etc/namebench/%s' % filename)
+  for place in other_places:
+    if os.path.exists(place):
+      return place
+  return filename

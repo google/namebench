@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2009 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,13 +45,28 @@ setup(name='namebench',
           'Programming Language :: Python',
           'Topic :: Networking',
       ],
-      packages=['libnamebench', 'third_party/dns', 'third_party/graphy', 'third_party/jinja2'],
+      packages=['libnamebench',
+                'third_party/dns',
+                'third_party/dns/rdtypes',
+                'third_party/dns/rdtypes/ANY',
+                'third_party/dns/rdtypes/IN',
+                'third_party/graphy',
+                'third_party/jinja2',
+                'third_party/graphy/backends',
+                'third_party/graphy/backends/google_chart_api'],
       platforms=['Any'],
+# Someday we will have proper dependency fetching
 #      requires=['graphy', 'dnspython', 'jinja2'],
       license='Apache 2.0',
       scripts=['namebench.py'],      
       data_files=[
           ('namebench', ['namebench.cfg']),
+          ('namebench/templates',
+           ['templates/ascii.tmpl',
+                'templates/html.tmpl',
+                'templates/style.css'
+           ]
+          ),
           ('namebench/data', ['data/alexa-top-10000-global.txt'])
       ]
 )

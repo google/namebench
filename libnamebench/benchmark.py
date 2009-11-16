@@ -66,6 +66,7 @@ class Benchmark(object):
 
   def CreateTestsFromFile(self, filename, select_mode='weighted'):
     """Open an input file, and pass the data to CreateTests."""
+    filename = util.FindDataFile(filename)
     input_data = open(filename).readlines()
     return self.CreateTests(input_data, select_mode=select_mode)
 
@@ -270,9 +271,11 @@ class Benchmark(object):
     else:
       csv_link = None
 
-    env = jinja2.Environment(loader=jinja2.PackageLoader('namebench',
-                                                         'templates'))
-    template = env.get_template('%s.tmpl' % format)
+    template_name = '%s.tmpl' % format
+#    template_path = util.FindDataFile(os.path.join('templates', template_name))
+#    template_dir = os.path.dirname(template_path)
+    env = jinja2.Environment(loader=jinja2.PackageLoader('namebench', 'templates'))
+    template = env.get_template(template_name)
     rendered = template.render(
         system_primary=system_primary,
         timestamp = datetime.datetime.now(),

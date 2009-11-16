@@ -21,6 +21,13 @@ import math
 import re
 import urllib
 
+
+# See if a third_party library exists -- use it if so.
+try:
+  import third_party
+except ImportError:
+  pass
+
 # external dependencies (from third_party)
 from graphy import common
 from graphy.backends import google_chart_api
