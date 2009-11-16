@@ -18,13 +18,32 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-
+import os
 from namebench import VERSION
 from distutils.core import setup
 try:
     import py2exe
 except ImportError:
     pass
+
+# If you don't want 3rd party libraries included, set this in your environment.  
+if os.getenv('NO_THIRD_PARTY', None):
+  packages=['libnamebench']
+else:
+  packages = [
+      'libnamebench',
+      'third_party',
+      'third_party/dns',
+      'third_party/dns/rdtypes',
+      'third_party/dns/rdtypes/ANY',
+      'third_party/dns/rdtypes/IN',
+      'third_party/graphy',
+      'third_party/jinja2',
+      'third_party/graphy/backends',
+      'third_party/graphy/backends/google_chart_api'
+  ]
+
+
 
 setup(name='namebench',
       version=VERSION,
@@ -45,19 +64,8 @@ setup(name='namebench',
           'Programming Language :: Python',
           'Topic :: Networking',
       ],
-      packages=['libnamebench',
-                'third_party',
-                'third_party/dns',
-                'third_party/dns/rdtypes',
-                'third_party/dns/rdtypes/ANY',
-                'third_party/dns/rdtypes/IN',
-                'third_party/graphy',
-                'third_party/jinja2',
-                'third_party/graphy/backends',
-                'third_party/graphy/backends/google_chart_api'],
+      packages=packages,
       platforms=['Any'],
-# Someday we will have proper dependency fetching
-#      requires=['graphy', 'dnspython', 'jinja2'],
       license='Apache 2.0',
       scripts=['namebench.py'],      
       data_files=[
