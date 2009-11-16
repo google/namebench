@@ -179,10 +179,8 @@ class NameBenchGui(Frame, base_ui.BaseUI):
       return
     
     if running:
-      self.UpdateStatus('disabling button')
       try:
         self.button.config(state=DISABLED)
-        self.UpdateStatus('Changing button text')
         self.button.config(text='Running')
       except TclError:
         self.broken_tk = True
@@ -191,7 +189,6 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     else:
       try:
         self.button.config(state=NORMAL)
-        self.UpdateStatus('Changing button text')
         self.button.config(text='Start Benchmark')
       except TclError:
         pass
