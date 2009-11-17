@@ -72,7 +72,9 @@ class BaseUI(object):
     self.UpdateStatus('Creating test records using %s' % self.options.select_mode)
     if self.options.data_source:
       hosts = self.hparser.GetParsedSource(self.options.data_source)
+      self.UpdateStatus('%s has %s hosts' % (self.options.data_source, len(hosts)))
       test_data = self.hparser.GenerateTestData(hosts)
+      self.UpdateStatus('%s records available in test pool' % len(test_data))
       self.bmark.CreateTests(test_data, select_mode=self.options.select_mode)
     else:
       # The Alexa data (by default)
@@ -105,13 +107,8 @@ class BaseUI(object):
     self.UpdateStatus('Reports saved.')
 
   def DisplayHtmlReport(self):
-    self.UpdateStatus('Preparing to displayHTML report')
-    print self.html_path
-    # All this garbage is to make Windows happy
-    url = 'file://%s' % urllib.quote(self.html_path.replace('\\', '/')).replace('%3A', ':')
-    print url
-    self.UpdateStatus('Opening HTML report')
-    webbrowser.open(url)
+    self.UpdateStatus('Opening %s' % self.html_path)
+    webbrowser.open(self.html_path)
 
   def DiscoverSources(self):
     """Seek out and create a list of valid data sources."""
