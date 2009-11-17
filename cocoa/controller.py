@@ -27,6 +27,7 @@ import urllib
 import time
 import webbrowser
 import tempfile
+import traceback
 import sys
 import os
 import re
@@ -130,8 +131,19 @@ class controller(NSWindowController, base_ui.BaseUI):
     pool = NSAutoreleasePool.alloc().init()
     self.spinner.startAnimation_(self)
     self.UpdateStatus('Preparing benchmark')
-    self.PrepareBenchmark()
-    self.RunBenchmark()
+    try:
+      self.PrepareBenchmark()
+      self.RunBenchmark()
+    except nameserver_list.OutgoingUdpInterception:
+      (exc_type, exception, tb) = sys.exc_info()
+      self.UpdateStatus('Outgoing requests were intercepted!',
+                        error=str(exception))
+    except:
+      (exc_type, exception, tb) = sys.exc_info()
+      traceback.print_exc(tb)
+      error_msg = '\n'.join(traceback.format_tb(tb)[-2:])
+      self.UpdateStatus('FAIL: %s' % exception, error=error_msg)
+      
     self.spinner.stopAnimation_(self)
     pool.release()
 
