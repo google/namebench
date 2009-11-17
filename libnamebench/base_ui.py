@@ -32,7 +32,8 @@ RSRC_DIR = None
 def GenerateOutputFilename(extension):
 #  output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
   output_dir = tempfile.gettempdir()
-  output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H%M')
+  output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
+                                                            '%Y-%m-%d %H%M')
   output_base = output_base.replace(':', '').replace(' ', '_')
   return os.path.join(output_dir, '%s.%s' % (output_base, extension))
 
@@ -42,7 +43,7 @@ class BaseUI(object):
   def UpdateStatus(self, UpdateStatus, count=None, total=None, error=None):
     """Update the little status message on the bottom of the window."""
     if hasattr(self, 'status_callback') and self.status_callback:
-      self.status_callback(UpdateStatus, count=count, total=total)
+      self.status_callback(UpdateStatus, count=count, total=total, error=error)
     else:
       print '(UpdateStatus: %s count=%s total=%s, err=%s)' % (UpdateStatus, count, total, error)
 

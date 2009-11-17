@@ -289,7 +289,7 @@ class NameServer(object):
       if self.is_system:
         print 'Ouch, %s failed StoreWildcardCache' % self
       self.disabled = 'Failed CacheWildcard: %s' % warning
-    
+
     # Is this really a good idea to count?
     #self.checks.append(('wildcard store', is_broken, warning, duration))
 
@@ -328,13 +328,13 @@ class NameServer(object):
       )
       if is_broken:
         sys.stdout.write('o')
-        
+
     # Is this really a good idea to count?
     #self.checks.append((cache_id, is_broken, warning, duration))
 
     if is_broken:
       if self.is_system:
-        print 'Ouch, %s failed TestSharedCache' % self      
+        print 'Ouch, %s failed TestSharedCache' % self
       self.disabled = 'Failed shared-cache: %s' % warning
     else:
       my_ttl = response.answer[0].ttl
@@ -351,14 +351,14 @@ class NameServer(object):
           upstream_ttl = other_ttl
           downstream_ttl = my_ttl
 
-        
+
         if other_ns.check_duration > self.check_duration:
           slower = other_ns
           faster = self
         else:
           slower = self
           faster = other_ns
-        
+
         if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
           print "%s [%s] -> %s [%s] for %s" % (downstream, downstream_ttl,
                                                          upstream, upstream_ttl, cache_id)
@@ -386,7 +386,7 @@ class NameServer(object):
       if is_broken:
         self.disabled = 'Failed %s: %s' % (test.__name__, warning)
         break
-    
+
 #    if self.warnings:
 #      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
     return self.disabled

@@ -20,10 +20,13 @@ import os
 import sys
 import threading
 import tkFont
+import traceback
 from Tkinter import *
+import tkMessageBox
 
 import base_ui
 import history_parser
+import nameserver_list
 import util
 
 def closedWindowHandler():
@@ -48,16 +51,28 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
   def run(self):
     if self.runstate_callback:
       self.runstate_callback(running=True)
-    self.PrepareBenchmark()
-    self.UpdateStatus('Here comes the pain...')
-    self.RunBenchmark()
+    try:
+      self.PrepareBenchmark()
+      self.UpdateStatus('Here comes the pain...')
+      self.RunBenchmark()
+    except nameserver_list.OutgoingUdpInterception:
+      (exc_type, exception, tb) = sys.exc_info()
+      self.UpdateStatus('Outgoing requests were intercepted!',
+                        error=exception)
+    except:
+      (exc_type, exception, tb) = sys.exc_info()
+      print "-- FAIL ----------------------------------------------------------"
+      traceback.print_exc(tb)
+      print "------------------------------------------------------------------"
+      error_msg = '\n'.join(traceback.format_tb(tb)[-2:])
+      self.UpdateStatus('FAIL: %s' % exception, error=error_msg)
     if self.runstate_callback:
       self.runstate_callback(running=False)
 
 
 class NameBenchGui(Frame, base_ui.BaseUI):
   """The main Tk GUI class."""
-    
+
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
     self.options = options
     self.supplied_ns = supplied_ns
@@ -91,10 +106,10 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     inner_frame.grid(row=0, columnspan=2)
     status = Label(outer_frame, text='...', textvariable=self.status)
     status.grid(row=15, sticky=W, column=0)
-    
+
     bold_font = tkFont.Font(font=status['font'])
     bold_font['weight'] = 'bold'
-    
+
     ns_label = Label(inner_frame, text="Nameservers")
     ns_label.grid(row=0, columnspan=2, sticky=W)
     ns_label['font'] = bold_font
@@ -117,7 +132,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     ds_label = Label(inner_frame, text="Benchmark Data Source")
     ds_label.grid(row=5, column=0, sticky=W)
     ds_label['font'] = bold_font
-    
+
     numtests_label = Label(inner_frame, text="Number of tests")
     numtests_label.grid(row=5, column=1, sticky=W)
     numtests_label['font'] = bold_font
@@ -136,7 +151,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     bds_label = Label(inner_frame, text="Benchmark Data Selection")
     bds_label.grid(row=7, column=0, sticky=W)
     bds_label['font'] = bold_font
-    
+
     num_runs_label = Label(inner_frame, text="Number of runs")
     num_runs_label.grid(row=7, column=1, sticky=W)
     num_runs_label['font'] = bold_font
@@ -168,7 +183,11 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     else:
       state = message
 
-    print "> %s" % state
+    if error:
+      print "> %s [%s]" % (state, error)
+      tkMessageBox.showerror(message, error)
+    else:
+      print "> %s" % state
     self.status.set(state[0:60])
 
   def UpdateRunState(self, running=True):
@@ -177,7 +196,7 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     # See http://code.google.com/p/namebench/issues/detail?id=23'
     if self.broken_tk:
       return
-    
+
     if running:
       try:
         self.button.config(state=DISABLED)

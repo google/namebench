@@ -44,6 +44,15 @@ if sys.platform == "win32":
 else:
   MAX_SANE_THREAD_COUNT = 90
 
+class OutgoingUdpInterception(Exception):
+
+  def __init__(self, value):
+    self.value = value
+
+  def __str__(self):
+    return repr(self.value)
+
+
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
@@ -131,7 +140,7 @@ class NameServers(list):
 
   def AddServer(self, ip, name, primary=False):
     """Add a server to the list given an IP and name."""
-    
+
     ns = nameserver.NameServer(ip, name=name, primary=primary)
     if ip in self.system_nameservers:
       ns.is_system = True
@@ -153,7 +162,7 @@ class NameServers(list):
       if ns.name != ns.ip:
         for existing_ns in self:
           if existing_ns.ip == ns.ip and existing_ns.name == existing_ns.ip:
-            existing_ns.name = ns.name      
+            existing_ns.name = ns.name
       return None
 
     # Add an identifier to the name if necessary.
@@ -174,9 +183,11 @@ class NameServers(list):
     cq = conn_quality.ConnectionQuality()
     (intercepted, congestion, duration) = cq.CheckConnectionQuality()
     if intercepted:
-      self.msg('Your internet service provider appears to be intercepting all'
-               ' outgoing UDP packets. Please contact them to get this fixed.',
-               error=True)
+      raise OutgoingUdpInterception(
+          'Your Internet Service Provider appears to be intercepting and '
+          'redirecting all outgoing DNS requests. This means we cannot '
+          'benchmark or utilize alternate DNS servers. Please ask them to stop.'
+      )
     if congestion > 1:
       if congestion > MAX_CONGESTION_MULTIPLIER:
         multiplier = MAX_CONGESTION_MULTIPLIER
@@ -315,7 +326,7 @@ class NameServers(list):
                total=len(ns_by_fastest))
       if not other_ns.disabled:
         self.RunCacheCollusionThreads(other_ns, test_servers)
-        
+
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
     threads = []
@@ -378,6 +389,6 @@ class NameServers(list):
     for (index, thread) in enumerate(threads):
       self.msg('Waiting for health check threads', index+1, len(threads))
       thread.join()
-    
+
     healthy = [x for x in self if not x.disabled]
     self.msg('%s of %s name servers are healthy' % (len(healthy), len(self)))
