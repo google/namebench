@@ -18,7 +18,7 @@ import datetime
 import os
 import tempfile
 import urllib
-import webbrowser
+import better_webbrowser
 
 import benchmark
 import history_parser
@@ -109,7 +109,7 @@ class BaseUI(object):
 
   def DisplayHtmlReport(self):
     self.UpdateStatus('Opening %s' % self.html_path)
-    webbrowser.open(self.html_path)
+    better_webbrowser.open(self.html_path)
 
   def DiscoverSources(self):
     """Seek out and create a list of valid data sources."""
