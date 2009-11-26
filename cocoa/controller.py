@@ -139,6 +139,7 @@ class controller(NSWindowController, base_ui.BaseUI):
       self.UpdateStatus('Outgoing requests were intercepted!',
                         error=str(exception))
     except nameserver_list.TooFewNameservers:
+      (exc_type, exception, tb) = sys.exc_info()
       self.UpdateStatus('Too few nameservers to test', error=str(exception))
     except:
       (exc_type, exception, tb) = sys.exc_info()
