@@ -72,18 +72,21 @@ def ExtractIPTuplesFromString(string):
 def FindDataFile(filename):
   if os.path.exists(filename):
     return filename
-  
-    
+      
   # If it's not a relative path, we can't do anything useful.
   if os.path.isabs(filename):
-    return None
+    return filename
   
-  other_places = (os.path.join(sys.prefix, 'namebench', filename),
-                  os.path.join(sys.prefix, filename),
-                  '/var/lib/namebench/%s' % filename,
-                  '/usr/local/etc/namebench/%s' % filename,
-                  '/etc/namebench/%s' % filename)
+  other_places = [os.path.join(sys.prefix, 'namebench'),
+                  '/usr/local/etc/namebench',
+                  '/etc/namebench']
+  for dir in reversed(sys.path):
+    other_places.append(dir)
+    other_places.append(os.path.join(dir, 'namebench'))
+
   for place in other_places:
-    if os.path.exists(place):
-      return place
+    path = os.path.join(place, filename)
+    if os.path.exists(path):
+      return path
+
   return filename

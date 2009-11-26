@@ -59,12 +59,14 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
       (exc_type, exception, tb) = sys.exc_info()
       self.UpdateStatus('Outgoing requests were intercepted!',
                         error=exception)
+    except nameserver_list.TooFewNameservers:
+      self.UpdateStatus('Too few nameservers to test', error=exception)
     except:
       (exc_type, exception, tb) = sys.exc_info()
       print "-- FAIL ----------------------------------------------------------"
       traceback.print_exc(tb)
       print "------------------------------------------------------------------"
-      error_msg = '\n'.join(traceback.format_tb(tb)[-2:])
+      error_msg = '\n'.join(traceback.format_tb(tb)[-4:])
       self.UpdateStatus('FAIL: %s' % exception, error=error_msg)
     if self.runstate_callback:
       self.runstate_callback(running=False)

@@ -35,7 +35,7 @@ import util
 NS_CACHE_SLACK = 1.7
 CACHE_VER = 2
 MAX_CONGESTION_MULTIPLIER = 5
-PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 3
+PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 4
 
 
 # Windows behaves in unfortunate ways if too many threads are specified
@@ -45,6 +45,14 @@ else:
   MAX_SANE_THREAD_COUNT = 90
 
 class OutgoingUdpInterception(Exception):
+
+  def __init__(self, value):
+    self.value = value
+
+  def __str__(self):
+    return repr(self.value)
+
+class TooFewNameservers(Exception):
 
   def __init__(self, value):
     self.value = value
@@ -131,7 +139,7 @@ class NameServers(list):
   @property
   def enabled(self):
     return [x for x in self if not x.disabled]
-
+    
   def msg(self, msg, count=None, total=None, error=False):
     if self.status_callback:
       self.status_callback(msg, count=count, total=total, error=error)
@@ -379,6 +387,9 @@ class NameServers(list):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
     servers = list(self)
+    if not servers:
+      raise TooFewNameservers('You must provide at least one nameserver to test.')
+    
     random.shuffle(servers)
     for (index, chunk) in enumerate(util.SplitSequence(servers, self.thread_count)):
       self.msg('Launching health check threads', count=index+1, total=self.thread_count)
@@ -390,5 +401,9 @@ class NameServers(list):
       self.msg('Waiting for health check threads', index+1, len(threads))
       thread.join()
 
-    healthy = [x for x in self if not x.disabled]
-    self.msg('%s of %s name servers are healthy' % (len(healthy), len(self)))
+    if self.enabled:
+      self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
+    else:
+      raise TooFewNameservers('None of the %s nameservers tested are healthy' % len(self))
+ 
+  

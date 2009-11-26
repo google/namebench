@@ -277,6 +277,8 @@ class Benchmark(object):
 
     template_name = '%s.tmpl' % format
     template_path = util.FindDataFile(os.path.join('templates', template_name))
+    self.msg('Using template path: "%s"' % template_path)
+    
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
