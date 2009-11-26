@@ -138,10 +138,12 @@ class controller(NSWindowController, base_ui.BaseUI):
       (exc_type, exception, tb) = sys.exc_info()
       self.UpdateStatus('Outgoing requests were intercepted!',
                         error=str(exception))
+    except nameserver_list.TooFewNameservers:
+      self.UpdateStatus('Too few nameservers to test', error=str(exception))
     except:
       (exc_type, exception, tb) = sys.exc_info()
       traceback.print_exc(tb)
-      error_msg = '\n'.join(traceback.format_tb(tb)[-2:])
+      error_msg = '\n'.join(traceback.format_tb(tb)[-4:])
       self.UpdateStatus('FAIL: %s' % exception, error=error_msg)
       
     self.spinner.stopAnimation_(self)
