@@ -51,12 +51,16 @@ def SecondsToMilliseconds(seconds):
   return seconds * 1000
 
 def SplitSequence(seq, size):
-  """Recipe From http://code.activestate.com/recipes/425397/ ."""
+  """Recipe From http://code.activestate.com/recipes/425397/
+  
+  Modified to not return blank values."""
   newseq = []
   splitsize = 1.0/size*len(seq)
   for i in range(size):
     newseq.append(seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
-  return newseq
+  
+  return  [ x for x in newseq if x ]
+
 
 def InternalNameServers():
   """Return list of DNS server IP's used by the host."""
