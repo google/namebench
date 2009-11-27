@@ -360,8 +360,8 @@ class NameServer(object):
           faster = other_ns
 
         if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
-          print "%s [%s] -> %s [%s] for %s" % (downstream, downstream_ttl,
-                                                         upstream, upstream_ttl, cache_id)
+#          print "%s [%s] -> %s [%s] for %s" % (downstream, downstream_ttl,
+#                                                         upstream, upstream_ttl, cache_id)
           return (True, slower, faster)
 
     return (False, None, None)
@@ -380,8 +380,8 @@ class NameServer(object):
       (is_broken, warning, duration) = test()
       self.checks.append((test.__name__, is_broken, warning, duration))
       if warning:
-        if self.is_system:
-          print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
+#        if self.is_system:
+#          print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
         self.warnings.append(warning)
       if is_broken:
         self.disabled = 'Failed %s: %s' % (test.__name__, warning)
