@@ -44,25 +44,25 @@ class NameBenchCli(object):
     self.last_msg = None
 
   def msg(self, msg, count=None, total=None, error=False):
-#    print (msg, count, total)
     if self.last_msg == (msg, count, total, error):
       return None
-    else:
-      self.last_msg = (msg, count, total, error)
 
     if error:
       print
       print '* ERROR: %s' % msg
       sys.exit(2)
     elif not total:
-      print '- %s' % msg
-    elif count in (0, 1):
+      sys.stdout.write('- %s\n' % msg)
+    elif self.last_msg[0] != msg:
       sys.stdout.write('- %s: %s/%s' % (msg, count, total))
-    elif count == total:
-      sys.stdout.write('%s/%s\n' % (count, total))
-    else:
-      sys.stdout.write('.')
+
+    if total:
+      if count == total:
+        sys.stdout.write('%s/%s\n' % (count, total))
+      else:
+        sys.stdout.write('.')
     sys.stdout.flush()
+    self.last_msg = (msg, count, total, error)
 
   def PrepareNameservers(self):
     include_internal = True
