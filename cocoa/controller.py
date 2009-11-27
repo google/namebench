@@ -42,7 +42,6 @@ else:
   RSRC_DIR = os.path.dirname(__file__)
 
 NSLog("Resource directory is %s" % RSRC_DIR)
-print sys.path
 import third_party
 from libnamebench import base_ui
 from libnamebench import config

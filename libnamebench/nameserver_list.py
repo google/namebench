@@ -340,7 +340,7 @@ class NameServers(list):
           faster.disabled = 'Shares-cache with current primary DNS server'
           slower.warnings.append('shares cache with faster %s' % faster.ip)
         elif slower.is_primary and not faster.is_primary:
-          faster.disabled = 'Shares cache wth %s [%s]' % (slower.name, slower.ip)
+          faster.disabled = 'Shares cache with %s [%s]' % (slower.name, slower.ip)
           slower.warnings.append('shares cache with %s' % faster.ip)
         else:
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
