@@ -1,4 +1,4 @@
-PATH=C:\python26;C:\progra~2\7-zip;%PATH%
+PATH=C:\python26;C:\progra~1\7-zip;C:\progra~2\7-zip;%PATH%
 del /q /s dist\*.*
 python setup.py py2exe
 cd dist
