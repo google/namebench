@@ -64,10 +64,9 @@ class TooFewNameservers(Exception):
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
-  def __init__(self, nameservers, store_wildcard=False, compare_cache=None):
+  def __init__(self, nameservers, store_wildcard=False):
     threading.Thread.__init__(self)
     self.store_wildcard = store_wildcard
-    self.compare_cache = compare_cache
     self.nameservers = nameservers
     self.results = []
 
@@ -78,11 +77,23 @@ class TestNameServersThread(threading.Thread):
         continue
       if self.store_wildcard:
         self.results.append(ns.StoreWildcardCache())
-      elif self.compare_cache:
-        self.results.append(ns.TestSharedCache(self.compare_cache))
       else:
         self.results.append(ns.CheckHealth())
 
+
+class TestCacheSharingThread(threading.Thread):
+  """Quickly test the if nameservers share cache with multiple threads."""
+
+  def __init__(self, test_combos):
+    threading.Thread.__init__(self)
+    self.test_combos = test_combos
+    self.results = []
+
+  def run(self):
+    for (ns, other_ns) in self.test_combos:
+      if ns.disabled or other_ns.disabled:
+        continue
+      self.results.append(ns.TestSharedCache(other_ns))
 
 class NameServers(list):
 
@@ -105,7 +116,7 @@ class NameServers(list):
       self.thread_count = threads
 
 
-    self.ApplyCongestionFactor()
+#    self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
     self.system_nameservers = util.InternalNameServers()
     for (ip, name) in nameservers:
@@ -280,10 +291,8 @@ class NameServers(list):
   def InvalidateSecondaryCache(self):
     cpath = self._SecondaryCachePath()
     if os.path.exists(cpath):
-      self.msg('Invalidating cache in %s' % cpath)
+      self.msg('Removing %s' % cpath)
       os.unlink(cpath)
-    else:
-      self.msg('Cache not found in %s to invalidate' % cpath)
 
   def _LoadSecondaryCache(self, cpath):
     """Check if our health cache has any good data."""
@@ -311,62 +320,18 @@ class NameServers(list):
   def CheckCacheCollusion(self):
     """Mark if any nameservers share cache, especially if they are slower."""
     self.RunWildcardStoreThreads()
-    # Give the TTL a chance to decrement
-    self.msg("Waiting for nameservers TTL's to decrement")
-    time.sleep(4)
-    tested = []
-    ns_by_fastest = [x for x in self.SortByFastest() if not x.disabled]
-    for (index, other_ns) in enumerate(ns_by_fastest):
-      test_servers = []
-      for ns in ns_by_fastest:
-        if ns.is_slower_replica or ns.disabled:
-          continue
-        elif ns.ip == other_ns.ip or ns in other_ns.shared_with:
-          continue
-        # We do extra work here because we do not check for (other, ns), but
-        # I believe it is worth the extra time to check it anyways.
-        elif (ns.ip, other_ns.ip) in tested:
-          continue
-        test_servers.append(ns)
-        tested.append((ns.ip, other_ns.ip))
+    sleepy_time = 4
+    self.msg("Waiting %ss for TTL's to decrement." % sleepy_time)
+    time.sleep(sleepy_time)
 
-      self.msg('Checking nameservers for slow replicas', count=index+1,
-               total=len(ns_by_fastest))
-      if not other_ns.disabled:
-        self.RunCacheCollusionThreads(other_ns, test_servers)
-
-  def RunWildcardStoreThreads(self):
-    """Store a wildcard cache value for all nameservers (using threads)."""
-    threads = []
-    for (index, chunk) in enumerate(util.SplitSequence(self, self.thread_count)):
-      self.msg('Launching wildcard check threads', count=index+1, total=self.thread_count)
-      thread = TestNameServersThread(chunk, store_wildcard=True)
-      thread.start()
-      threads.append(thread)
-
-    for (index, thread) in enumerate(threads):
-      self.msg('Waiting for wildcard check threads', index+1, len(threads))
-      thread.join()
-
-  def RunCacheCollusionThreads(self, other_ns, test_servers):
-    """Schedule and manage threading for cache collusion checks."""
-
-    # TODO(tstromberg): Investigate issues with long initial
-    # health-check runs.
-    threads = []
-    thread_count = self.thread_count
-    for chunk in util.SplitSequence(test_servers, thread_count):
-      thread = TestNameServersThread(chunk, compare_cache=other_ns)
-      thread.start()
-      threads.append(thread)
-
-    results = []
-    for thread in threads:
-      thread.join()
-      results.extend(thread.results)
-
-    # TODO(tstromberg): Comparing fast/slow at this point is stupid. Move it
-    # till after these checks have completed.
+    test_combos = []
+    good_nameservers = [x for x in self.SortByFastest() if not x.disabled]
+    for (index, ns) in enumerate(good_nameservers):
+      for compare_ns in good_nameservers:
+        if ns != compare_ns:
+          test_combos.append((compare_ns, ns))
+        
+    results = self.RunCacheCollusionThreads(test_combos)
     for (shared, slower, faster) in results:
       if shared:
         dur_delta = abs(slower.check_duration - faster.check_duration)
@@ -383,6 +348,44 @@ class NameServers(list):
         slower.shared_with.append(faster)
         faster.shared_with.append(slower)
 
+
+  def RunWildcardStoreThreads(self):
+    """Store a wildcard cache value for all nameservers (using threads)."""
+    threads = []
+    for (index, chunk) in enumerate(util.SplitSequence(self, self.thread_count)):
+      thread = TestNameServersThread(chunk, store_wildcard=True)
+      thread.start()
+      threads.append(thread)
+
+    for (index, thread) in enumerate(threads):
+      self.msg('Waiting for wildcard check threads', index+1, len(threads))
+      thread.join()
+
+  def RunCacheCollusionThreads(self, test_combos):
+    """Schedule and manage threading for cache collusion checks."""
+
+    threads = []
+    thread_count = self.thread_count
+    for chunk in util.SplitSequence(test_combos, thread_count):
+      thread = TestCacheSharingThread(chunk)
+      thread.start()
+      threads.append(thread)
+
+    results = []
+    total = len(threads)
+    joined_threads = 0
+    while threads:
+      for thread in list(threads):
+        if not thread.isAlive():
+          thread.join()
+          results.extend(thread.results)
+          joined_threads += 1
+          threads.remove(thread)
+      self.msg('Waiting for cache collusion threads', count=joined_threads, total=total)
+      time.sleep(0.5)
+
+    return results
+
   def RunHealthCheckThreads(self):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
@@ -392,14 +395,21 @@ class NameServers(list):
     
     random.shuffle(servers)
     for (index, chunk) in enumerate(util.SplitSequence(servers, self.thread_count)):
-      self.msg('Launching health check threads', count=index+1, total=self.thread_count)
       thread = TestNameServersThread(chunk)
       thread.start()
       threads.append(thread)
 
-    for (index, thread) in enumerate(threads):
-      self.msg('Waiting for health check threads', index+1, len(threads))
-      thread.join()
+    joined_threads = 0
+    total = len(threads)
+    while threads:
+      for thread in list(threads):
+        if not thread.isAlive():
+          thread.join()
+          joined_threads += 1
+          threads.remove(thread)
+      self.msg('Waiting for health check threads for %s servers' % len(self), count=joined_threads,
+               total=total)
+      time.sleep(0.5)
 
     if self.enabled:
       self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
