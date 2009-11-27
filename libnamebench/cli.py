@@ -41,7 +41,7 @@ class NameBenchCli(object):
     self.global_ns = global_ns
     self.regional_ns = regional_ns
     self.version = version
-    self.last_msg = None
+    self.last_msg = (None, None, None, None)
 
   def msg(self, msg, count=None, total=None, error=False):
     if self.last_msg == (msg, count, total, error):
