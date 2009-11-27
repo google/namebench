@@ -41,15 +41,22 @@ class NameBenchCli(object):
     self.global_ns = global_ns
     self.regional_ns = regional_ns
     self.version = version
+    self.last_msg = None
 
   def msg(self, msg, count=None, total=None, error=False):
+#    print (msg, count, total)
+    if self.last_msg == (msg, count, total, error):
+      return None
+    else:
+      self.last_msg = (msg, count, total, error)
+
     if error:
       print
       print '* ERROR: %s' % msg
       sys.exit(2)
     elif not total:
       print '- %s' % msg
-    elif count == 1:
+    elif count in (0, 1):
       sys.stdout.write('- %s: %s/%s' % (msg, count, total))
     elif count == total:
       sys.stdout.write('%s/%s\n' % (count, total))
