@@ -263,7 +263,7 @@ class NameServers(list):
       if not ns.is_primary and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           # Silently remove secondaries who's only fault was being too slow.
-          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_duration, len(ns.checks))
+          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
           self.remove(ns)
         else:
           secondaries_kept += 1
@@ -334,7 +334,7 @@ class NameServers(list):
 
   def SortByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
-    return sorted(self, key=operator.attrgetter('check_duration'))
+    return sorted(self, key=operator.attrgetter('check_average'))
 
   def CheckCacheCollusion(self):
     """Mark if any nameservers share cache, especially if they are slower."""
@@ -353,10 +353,11 @@ class NameServers(list):
     results = self.RunCacheCollusionThreads(test_combos)
     for (ns, shared_ns) in results:
       if shared_ns:
+        print "%s shares with %s" % (ns, shared_ns)
         ns.shared_with.add(shared_ns)
         shared_ns.shared_with.add(ns)
                 
-        if ns.check_duration > shared_ns.check_duration:
+        if ns.check_average > shared_ns.check_average:
           slower = ns
           faster = shared_ns
         else:

@@ -83,10 +83,12 @@ class NameServer(object):
     self.timer = DEFAULT_TIMER
 
   @property
+  def check_average(self):
+    return util.CalculateListAverage([x[3] for x in self.checks])
+
+  @property
   def check_duration(self):
-    total = sum([x[3] for x in self.checks])
-    print "%s TOTAL-%s %s" % (int(total), len(self.checks), self)
-    return total
+    return sum([x[3] for x in self.checks])
 
   @property
   def failure(self):
@@ -331,10 +333,6 @@ class NameServer(object):
         print "%s failed to get answer for %s in %sms [%s]" % (self, ref_hostname, duration, exc)
         continue
       
-      if not checked:
-        print "%s check cache: %s" % (int(duration), self)
-        self.checks.append(('cache', exc, exc, duration))
-      checked.append(ref_hostname)
       ttl = response.answer[0].ttl
       delta = abs(ref_ttl - ttl)
       query_age = self.timer() - ref_timestamp
@@ -342,14 +340,12 @@ class NameServer(object):
       
 #      print "%s check against %s for %s: delta=%s age=%s" % (self, other_ns, ref_hostname, delta, query_age)
       if delta > 0 and delta_age_delta < 2:
-#        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
-        shared = other_ns
-      else:
-        if shared:
-          print '%s was shared, but is now clear: %s (d=%s, aged=%s)' % (self, ref_hostname, delta, delta_age_delta)
-          print "self: %s %s age=%s" % (self, ttl, query_age)
-          print "other: %s %s delta=%s" % (other_ns, ref_ttl, delta)
-        return False
+        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
+        return other_ns
+
+      if not checked:
+        self.checks.append(('cache', exc, exc, duration))
+      checked.append(ref_hostname)
       
     if not checked:
       self.disabled = "Failed to test %s wildcard caches"  % len(other_ns.cache_checks)
@@ -374,7 +370,7 @@ class NameServer(object):
     for test in tests:
       (is_broken, warning, duration) = test()
       self.checks.append((test.__name__, is_broken, warning, duration))
-      print "%s check %s: %s" % (int(duration), test.__name__, self)
+#      print "%s check %s: %s" % (int(duration), test.__name__, self)
       if warning:
         if self.is_system:
           print
