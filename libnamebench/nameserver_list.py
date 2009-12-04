@@ -35,14 +35,16 @@ import util
 NS_CACHE_SLACK = 1.7
 CACHE_VER = 2
 MAX_CONGESTION_MULTIPLIER = 5
-PRIMARY_HEALTH_TIMEOUT_MULTIPLIER = 4
+
+GLOBAL_HEALTH_TIMEOUT_MULTIPLIER = 3
+SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 10
 
 
 # Windows behaves in unfortunate ways if too many threads are specified
 if sys.platform == "win32":
   MAX_SANE_THREAD_COUNT = 60
 else:
-  MAX_SANE_THREAD_COUNT = 90
+  MAX_SANE_THREAD_COUNT = 250
 
 class OutgoingUdpInterception(Exception):
 
@@ -99,12 +101,13 @@ class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
                include_internal=False, threads=20, status_callback=None,
-               timeout=5, health_timeout=5):
+               timeout=5, health_timeout=5, skip_cache_collusion_checks=False):
     self.seen_ips = set()
     self.seen_names = set()
     self.timeout = timeout
     self.num_servers = num_servers
     self.requested_health_timeout = health_timeout
+    self.skip_cache_collusion_checks = skip_cache_collusion_checks
     self.health_timeout = health_timeout
     self.status_callback = status_callback
     self.cache_dir = tempfile.gettempdir()
@@ -168,8 +171,10 @@ class NameServers(list):
 
     ns.timeout = self.timeout
     # Give them a little extra love for the road.
-    if ns.is_primary:
-      ns.health_timeout = self.health_timeout * PRIMARY_HEALTH_TIMEOUT_MULTIPLIER
+    if ns.is_system:
+      ns.health_timeout = self.health_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
+    elif ns.is_primary:
+      ns.health_timeout = self.health_timeout * GLOBAL_HEALTH_TIMEOUT_MULTIPLIER
     else:
       ns.health_timeout = self.health_timeout
     self.append(ns)
@@ -276,7 +281,8 @@ class NameServers(list):
     if not cached:
       self._UpdateSecondaryCache(cpath)
 
-    self.CheckCacheCollusion()
+    if not self.skip_cache_collusion_checks:
+      self.CheckCacheCollusion()
     self.DisableUnwantedServers()
 
   def _SecondaryCachePath(self):
@@ -382,7 +388,8 @@ class NameServers(list):
           joined_threads += 1
           threads.remove(thread)
       self.msg('Waiting for cache collusion threads', count=joined_threads, total=total)
-      time.sleep(0.5)
+      if joined_threads != total:
+        time.sleep(0.5)
 
     return results
 
@@ -409,7 +416,8 @@ class NameServers(list):
           threads.remove(thread)
       self.msg('Waiting for health check threads for %s servers' % len(self), count=joined_threads,
                total=total)
-      time.sleep(0.5)
+      if joined_threads != total:
+        time.sleep(1)
 
     if self.enabled:
       self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
