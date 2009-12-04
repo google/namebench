@@ -73,8 +73,8 @@ class NameServer(object):
     self.is_primary = primary
     self.timeout = 60
     self.health_timeout = 30
-    self.warnings = []
-    self.shared_with = []
+    self.warnings = set()
+    self.shared_with = set()
     self.disabled = False
     self.checks = []
     self.share_check_count = 0
@@ -98,7 +98,7 @@ class NameServer(object):
     if self.disabled:
       return '(excluded: %s)' % self.disabled
     else:
-      return ', '.join(set(self.warnings))
+      return ', '.join(self.warnings)
 
   @property
   def warnings_comment(self):
@@ -306,7 +306,7 @@ class NameServer(object):
   def StoreWildcardCache(self):
     (is_broken, warning, duration) = self.QueryWildcardCache(save=True)[1:]
     if warning:
-      self.warnings.append(warning)
+      self.warnings.add(warning)
     if is_broken:
       # Do not disable system DNS servers
       if self.is_system:
@@ -404,8 +404,6 @@ class NameServer(object):
                self.TestWindowsUpdateMicrosoftResponse,
                self.TestWwwPaypalComResponse,
                self.TestWwwTpbOrgResponse]
-    self.checks = []
-    self.warnings = []
 
     for test in tests:
       (is_broken, warning, duration) = test()
@@ -415,7 +413,7 @@ class NameServer(object):
           print
           print "* System DNS is broken: %s [%s] failed %s: %s <%s>" % (self.name, self.ip, test.__name__, warning, duration)
           print
-        self.warnings.append(warning)
+        self.warnings.add(warning)
       if is_broken:
         # Do not disable internal nameservers, as it is nice to compare them!
         if not self.is_system:

@@ -33,7 +33,7 @@ import nameserver
 import util
 
 NS_CACHE_SLACK = 2
-CACHE_VER = 2
+CACHE_VER = 3
 MAX_CONGESTION_MULTIPLIER = 5
 FIRST_CUT_MULTIPLIER = 0.2
 GLOBAL_HEALTH_TIMEOUT_MULTIPLIER = 3
@@ -233,6 +233,9 @@ class NameServers(list):
       cpath = self._SecondaryCachePath()
       cache_data = self._LoadSecondaryCache(cpath)
       if cache_data:
+        for ns in self:
+          ns.warnings = set()
+          ns.checks = []
         cached = True
         cached_ips = [x.ip for x in cache_data if not x.is_primary]
         for ns in list(self.secondaries):
@@ -352,15 +355,15 @@ class NameServers(list):
         # Do not disable our current primary DNS server
         if slower.system_position == 0:
           faster.disabled = 'Shares-cache with current primary DNS server'
-          slower.warnings.append('shares cache with faster %s' % faster.ip)
+          slower.warnings.add('Replica of faster %s' % faster.ip)
         elif slower.is_primary and not faster.is_primary:
-          faster.disabled = 'Shares cache with %s [%s]' % (slower.name, slower.ip)
-          slower.warnings.append('shares cache with %s' % faster.ip)
+          faster.disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
+          slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
         else:
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
-          faster.warnings.append('shares cache with %s' % slower.ip)
-        slower.shared_with.append(faster)
-        faster.shared_with.append(slower)
+          faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
+        slower.shared_with.add(faster)
+        faster.shared_with.add(slower)
 
 
   def RunWildcardStoreThreads(self):
