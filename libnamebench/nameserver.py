@@ -52,7 +52,7 @@ GOOGLE_CLASS_B = ('74.125',)
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
 WWW_FACEBOOK_RESPONSE = ('69.63.18')
-WINDOWSUPDATE_MICROSOFT_RESPONSE = ('207.46.18.', '207.46.225.')
+WINDOWSUPDATE_MICROSOFT_RESPONSE = ('windowsupdate.microsoft.nsatc.net.')
 WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
@@ -212,6 +212,7 @@ class NameServer(object):
           if string in str(a):
             failed=False
             break
+
         if failed:
           failures.append(a)
     if failures:
@@ -421,7 +422,7 @@ class NameServer(object):
           self.disabled = 'Failed %s: %s' % (test.__name__, warning)
         break
 
-    if self.warnings:
-      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
+#    if self.warnings:
+#      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
     return self.disabled
 
