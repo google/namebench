@@ -14,7 +14,7 @@ Response Distribution Chart URL (Full):
 
 Recommended configuration (fastest + nearest):
 ----------------------------------------------
-{% for ns in recommended %}{{ "nameserver %-15.15s # %s %s\n"|format(ns.ip, ns.name, ns.warnings_string) }}{% endfor %}
+{% for ns in recommended %}{{ "nameserver %-15.15s # %s  %s\n"|format(ns.ip, ns.name, ns.warnings_string) }}{% endfor %}
 
 {% if comparison.percent %}
 ********************************************************************************
