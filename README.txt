@@ -11,8 +11,12 @@ Most people will simply want to run this software with no arguments:
 
   ./namebench.py
 
-This will test the nameservers you have already configured this machine to use,
-plus 3 popular global DNS services, and the best 4-6 additional name servers
+If you want to install this tool permanently, you can use:
+
+  sudo python setup.py install
+
+namebench will test the nameservers your machine is currently using, plus
+the popular global DNS services, and the best 4-6 additional name servers
 that it can find for you. It will output some text-graphs and URL's for more
 a more detailed performance analysis of each nameserver.
 
@@ -36,28 +40,43 @@ subdirectory.
 
 --[ options ]-----------------------------------------------------------------
 
-Usage: namebench.py [options] <additional nameservers>
+Usage: namebench.py [options]
 
 Options:
   -h, --help            show this help message and exit
   -r RUN_COUNT, --runs=RUN_COUNT
                         Number of test runs to perform on each nameserver.
-  -c CONFIG, --config=CONFIG
+  -z CONFIG, --config=CONFIG
                         Config file to use.
   -o OUTPUT_FILE, --output=OUTPUT_FILE
-                        Filename to write query results to (CSV format).
+                        Filename to write output to
+  -f OUTPUT_FORMAT, --format=OUTPUT_FORMAT
+                        Output format for file (ascii, html)
+  -c CSV_FILE, --csv_output=CSV_FILE
+                        Filename to write CSV output to
   -j THREAD_COUNT, --threads=THREAD_COUNT
                         # of threads to use
   -y TIMEOUT, --timeout=TIMEOUT
                         # of seconds general requests timeout in.
   -Y HEALTH_TIMEOUT, --health_timeout=HEALTH_TIMEOUT
-                        # of seconds health checks timeout in.
-  -i INPUT_FILE, --input=INPUT_FILE
+                        health check timeout (in seconds)
+  -d DATA_FILE, --datafile=DATA_FILE
                         File containing a list of domain names to query.
+  -i IMPORT_FILE, --import=IMPORT_FILE
+                        Import history from an external application (chrome,
+                        chromium, epiphany, firefox, internet_explorer, opera,
+                        safari, squid)
+  -I, --invalidate_cache
+                        Force health cache to be invalidated
   -t TEST_COUNT, --tests=TEST_COUNT
                         Number of queries per run.
+  -m SELECT_MODE, --select_mode=SELECT_MODE
+                        Selection algorithm to use (weighted, random, chunk)
   -s NUM_SERVERS, --num_servers=NUM_SERVERS
-                        Number of nameservers to test
+                        Number of nameservers to include in test
+  -S, --no_regional     Disable regional_ns servers
+  -x, --no_gui          Disable GUI
+  -O, --only            Only test nameservers passed as arguments
 
 --[ sample output ]-------------------------------------------------------------
 
