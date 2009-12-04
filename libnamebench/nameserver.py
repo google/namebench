@@ -328,20 +328,15 @@ class NameServer(object):
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
       (response, duration, exc) = self.TimedRequest('A', ref_hostname, timeout=timeout)
       
-      ref_ttl = ref_response.answer[0].ttl
-      if not response or not response.answer:
-        print "%s failed to get answer for %s in %sms [%s]" % (self, ref_hostname, duration, exc)
-        continue
-      
-      ttl = response.answer[0].ttl
-      delta = abs(ref_ttl - ttl)
-      query_age = self.timer() - ref_timestamp
-      delta_age_delta = abs(query_age - delta)
-      
-#      print "%s check against %s for %s: delta=%s age=%s" % (self, other_ns, ref_hostname, delta, query_age)
-      if delta > 0 and delta_age_delta < 2:
-#        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
-        return other_ns
+      if response and response.answer:
+        ref_ttl = ref_response.answer[0].ttl
+        ttl = response.answer[0].ttl
+        delta = abs(ref_ttl - ttl)
+        query_age = self.timer() - ref_timestamp
+        delta_age_delta = abs(query_age - delta)
+        
+        if delta > 0 and delta_age_delta < 2:
+          return other_ns
 
       if not checked:
         self.checks.append(('cache', exc, exc, duration))
