@@ -120,7 +120,7 @@ class NameServers(list):
       self.thread_count = threads
 
 
-#    self.ApplyCongestionFactor()
+    self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
     self.system_nameservers = util.InternalNameServers()
     for (ip, name) in nameservers:
