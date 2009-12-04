@@ -58,9 +58,11 @@ OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 MIN_SHARING_DELTA_MS = 3
 MAX_SHARING_DELTA_MS = 90
+TOTAL_WILDCARDS_TO_STORE = 2
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 4
+MAX_STORE_ATTEMPTS = 4
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -78,8 +80,9 @@ class NameServer(object):
     self.disabled = False
     self.checks = []
     self.share_check_count = 0
-    self.cache_check = None
+    self.cache_checks = []
     self.is_slower_replica = False
+    self.timer = DEFAULT_TIMER
 
   @property
   def check_duration(self):
@@ -129,8 +132,7 @@ class NameServer(object):
   def Query(self, request, timeout):
     return dns.query.udp(request, self.ip, timeout, 53)
 
-  def TimedRequest(self, type_string, record_string, timeout=None,
-                   timer=DEFAULT_TIMER):
+  def TimedRequest(self, type_string, record_string, timeout=None):
     """Make a DNS request, returning the reply and duration it took.
 
     Args:
@@ -160,9 +162,9 @@ class NameServer(object):
     exc = None
     duration = None
     try:
-      start_time = timer()
+      start_time = self.timer()
       response = self.Query(request, timeout)
-      duration = timer() - start_time
+      duration = self.timer() - start_time
     except (dns.exception.Timeout), exc:
       response = None
     except (dns.query.BadResponse, dns.message.TrailingJunk,
@@ -176,7 +178,7 @@ class NameServer(object):
       response = None
 
     if not duration:
-      duration = timer() - start_time
+      duration = self.timer() - start_time
 
     return (response, util.SecondsToMilliseconds(duration), exc)
 
@@ -277,45 +279,26 @@ class NameServer(object):
       warning = 'NXDOMAIN Hijacking'
     return (is_broken, warning, duration)
 
-  def QueryWildcardCache(self, hostname=None, save=True, timeout=None):
-    """Make a cache to a random wildcard DNS host, storing the record."""
-    if not timeout:
-      timeout = self.health_timeout
-    is_broken = False
-    warning = None
-    if not hostname:
-      domain = random.choice(WILDCARD_DOMAINS)
-      hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
-    (response, duration, exc) = self.TimedRequest('A', hostname,
-                                                  timeout=timeout)
-    ttl = None
-    if not response:
-      is_broken = True
-      warning = exc.__class__.__name__
-    elif not response.answer:
-      is_broken = True
-      warning = 'No response'
-    else:
-      ttl = response.answer[0].ttl
-
-    if save:
-      self.cache_check = (hostname, ttl)
-
-    return (response, is_broken, warning, duration)
 
   def StoreWildcardCache(self):
-    (is_broken, warning, duration) = self.QueryWildcardCache(save=True)[1:]
-    if warning:
-      self.warnings.add(warning)
-    if is_broken:
-      # Do not disable system DNS servers
-      if self.is_system:
-        print 'Ouch, %s failed StoreWildcardCache: %s <%s>' % (self, warning, duration)
-      else:
-        self.disabled = 'Failed CacheWildcard: %s' % warning
+    """Store a set of wildcard records."""
+    timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
+    
+    attempts = 0
 
-    # Is this really a good idea to count?
-    #self.checks.append(('wildcard store', is_broken, warning, duration))
+    while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
+      attempts += 1
+      if attempts == MAX_STORE_ATTEMPTS:
+#        print "%s is unable to query wildcard caches" % self
+        self.disabled = 'Unable to recursively query wildcard hostnames'
+        return False
+      domain = random.choice(WILDCARD_DOMAINS)
+      hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
+      (response, duration, exc) = self.TimedRequest('A', hostname, timeout=timeout)
+      if response and response.answer:
+#        print "%s storing %s TTL=%s (at %s)"  % (self, hostname, response.answer[0].ttl, self.timer())
+        self.cache_checks.append((hostname, response, self.timer()))
+
 
   def TestSharedCache(self, other_ns):
     """Is this nameserver sharing a cache with another nameserver?
@@ -329,67 +312,44 @@ class NameServer(object):
         - The faster NameServer object
         - The slower NameServer object
     """
-    if other_ns.cache_check:
-      (cache_id, other_ttl) = other_ns.cache_check
-    else:
-      print "* cache check for %s is missing (skipping)" % other_ns
-      return (False, None, None)
-
-    # These queries tend to run slow, and we've already narrowed down the worst.
     timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
-    (response, is_broken, warning, duration) = self.QueryWildcardCache(
-        cache_id,
-        save=False,
-        timeout=timeout
-    )
-    # Try again, but only once. Do penalize them for the first fail however.
-    if is_broken:
-      sys.stdout.write('_')
-      (response, is_broken, warning, duration2) = self.QueryWildcardCache(
-          cache_id,
-          save=False,
-          timeout=timeout
-      )
-      if is_broken:
-        sys.stdout.write('o')
+    checked = []
+    shared = False
 
-    # Is this really a good idea to count?
-    #self.checks.append((cache_id, is_broken, warning, duration))
+    if self.disabled or other_ns.disabled:
+      return False
 
-    if is_broken:
-      if self.is_system:
-        print 'Ouch, %s failed TestSharedCache: %s <%s>' % (self, warning, duration)
+    if not other_ns.cache_checks:
+      print "%s has no cache checks" % other_ns
+      return False
+
+    for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
+      (response, duration, exc) = self.TimedRequest('A', ref_hostname, timeout=timeout)
+      ref_ttl = ref_response.answer[0].ttl
+      if not response or not response.answer:
+#        print "%s failed to get answer for %s in %sms [%s]" % (self, ref_hostname, duration, exc)
+        continue
+      
+      checked.append(ref_hostname)
+      ttl = response.answer[0].ttl
+      delta = abs(ref_ttl - ttl)
+      query_age = self.timer() - ref_timestamp
+      delta_age_delta = abs(query_age - delta)
+      
+#      print "%s check against %s for %s: delta=%s age=%s" % (self, other_ns, ref_hostname, delta, query_age)
+      if delta > 0 and delta_age_delta < 2:
+        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
+        shared = other_ns
       else:
-        self.disabled = 'Failed shared-cache: %s' % warning
-    else:
-      my_ttl = response.answer[0].ttl
-      delta = abs(other_ttl - my_ttl)
-      if delta > 0:
-        if my_ttl < other_ttl:
-          upstream = self
-          upstream_ttl = my_ttl
-          downstream_ttl = other_ttl
-          downstream = other_ns
-        else:
-          upstream = other_ns
-          downstream = self
-          upstream_ttl = other_ttl
-          downstream_ttl = my_ttl
-
-
-        if other_ns.check_duration > self.check_duration:
-          slower = other_ns
-          faster = self
-        else:
-          slower = self
-          faster = other_ns
-
-        if delta > MIN_SHARING_DELTA_MS and delta < MAX_SHARING_DELTA_MS:
-#          print "%s [%s] -> %s [%s] for %s" % (downstream, downstream_ttl,
-#                                                         upstream, upstream_ttl, cache_id)
-          return (True, slower, faster)
-
-    return (False, None, None)
+        if shared:
+          print '%s was shared, but is now clear: %s (%s, %s)' % (self, ref_hostname, delta, delta_age_delta)
+        return False
+      
+    if not checked:
+      self.disabled = "Failed to test %s wildcard caches"  % len(other_ns.cache_checks)
+    
+    print "%s is SHARED to %s" % (self, shared)
+    return shared
 
   def CheckHealth(self, fast_check=False):
     """Qualify a nameserver to see if it is any good."""

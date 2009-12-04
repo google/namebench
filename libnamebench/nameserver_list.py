@@ -96,7 +96,7 @@ class TestCacheSharingThread(threading.Thread):
     for (ns, other_ns) in self.test_combos:
       if ns.disabled or other_ns.disabled:
         continue
-      self.results.append(ns.TestSharedCache(other_ns))
+      self.results.append((ns, ns.TestSharedCache(other_ns)))
 
 class NameServers(list):
 
@@ -349,10 +349,18 @@ class NameServers(list):
           test_combos.append((compare_ns, ns))
         
     results = self.RunCacheCollusionThreads(test_combos)
-    for (shared, slower, faster) in results:
-      if shared:
-        dur_delta = abs(slower.check_duration - faster.check_duration)
-        # Do not disable our current primary DNS server
+    for (ns, shared_ns) in results:
+      if shared_ns:
+        ns.shared_with.add(shared_ns)
+        shared_ns.shared_with.add(ns)
+                
+        if ns.check_duration > shared_ns.check_duration:
+          slower = ns
+          faster = shared_ns
+        else:
+          slower = shared_ns
+          faster = ns
+        
         if slower.system_position == 0:
           faster.disabled = 'Shares-cache with current primary DNS server'
           slower.warnings.add('Replica of faster %s' % faster.ip)
@@ -362,8 +370,6 @@ class NameServers(list):
         else:
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
           faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
-        slower.shared_with.add(faster)
-        faster.shared_with.add(slower)
 
 
   def RunWildcardStoreThreads(self):
