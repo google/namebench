@@ -251,6 +251,7 @@ class NameServers(list):
       # If we have a specific target count to reach, we are in the first phase
       # of narrowing down nameservers. Silently drop bad nameservers.
       if ns.disabled and delete_unwanted and not ns.is_primary:
+        print "Disabled %s (disabled)" % ns
         self.remove(ns)
 
     primary_count = len(self.enabled_primaries)
@@ -258,10 +259,11 @@ class NameServers(list):
     secondaries_needed = target_count - primary_count
 
     # Phase two is removing all of the slower secondary servers
-    for ns in list(self.SortByFastest()):
+    for (idx, ns) in enumerate(list(self.SortByFastest())):
       if not ns.is_primary and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           # Silently remove secondaries who's only fault was being too slow.
+          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_duration, len(ns.checks))
           self.remove(ns)
         else:
           secondaries_kept += 1
@@ -301,7 +303,7 @@ class NameServers(list):
     secondary_ips = [x.ip for x in self.secondaries]
     checksum = hash(str(sorted(secondary_ips)))
     basefile = '.'.join(map(str, ('namebench', CACHE_VER, len(secondary_ips),
-                                  self.num_servers,
+                                  self.system_nameservers[0],
                                   self.requested_health_timeout, checksum)))
     return os.path.join(self.cache_dir, basefile)
 

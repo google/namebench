@@ -56,13 +56,11 @@ WINDOWSUPDATE_MICROSOFT_RESPONSE = ('windowsupdate.microsoft.nsatc.net.')
 WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
-MIN_SHARING_DELTA_MS = 3
-MAX_SHARING_DELTA_MS = 90
-TOTAL_WILDCARDS_TO_STORE = 2
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 4
 MAX_STORE_ATTEMPTS = 4
+TOTAL_WILDCARDS_TO_STORE = 2
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -86,7 +84,9 @@ class NameServer(object):
 
   @property
   def check_duration(self):
-    return sum([x[3] for x in self.checks])
+    total = sum([x[3] for x in self.checks])
+    print "%s TOTAL-%s %s" % (int(total), len(self.checks), self)
+    return total
 
   @property
   def failure(self):
@@ -325,11 +325,15 @@ class NameServer(object):
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
       (response, duration, exc) = self.TimedRequest('A', ref_hostname, timeout=timeout)
+      
       ref_ttl = ref_response.answer[0].ttl
       if not response or not response.answer:
-#        print "%s failed to get answer for %s in %sms [%s]" % (self, ref_hostname, duration, exc)
+        print "%s failed to get answer for %s in %sms [%s]" % (self, ref_hostname, duration, exc)
         continue
       
+      if not checked:
+        print "%s check cache: %s" % (int(duration), self)
+        self.checks.append(('cache', exc, exc, duration))
       checked.append(ref_hostname)
       ttl = response.answer[0].ttl
       delta = abs(ref_ttl - ttl)
@@ -370,6 +374,7 @@ class NameServer(object):
     for test in tests:
       (is_broken, warning, duration) = test()
       self.checks.append((test.__name__, is_broken, warning, duration))
+      print "%s check %s: %s" % (int(duration), test.__name__, self)
       if warning:
         if self.is_system:
           print
