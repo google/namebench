@@ -35,7 +35,7 @@ import util
 NS_CACHE_SLACK = 1.7
 CACHE_VER = 2
 MAX_CONGESTION_MULTIPLIER = 5
-
+FIRST_CUT_MULTIPLIER = 0.2
 GLOBAL_HEALTH_TIMEOUT_MULTIPLIER = 3
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 10
 
@@ -278,7 +278,7 @@ class NameServers(list):
                (len(self), self.thread_count))
     # first pass
     self.RunHealthCheckThreads(fast_check=True)
-    self.DisableUnwantedServers(target_count=len(self) / 4,
+    self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
                                 delete_unwanted=True)
 
     # second pass

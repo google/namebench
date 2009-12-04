@@ -51,6 +51,8 @@ else:
 GOOGLE_CLASS_B = ('74.125',)
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
+WWW_FACEBOOK_RESPONSE = ('69.63.18')
+WINDOWSUPDATE_MICROSOFT_RESPONSE = ('207.46.18.', '207.46.225.')
 WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
@@ -241,6 +243,13 @@ class NameServer(object):
     return self.TestAnswers('A', 'www.thepiratebay.org.', WWW_TPB_RESPONSE,
                             fatal=False)
 
+  def TestWwwFacebookComResponse(self):
+    return self.TestAnswers('A', 'www.facebook.com.', WWW_FACEBOOK_RESPONSE)
+
+  def TestWindowsUpdateMicrosoftResponse(self):
+    return self.TestAnswers('A', 'windowsupdate.microsoft.com.', WINDOWSUPDATE_MICROSOFT_RESPONSE)
+
+
   def TestLocalhostResponse(self):
     (response, duration, exc) = self.TimedRequest('A', 'localhost.',
                                                   timeout=self.health_timeout)
@@ -390,6 +399,8 @@ class NameServer(object):
       tests = [self.TestWwwGoogleComResponse,
                self.TestGoogleComResponse,
                self.TestNegativeResponse,
+               self.TestWwwFacebookComResponse,
+               self.TestWindowsUpdateMicrosoftResponse,
                self.TestWwwPaypalComResponse,
                self.TestWwwTpbOrgResponse]
     self.checks = []
@@ -410,7 +421,7 @@ class NameServer(object):
           self.disabled = 'Failed %s: %s' % (test.__name__, warning)
         break
 
-#    if self.warnings:
-#      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
+    if self.warnings:
+      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
     return self.disabled
 
