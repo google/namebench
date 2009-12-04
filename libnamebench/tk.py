@@ -179,8 +179,8 @@ class NameBenchGui(Frame, base_ui.BaseUI):
     """Update our little status window."""
 
     # TODO(tstromberg): Add specific Error support
-    if total and count:
-      state = '%s [%s/%s]' % (message, count, total)
+    if total:
+      state = '%s... [%s/%s]' % (message, count, total)
     elif count:
       state = '%s%s' % (message, '.' * count)
     else:

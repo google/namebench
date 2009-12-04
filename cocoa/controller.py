@@ -92,7 +92,7 @@ class controller(NSWindowController, base_ui.BaseUI):
     """Update the status message at the bottom of the window."""
     if error:
       return self.displayError(message, error)
-    if total and count:
+    if total:
       state = '%s [%s/%s]' % (message, count, total)
     elif count:
       state = '%s%s' % (message, '.' * count)
