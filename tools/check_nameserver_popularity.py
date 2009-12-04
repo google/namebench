@@ -15,7 +15,6 @@ for ip in sys.argv[1:]:
   query = '"%s" %s' % (ip, QUERY_MODIFIERS)
   cache_path = os.path.join(CACHE_DIR, ip)
   if os.path.exists(cache_path + '.pickle'):
-    continue
     print '%s in cache' % ip
   else:
     if os.path.exists(cache_path):
@@ -44,4 +43,4 @@ for ip in sys.argv[1:]:
     except yahoo.search.SearchError:
       print "%s failed" % (ip)
       print sys.exc_info()
-    time.sleep(1.5)
+    time.sleep(0.5)
