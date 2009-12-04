@@ -103,7 +103,7 @@ class NameServer(object):
     if self.disabled:
       return '(excluded: %s)' % self.disabled
     else:
-      return ', '.join(self.warnings)
+      return ', '.join(map(str,self.warnings))
 
   @property
   def warnings_comment(self):
