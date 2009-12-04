@@ -23,7 +23,7 @@ import nameserver
 import util
 
 OPENDNS_NS = '208.67.220.220'
-EXPECTED_CONGESTION_DURATION = 65.0
+EXPECTED_CONGESTION_DURATION = 60.0
 
 class ConnectionQuality(object):
   def GetInterceptionStatus(self):

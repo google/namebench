@@ -58,8 +58,8 @@ OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many checks to consider when calculating ns check_duration
-SHARED_CACHE_TIMEOUT_MULTIPLIER = 3
-MAX_STORE_ATTEMPTS = 2
+SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
+MAX_STORE_ATTEMPTS = 3
 TOTAL_WILDCARDS_TO_STORE = 2
 
 class NameServer(object):

@@ -298,6 +298,9 @@ class NameServers(list):
       self.CheckCacheCollusion()
     self.DisableUnwantedServers()
 
+    if not self.enabled:
+      raise TooFewNameservers('None of the nameservers tested are healthy')
+
   def _SecondaryCachePath(self):
     """Find a usable and unique location to store health results."""
     secondary_ips = [x.ip for x in self.secondaries]
