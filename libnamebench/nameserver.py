@@ -300,6 +300,8 @@ class NameServer(object):
       if response and response.answer:
 #        print "%s storing %s TTL=%s (at %s)"  % (self, hostname, response.answer[0].ttl, self.timer())
         self.cache_checks.append((hostname, response, self.timer()))
+      else:
+        sys.stdout.write('x')
 
 
   def TestSharedCache(self, other_ns):
@@ -337,6 +339,8 @@ class NameServer(object):
         
         if delta > 0 and delta_age_delta < 2:
           return other_ns
+      else:
+        sys.stdout.write('x')
 
       if not checked:
         self.checks.append(('cache', exc, exc, duration))
