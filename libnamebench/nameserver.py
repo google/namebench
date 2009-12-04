@@ -58,7 +58,7 @@ MIN_SHARING_DELTA_MS = 3
 MAX_SHARING_DELTA_MS = 90
 
 # How many checks to consider when calculating ns check_duration
-SHARED_CACHE_TIMEOUT_MULTIPLIER = 2.25
+SHARED_CACHE_TIMEOUT_MULTIPLIER = 4
 
 class NameServer(object):
   """Hold information about a particular nameserver."""
@@ -286,9 +286,11 @@ class NameServer(object):
     if warning:
       self.warnings.append(warning)
     if is_broken:
+      # Do not disable system DNS servers
       if self.is_system:
-        print 'Ouch, %s failed StoreWildcardCache' % self
-      self.disabled = 'Failed CacheWildcard: %s' % warning
+        print 'Ouch, %s failed StoreWildcardCache: %s <%s>' % (self, warning, duration)
+      else:
+        self.disabled = 'Failed CacheWildcard: %s' % warning
 
     # Is this really a good idea to count?
     #self.checks.append(('wildcard store', is_broken, warning, duration))
@@ -334,8 +336,9 @@ class NameServer(object):
 
     if is_broken:
       if self.is_system:
-        print 'Ouch, %s failed TestSharedCache' % self
-      self.disabled = 'Failed shared-cache: %s' % warning
+        print 'Ouch, %s failed TestSharedCache: %s <%s>' % (self, warning, duration)
+      else:
+        self.disabled = 'Failed shared-cache: %s' % warning
     else:
       my_ttl = response.answer[0].ttl
       delta = abs(other_ttl - my_ttl)
@@ -380,11 +383,15 @@ class NameServer(object):
       (is_broken, warning, duration) = test()
       self.checks.append((test.__name__, is_broken, warning, duration))
       if warning:
-#        if self.is_system:
-#          print "found %s [%s] to have %s: %s" % (self.name, self.ip, test, warning)
+        if self.is_system:
+          print
+          print "* System DNS is broken: %s [%s] failed %s: %s <%s>" % (self.name, self.ip, test.__name__, warning, duration)
+          print
         self.warnings.append(warning)
       if is_broken:
-        self.disabled = 'Failed %s: %s' % (test.__name__, warning)
+        # Do not disable internal nameservers, as it is nice to compare them!
+        if not self.is_system:
+          self.disabled = 'Failed %s: %s' % (test.__name__, warning)
         break
 
 #    if self.warnings:
