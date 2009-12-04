@@ -340,7 +340,7 @@ class NameServer(object):
       
 #      print "%s check against %s for %s: delta=%s age=%s" % (self, other_ns, ref_hostname, delta, query_age)
       if delta > 0 and delta_age_delta < 2:
-        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
+#        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
         return other_ns
 
       if not checked:

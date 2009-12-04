@@ -251,7 +251,7 @@ class NameServers(list):
       # If we have a specific target count to reach, we are in the first phase
       # of narrowing down nameservers. Silently drop bad nameservers.
       if ns.disabled and delete_unwanted and not ns.is_primary:
-        print "Disabled %s (disabled)" % ns
+#        print "Disabled %s (disabled)" % ns
         self.remove(ns)
 
     primary_count = len(self.enabled_primaries)
@@ -263,7 +263,7 @@ class NameServers(list):
       if not ns.is_primary and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           # Silently remove secondaries who's only fault was being too slow.
-          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
+#          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
           self.remove(ns)
         else:
           secondaries_kept += 1
@@ -353,7 +353,6 @@ class NameServers(list):
     results = self.RunCacheCollusionThreads(test_combos)
     for (ns, shared_ns) in results:
       if shared_ns:
-        print "%s shares with %s" % (ns, shared_ns)
         ns.shared_with.add(shared_ns)
         shared_ns.shared_with.add(ns)
                 
