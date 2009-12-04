@@ -72,8 +72,8 @@ def ExtractIPsFromString(ip_string):
 def ExtractIPTuplesFromString(ip_string):
   ip_tuples = []
   for ip in ExtractIPsFromString(ip_string):
-      valid_ips.append((ip,ip))
-  return valid_ips
+      ip_tuples.append((ip,ip))
+  return ip_tuples
 
 def FindDataFile(filename):
   if os.path.exists(filename):
