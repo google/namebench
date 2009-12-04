@@ -32,7 +32,7 @@ import conn_quality
 import nameserver
 import util
 
-NS_CACHE_SLACK = 1.7
+NS_CACHE_SLACK = 2
 CACHE_VER = 2
 MAX_CONGESTION_MULTIPLIER = 5
 FIRST_CUT_MULTIPLIER = 0.2
@@ -276,12 +276,13 @@ class NameServers(list):
     if not cached:
       self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
                (len(self), self.thread_count))
-    # first pass
-    self.RunHealthCheckThreads(fast_check=True)
-    self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
-                                delete_unwanted=True)
 
-    # second pass
+    # If we have a lot of nameservers, make a first cut.
+    if len(self) > (self.num_servers / FIRST_CUT_MULTIPLIER):
+      self.RunHealthCheckThreads(fast_check=True)
+      self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
+                                  delete_unwanted=True)
+
     self.RunHealthCheckThreads()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
