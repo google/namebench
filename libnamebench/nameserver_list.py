@@ -66,9 +66,10 @@ class TooFewNameservers(Exception):
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
-  def __init__(self, nameservers, store_wildcard=False):
+  def __init__(self, nameservers, store_wildcard=False, fast_check=False):
     threading.Thread.__init__(self)
     self.store_wildcard = store_wildcard
+    self.fast_check = fast_check
     self.nameservers = nameservers
     self.results = []
 
@@ -80,7 +81,7 @@ class TestNameServersThread(threading.Thread):
       if self.store_wildcard:
         self.results.append(ns.StoreWildcardCache())
       else:
-        self.results.append(ns.CheckHealth())
+        self.results.append(ns.CheckHealth(fast_check=self.fast_check))
 
 
 class TestCacheSharingThread(threading.Thread):
@@ -275,6 +276,12 @@ class NameServers(list):
     if not cached:
       self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
                (len(self), self.thread_count))
+    # first pass
+    self.RunHealthCheckThreads(fast_check=True)
+    self.DisableUnwantedServers(target_count=len(self) / 4,
+                                delete_unwanted=True)
+
+    # second pass
     self.RunHealthCheckThreads()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
@@ -393,7 +400,7 @@ class NameServers(list):
 
     return results
 
-  def RunHealthCheckThreads(self):
+  def RunHealthCheckThreads(self, fast_check=False):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
     servers = list(self)
@@ -402,7 +409,7 @@ class NameServers(list):
     
     random.shuffle(servers)
     for (index, chunk) in enumerate(util.SplitSequence(servers, self.thread_count)):
-      thread = TestNameServersThread(chunk)
+      thread = TestNameServersThread(chunk, fast_check=fast_check)
       thread.start()
       threads.append(thread)
 
@@ -414,8 +421,11 @@ class NameServers(list):
           thread.join()
           joined_threads += 1
           threads.remove(thread)
-      self.msg('Waiting for health check threads for %s servers' % len(self), count=joined_threads,
-               total=total)
+      if fast_check:
+        self.msg('Checking availability of %s servers' % len(self), count=joined_threads, total=total)
+      else:
+        self.msg('Waiting for health check threads for %s servers' % len(self), count=joined_threads,
+                 total=total)
       if joined_threads != total:
         time.sleep(1)
 

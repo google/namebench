@@ -241,6 +241,18 @@ class NameServer(object):
     return self.TestAnswers('A', 'www.thepiratebay.org.', WWW_TPB_RESPONSE,
                             fatal=False)
 
+  def TestLocalhostResponse(self):
+    (response, duration, exc) = self.TimedRequest('A', 'localhost.',
+                                                  timeout=self.health_timeout)
+    if exc:
+      is_broken = True
+      warning = str(exc.__class__.__name__)
+    else:
+      is_broken = False
+      warning = None
+    return (is_broken, warning, duration)
+
+
   def TestNegativeResponse(self):
     """Test for NXDOMAIN hijaaking."""
     is_broken = False
@@ -369,13 +381,17 @@ class NameServer(object):
 
     return (False, None, None)
 
-  def CheckHealth(self):
+  def CheckHealth(self, fast_check=False):
     """Qualify a nameserver to see if it is any good."""
-    tests = [self.TestWwwGoogleComResponse,
-             self.TestGoogleComResponse,
-             self.TestNegativeResponse,
-             self.TestWwwPaypalComResponse,
-             self.TestWwwTpbOrgResponse]
+    
+    if fast_check:
+      tests = [self.TestLocalhostResponse]
+    else:
+      tests = [self.TestWwwGoogleComResponse,
+               self.TestGoogleComResponse,
+               self.TestNegativeResponse,
+               self.TestWwwPaypalComResponse,
+               self.TestWwwTpbOrgResponse]
     self.checks = []
     self.warnings = []
 
