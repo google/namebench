@@ -338,17 +338,19 @@ class NameServer(object):
       
 #      print "%s check against %s for %s: delta=%s age=%s" % (self, other_ns, ref_hostname, delta, query_age)
       if delta > 0 and delta_age_delta < 2:
-        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
+#        print "- %s shared with %s on %s (delta=%s, age_delta=%s)" % (self, other_ns, ref_hostname, delta, delta_age_delta)
         shared = other_ns
       else:
         if shared:
-          print '%s was shared, but is now clear: %s (%s, %s)' % (self, ref_hostname, delta, delta_age_delta)
+          print '%s was shared, but is now clear: %s (d=%s, aged=%s)' % (self, ref_hostname, delta, delta_age_delta)
+          print "self: %s %s age=%s" % (self, ttl, query_age)
+          print "other: %s %s delta=%s" % (other_ns, ref_ttl, delta)
         return False
       
     if not checked:
       self.disabled = "Failed to test %s wildcard caches"  % len(other_ns.cache_checks)
     
-    print "%s is SHARED to %s" % (self, shared)
+#    print "%s is SHARED to %s" % (self, shared)
     return shared
 
   def CheckHealth(self, fast_check=False):
