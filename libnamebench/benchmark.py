@@ -276,19 +276,21 @@ class Benchmark(object):
       csv_link = None
 
     template_name = '%s.tmpl' % format
+    self.msg('Finding template file: %s' % template_name)
     template_path = util.FindDataFile(os.path.join('templates', template_name))
+    filtered_config = self.FilteredConfig(config)
     self.msg('Using template path: "%s"' % template_path)
-    
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
+    self.msg('Rendering template: %s' % template_name)
     rendered = template.render(
         system_primary=system_primary,
         timestamp = datetime.datetime.now(),
         lowest_latency=lowest_latency,
         best=best,
         comparison=comparison,
-        config=self.FilteredConfig(config),
+        config=filtered_config,
         mean_duration=mean_duration,
         nameserver_details=nameserver_details,
         mean_duration_url=mean_duration_url,
@@ -298,7 +300,7 @@ class Benchmark(object):
         recommended=recommended,
         csv_link=csv_link
     )
-
+    self.msg('Writing rendered output to file')
     if output_fp:
       output_fp.write(rendered)
     else:
