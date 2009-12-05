@@ -59,6 +59,8 @@ class NameBenchCli(object):
     if total:
       if count == total:
         sys.stdout.write('%s/%s\n' % (count, total))
+      if count and int(count) % 10 == 0:
+        sys.stdout.write(str(count))
       else:
         sys.stdout.write('.')
     sys.stdout.flush()
