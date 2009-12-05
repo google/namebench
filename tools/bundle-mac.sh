@@ -15,10 +15,17 @@
 
 PKG_DIR="$HOME/Desktop"
 
+tmp="/tmp/namebench-$$"
+svn checkout http://namebench.googlecode.com/svn/trunk/ $tmp
+
 rm -Rf $PKG_DIR/namebench.app
 cp -Rp cocoa/build/Debug/namebench.app $PKG_DIR/
-rsync -va --exclude ".svn/" --exclude "*~" --exclude "*.pyc" . $PKG_DIR/namebench.app/Contents/Resources/
-#open $PKG_DIR/namebench.app
+rsync -va --exclude ".svn/" --exclude "*~" --exclude "*.pyc" $tmp/ $PKG_DIR/namebench.app/Contents/Resources/
 version=`grep "^VERSION" namebench.py | cut -d\' -f2`
-hdiutil create -srcfolder $PKG_DIR/namebench.app $PKG_DIR/namebench-${version}.dmg
+dmg="$PKG_DIR/namebench-${version}.dmg"
+if [ -f "$dmg" ]; then
+  rm -f "$dmg"
+fi
+hdiutil create -srcfolder $PKG_DIR/namebench.app $dmg
+rm -Rf $PKG_DIR/namebench.app
 
