@@ -291,8 +291,8 @@ class NameServer(object):
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
       attempts += 1
       if attempts == MAX_STORE_ATTEMPTS:
-#        print "%s is unable to query wildcard caches" % self
-        self.disabled = 'Unable to recursively query wildcard hostnames'
+        if not self.is_system:
+          self.disabled = 'Unable to recursively query wildcard hostnames'
         return False
       domain = random.choice(WILDCARD_DOMAINS)
       hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
