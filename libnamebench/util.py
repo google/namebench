@@ -29,6 +29,8 @@ import nameserver
 
 def CalculateListAverage(values):
   """Computes the arithmetic mean of a list of numbers."""
+  if not values:
+    return 0
   return sum(values) / float(len(values))
 
 def DrawTextBar(value, max_value, max_width=53):
