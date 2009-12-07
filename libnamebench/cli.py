@@ -29,6 +29,7 @@ import benchmark
 import config
 import history_parser
 import nameserver_list
+import better_webbrowser
 import conn_quality
 
 # TODO(tstromberg): Migrate this class to using base_ui.BaseUI for less code
@@ -156,3 +157,6 @@ class NameBenchCli(object):
     print '* Saving request details to %s' % csv_filename
     bmark.SaveResultsToCsv(csv_filename)
 
+    if self.options.open_webbrowser:
+      better_webbrowser.open(filename)
+      

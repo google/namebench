@@ -73,6 +73,8 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     type='int', help='Number of nameservers to include in test')
   parser.add_option('-S', '--no_regional', dest='no_regional',
                     action='store_true', help='Disable regional_ns servers')
+  parser.add_option('-w', '--open_webbrowser', dest='open_webbrowser',
+                    action='store_true', help='Opens the final report in your browser')
   parser.add_option('-x', '--no_gui', dest='no_gui',
                     action='store_true', help='Disable GUI')
   # Silly Mac OS X adding -psn_0_xxxx
