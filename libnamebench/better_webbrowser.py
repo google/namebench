@@ -51,6 +51,9 @@ if sys.platform[:3] == 'win':
   import _winreg
 
   class WindowsHttpDefault(webbrowser.BaseBrowser):
+    """Directly uses the Windows HTTP handler to open a web browser, which may
+       be different than what os.startfile outputs for local HTML files."""
+
     def open(self, url, new=0, autoraise=1):
       command_args = create_win32_http_cmd(url)
       if not command_args:
