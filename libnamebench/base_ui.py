@@ -40,12 +40,12 @@ def GenerateOutputFilename(extension):
 class BaseUI(object):
   """Common methods for UI implementations."""
 
-  def UpdateStatus(self, UpdateStatus, count=None, total=None, error=None):
+  def UpdateStatus(self, msg, **kwargs):
     """Update the little status message on the bottom of the window."""
     if hasattr(self, 'status_callback') and self.status_callback:
-      self.status_callback(UpdateStatus, count=count, total=total, error=error)
+      self.status_callback(msg, **kwargs)
     else:
-      print '(UpdateStatus: %s count=%s total=%s, err=%s)' % (UpdateStatus, count, total, error)
+      print msg
 
   def PrepareBenchmark(self):
     self.UpdateStatus('Building nameserver objects')
