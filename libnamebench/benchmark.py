@@ -62,9 +62,9 @@ class Benchmark(object):
     self.test_data = []
     self.status_callback = status_callback
 
-  def msg(self, msg, count=None, total=None):
+  def msg(self, msg, **kwargs):
     if self.status_callback:
-      self.status_callback(msg, count=count, total=total)
+      self.status_callback(msg, **kwargs)
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
@@ -336,12 +336,14 @@ class Benchmark(object):
     Sample output:
     nameserver, test_number, test, type, duration, answer_count, ttl
     """
+    self.msg("Opening %s for write" % filename)
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
     output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record',
                      'Record Type', 'Duration', 'TTL', 'Answer Count',
                      'Response'])
     for ns in self.results:
+      self.msg("Saving detailed data for %s" % ns, debug=True)
       for (test_run, test_results) in enumerate(self.results[ns]):
         for (record, req_type, duration, response) in test_results:
           answer_text = ''
@@ -355,4 +357,5 @@ class Benchmark(object):
           output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record,
                            req_type, duration, ttl, answer_count, answer_text])
     csv_file.close()
+    self.msg("%s saved." % csv_file, debug=True)
 
