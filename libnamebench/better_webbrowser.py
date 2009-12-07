@@ -20,38 +20,8 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import os.path
 import subprocess
 import sys
+import traceback
 import webbrowser
-
-use_win32 = False
-if sys.platform == "win32":
-  try:
-    import _winreg
-    use_win32 = True
-  except ImportError:
-    pass
-  
-
-def open(url):
-  """Open a URL in the users web browser."""
-
-  if not use_win32:
-    return webbrowser.open(url)
-  else:
-    return win32_open(url)
-
-def win32_open(url):
-  """Open a URL with the program handler for the http protocol on win32."""
-
-  command_args = create_win32_http_cmd(url)
-  browser = subprocess.Popen(command_args)
-  
-def get_win32_http_handler():
-  """Given a url, return the appropriate win32 command and arguments."""
-
-  key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
-                        'Software\Classes\http\shell\open\command')
-  return _winreg.EnumValue(key, 0)[1]
-
 
 def create_win32_http_cmd(url):
   """Create a command-line tuple to launch a web browser for a given URL.
@@ -59,12 +29,46 @@ def create_win32_http_cmd(url):
   At the moment, this ignores all default arguments to the browser.
   TODO(tstromberg): Properly parse the command-line arguments.
   """
-
-  cmd = get_win32_http_handler()
+  key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
+                        'Software\Classes\http\shell\open\command')
+  cmd = _winreg.EnumValue(key, 0)[1]
   # "C:\blah blah\iexplore.exe" -nohome
   # "C:\blah blah\firefox.exe" -requestPending -osint -url "%1"  
   if '"' in cmd:
     executable = cmd.split('"')[1]
   else:
     executable = cmd.split(' ')[0]
+    
+  if not os.path.exists(executable):
+    print "Default HTTP browser does not exist: %s" % executable
+    return False
+  else:
+    print "HTTP handler: %s" % executable
   return (executable, url)
+
+
+if sys.platform[:3] == 'win':
+  import _winreg
+
+  class WindowsHttpDefault(webbrowser.BaseBrowser):
+    def open(self, url, new=0, autoraise=1):
+      command_args = create_win32_http_cmd(url)
+      if not command_args:
+        return False
+    
+      print command_args
+      try:
+        browser = subprocess.Popen(command_args)
+      except:
+        traceback.print_exc()
+        print "* Failed to run HTTP handler, trying next browser."
+        return False
+        
+  webbrowser.register("windows-http", WindowsHttpDefault, update_tryorder=-1)
+
+def open(url):
+  if hasattr(webbrowser, '_tryorder'):
+    print "Browsers: %s" % webbrowser._tryorder
+  print "Opening: %s" % url
+  
+  webbrowser.open(url)
