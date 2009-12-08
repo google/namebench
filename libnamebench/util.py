@@ -66,7 +66,11 @@ def SplitSequence(seq, size):
 
 def InternalNameServers():
   """Return list of DNS server IP's used by the host."""
-  return dns.resolver.Resolver().nameservers
+  try:
+    return dns.resolver.Resolver().nameservers
+  except:
+    print "Unable to get list of internal DNS servers."
+    return []
 
 def ExtractIPsFromString(ip_string):
   return re.findall('\d+\.\d+\.\d+\.+\d+', ip_string)
