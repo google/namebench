@@ -41,7 +41,12 @@ class ConnectionQuality(object):
     return (False, duration)
 
   def GetNegativeResponseDuration(self):
-    primary_ip = util.InternalNameServers()[0]
+    internal = util.InternalNameServers()
+    # In rare cases, we may not find any to use.
+    if not internal:
+      return 0
+
+    primary_ip = internal[0]
     primary = nameserver.NameServer(primary_ip)
     return primary.TestNegativeResponse()[2]
 
