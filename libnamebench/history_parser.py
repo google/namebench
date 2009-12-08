@@ -56,6 +56,8 @@ class HistoryParser(object):
         'safari': ('Apple Safari', self.SafariHistoryPath),
         'firefox': ('Mozilla Firefox', self.FirefoxHistoryPath),
         'internet_explorer': ('Microsoft Internet Explorer', self.InternetExplorerHistoryPath),
+        'konqueror': ('Konqueror', self.KonquerorHistoryPath),
+        'seamonkey': ('Mozilla Seamonkey', self.SeamonkeyHistoryPath),
         'squid': ('Squid Web Proxy', self.SquidLogPath),
     }
 
@@ -265,6 +267,17 @@ class HistoryParser(object):
     )
     return paths
 
+  def SeamonkeyHistoryPath(self):
+    paths = (
+        (os.getenv('HOME', ''), 'Library', 'Application Support', 'Seamonkey',
+         'Profiles', '*', 'history.dat'),
+        (os.getenv('HOME', ''), '.mozilla', 'seamonkey', '*', 'history.dat'),
+        (os.getenv('HOME', ''), '.mozilla', 'default', '*', 'history.dat'),
+        (os.getenv('APPDATA', ''), 'Mozilla', 'Seamonkey', 'Profiles', '*',
+         'history.dat')
+    )
+    return paths
+
   def InternetExplorerHistoryPath(self):
     paths = (
         # XP
@@ -279,6 +292,13 @@ class HistoryParser(object):
   def EpiphanyHistoryPath(self):
     paths = (
         (os.getenv('HOME', ''), '.gnome2', 'epiphany', 'ephy-history.xml'),
+    )
+    return paths
+
+  def KonquerorHistoryPath(self):
+    paths = (
+        (os.getenv('HOME', ''), '.kde4', 'share',  'apps', 'konqueror', 'konq_history'),
+        (os.getenv('HOME', ''), '.kde', 'share',  'apps', 'konqueror', 'konq_history'),
     )
     return paths
 
