@@ -140,7 +140,7 @@ class HistoryParser(object):
   def ParseByFilename(self, filename):
     # Only matches http://host.domain type entries (needs at least one subdom)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
-    print '- Reading history from %s' % filename
+    print '- History: %s' % filename
     # binary mode is necessary for running under Windows
     return parse_re.findall(open(filename, 'rb').read())
 
@@ -212,6 +212,8 @@ class HistoryParser(object):
          'History'),
         (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
          'History'),
+        (os.getenv('APPDATA', ''), 'Local', 'Google', 'Chrome', 'User Data',
+         'Default', 'History'),
         (os.getenv('USERPROFILE', ''), 'Local Settings', 'Application Data',
          'Google', 'Chrome', 'User Data', 'Default', 'History'),
     )
@@ -232,12 +234,16 @@ class HistoryParser(object):
         elif part == 'chrome' or part == 'google-chrome':
           new_path[index] = 'chromium'
       paths.append(new_path)
+      
     return paths
 
   def OperaHistoryPath(self):
     paths = (
         (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences',
          'global_history.dat'),
+        (os.getenv('APPDATA', ''), 'Opera', 'Opera', 'global_history.dat'),
+        (os.getenv('APPDATA', ''), 'Local', 'Opera', 'Opera', 'global_history.dat'),
+        (os.getenv('HOME', ''), '.opera', 'global_history.dat'),
     )
     return paths
 
