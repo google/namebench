@@ -340,7 +340,7 @@ class Benchmark(object):
     Sample output:
     nameserver, test_number, test, type, duration, answer_count, ttl
     """
-    self.msg("Opening %s for write" % filename, debug=Tre)
+    self.msg("Opening %s for write" % filename, debug=True)
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
     output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record',
