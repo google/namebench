@@ -45,7 +45,8 @@ def AddMsg(message, master=None, **kwargs):
   new_message = Message(message, **kwargs)
   if new_message != global_last_message:
     global_message_queue.put(new_message)
-    master.event_generate('<<msg>>', when='tail')
+    if master:
+      master.event_generate('<<msg>>', when='tail')
     global_last_message = new_message
 
 class Message(object):
