@@ -88,7 +88,7 @@ class controller(NSWindowController, base_ui.BaseUI):
   def applicationShouldTerminateAfterLastWindowClosed_(self, sender):
     return True
 
-  def UpdateStatus(self, message, count=None, total=None, error=False):
+  def UpdateStatus(self, message, count=None, total=None, error=False, debug=False):
     """Update the status message at the bottom of the window."""
     if error:
       return self.displayError(message, error)
