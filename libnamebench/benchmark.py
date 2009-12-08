@@ -71,6 +71,7 @@ class Benchmark(object):
   def CreateTestsFromFile(self, filename, select_mode='weighted'):
     """Open an input file, and pass the data to CreateTests."""
     filename = util.FindDataFile(filename)
+    self.msg('Reading test data from %s' % filename)
     input_data = open(filename).readlines()
     return self.CreateTests(input_data, select_mode=select_mode)
 
@@ -357,5 +358,5 @@ class Benchmark(object):
           output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record,
                            req_type, duration, ttl, answer_count, answer_text])
     csv_file.close()
-    self.msg("%s saved." % csv_file, debug=True)
+    self.msg("%s saved." % filename, debug=True)
 
