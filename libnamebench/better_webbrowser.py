@@ -32,9 +32,12 @@ def create_win32_http_cmd(url):
   try:
     key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
                         'Software\Classes\http\shell\open\command')
+  except WindowsError:
+    key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+                        'Software\Classes\http\shell\open\command')
   except:
     return False
-
+  
   cmd = _winreg.EnumValue(key, 0)[1]
   # "C:\blah blah\iexplore.exe" -nohome
   # "C:\blah blah\firefox.exe" -requestPending -osint -url "%1"  
