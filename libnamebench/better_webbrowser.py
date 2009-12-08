@@ -22,6 +22,7 @@ import subprocess
 import sys
 import traceback
 import webbrowser
+import time
 
 def create_win32_http_cmd(url):
   """Create a command-line tuple to launch a web browser for a given URL.
@@ -63,12 +64,15 @@ if sys.platform[:3] == 'win':
 
     def open(self, url, new=0, autoraise=1):
       command_args = create_win32_http_cmd(url)
+      print command_args
       if not command_args:
+        print "Could not find HTTP handler"
         return False
     
       print command_args
       try:
         browser = subprocess.Popen(command_args)
+        return True
       except:
         traceback.print_exc()
         print "* Failed to run HTTP handler, trying next browser."
@@ -77,8 +81,5 @@ if sys.platform[:3] == 'win':
   webbrowser.register("windows-http", WindowsHttpDefault, update_tryorder=-1)
 
 def open(url):
-  if hasattr(webbrowser, '_tryorder'):
-    print "Browsers: %s" % webbrowser._tryorder
   print "Opening: %s" % url
-  
   webbrowser.open(url)
