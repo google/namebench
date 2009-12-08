@@ -282,10 +282,8 @@ class Benchmark(object):
       csv_link = None
 
     template_name = '%s.tmpl' % format
-    self.msg('Finding template file: %s' % template_name)
     template_path = util.FindDataFile(os.path.join('templates', template_name))
     filtered_config = self.FilteredConfig(config)
-    self.msg('Using template path: "%s"' % template_path)
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
@@ -306,7 +304,7 @@ class Benchmark(object):
         recommended=recommended,
         csv_link=csv_link
     )
-    self.msg('Writing rendered output to file')
+    self.msg('Saving rendered %s output' % format)
     if output_fp:
       output_fp.write(rendered)
     else:
@@ -342,7 +340,7 @@ class Benchmark(object):
     Sample output:
     nameserver, test_number, test, type, duration, answer_count, ttl
     """
-    self.msg("Opening %s for write" % filename)
+    self.msg("Opening %s for write" % filename, debug=Tre)
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
     output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record',

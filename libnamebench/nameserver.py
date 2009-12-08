@@ -58,7 +58,7 @@ OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many failures before we disable system nameservers
-MAX_SYSTEM_FAILURES_BEFORE_DISABLE = 4
+MAX_SYSTEM_FAILURES = 4
 ERROR_PRONE_RATE = 10
 
 # How many checks to consider when calculating ns check_duration
