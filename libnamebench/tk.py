@@ -46,7 +46,11 @@ def AddMsg(message, master=None, **kwargs):
   if new_message != global_last_message:
     global_message_queue.put(new_message)
     if master:
-      master.event_generate('<<msg>>', when='tail')
+      try:
+        master.event_generate('<<msg>>', when='tail')
+      except TclError:
+        print "TCL error encountered, not pushing update to UI:"
+        traceback.print_exc()
     global_last_message = new_message
 
 class Message(object):
