@@ -29,8 +29,12 @@ def create_win32_http_cmd(url):
   At the moment, this ignores all default arguments to the browser.
   TODO(tstromberg): Properly parse the command-line arguments.
   """
-  key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
+  try:
+    key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
                         'Software\Classes\http\shell\open\command')
+  except:
+    return False
+
   cmd = _winreg.EnumValue(key, 0)[1]
   # "C:\blah blah\iexplore.exe" -nohome
   # "C:\blah blah\firefox.exe" -requestPending -osint -url "%1"  
