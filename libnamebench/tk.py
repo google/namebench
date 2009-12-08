@@ -244,7 +244,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
   def ErrorPopup(self, title, message):
     print "Showing popup: %s" % title
-    tkMessageBox.showerror(title, message, master=self.master)
+    tkMessageBox.showerror(str(title), str(message), master=self.master)
 
   def UpdateRunState(self, running=True):
     # try/except blocks added to work around broken Tcl/Tk libraries
