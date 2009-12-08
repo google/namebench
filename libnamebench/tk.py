@@ -48,10 +48,10 @@ def AddMsg(message, master=None, **kwargs):
     if master:
       try:
         master.event_generate('<<msg>>', when='tail')
+        global_last_message = new_message
       except TclError:
         print "TCL error encountered, not pushing update to UI:"
         traceback.print_exc()
-    global_last_message = new_message
 
 class Message(object):
   """Messages to be passed from to the main thread from children.
