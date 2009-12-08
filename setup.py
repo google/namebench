@@ -87,5 +87,6 @@ setup(name='namebench',
             'ignores': ['dns', 'jinja2', 'graphy'],
         }
       },
-      windows=['namebench.py'],
+       windows=['namebench.py'],
+#       console=['namebench.py']
 )

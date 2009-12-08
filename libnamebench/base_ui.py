@@ -79,8 +79,7 @@ class BaseUI(object):
       self.bmark.CreateTests(test_data, select_mode=self.options.select_mode)
     else:
       # The Alexa data (by default)
-      data_path = os.path.join(self.resource_dir, self.options.data_file)
-      self.bmark.CreateTestsFromFile(data_path,
+      self.bmark.CreateTestsFromFile(self.options.data_file,
                                      select_mode=self.options.select_mode)
     self.UpdateStatus('Benchmark preparation is complete.')
 
