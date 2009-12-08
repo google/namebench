@@ -58,11 +58,12 @@ OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many failures before we disable system nameservers
-MAX_SYSTEM_FAILURES = 4
+MAX_SYSTEM_FAILURES_BEFORE_DISABLE = 4
+ERROR_PRONE_RATE = 10
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
-MAX_STORE_ATTEMPTS = 3
+MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 
 class NameServer(object):
@@ -80,7 +81,9 @@ class NameServer(object):
     self.shared_with = set()
     self.disabled = False
     self.checks = []
-    self.failure_count = 0
+    self.request_count = 0
+    self.error_count = 0
+    self.failed_test_count = 0
     self.share_check_count = 0
     self.cache_checks = []
     self.is_slower_replica = False
@@ -125,6 +128,20 @@ class NameServer(object):
     except:
       return ''
 
+  @property
+  def is_error_prone(self):
+    if self.error_rate >= ERROR_PRONE_RATE:
+      return True
+    else:
+      return False
+      
+  @property
+  def error_rate(self):
+    if not self.error_count or not self.request_count:
+      return 0
+    else:
+      return (float(self.error_count) / float(self.request_count)) * 100
+
   def __str__(self):
     return '%s [%s]' % (self.name, self.ip)
 
@@ -133,11 +150,11 @@ class NameServer(object):
     
   def AddFailure(self, message):
     """Add a failure for this nameserver. This will effectively disable it's use."""
-    self.failure_count += 1
+    self.failed_test_count += 1
     if self.is_system:
-      print "* System DNS fail #%s/%s: %s %s" % (self.failure_count, MAX_SYSTEM_FAILURES, self, message)      
-      if self.failure_count >= MAX_SYSTEM_FAILURES:
-        print "* Disabling %s - %s failures" % (self, self.failure_count)
+      print "* System DNS fail #%s/%s: %s %s" % (self.failed_test_count, MAX_SYSTEM_FAILURES, self, message)      
+      if self.failed_test_count >= MAX_SYSTEM_FAILURES:
+        print "* Disabling %s - %s failures" % (self, self.failed_test_count)
         self.disabled = message
     else:
       self.disabled = message
@@ -166,7 +183,8 @@ class NameServer(object):
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)
     request = None
-
+    self.request_count += 1
+    
     # Sometimes it takes great effort just to craft a UDP packet.
     try:
       request = self.CreateRequest(record, request_type, dns.rdataclass.IN)
@@ -194,6 +212,9 @@ class NameServer(object):
       (exc, error) = sys.exc_info()[0:2]
       print "* Error with %s: %s (%s)" % (self, exc, error)
       response = None
+
+    if not response:
+      self.error_count += 1
 
     if not duration:
       duration = self.timer() - start_time
@@ -301,19 +322,17 @@ class NameServer(object):
   def StoreWildcardCache(self):
     """Store a set of wildcard records."""
     timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
-    
-    attempts = 0
+    attempted = []
 
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
-      attempts += 1
-      if attempts == MAX_STORE_ATTEMPTS:
-        self.AddFailure('Unable to recursively query wildcard hostnames')
+      if len(attempted) == MAX_STORE_ATTEMPTS:
+        self.AddFailure('Could not recursively query: %s' % ', '.join(attempted))
         return False
       domain = random.choice(WILDCARD_DOMAINS)
       hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
+      attempted.append(hostname)
       (response, duration, exc) = self.TimedRequest('A', hostname, timeout=timeout)
       if response and response.answer:
-#        print "%s storing %s TTL=%s (at %s)"  % (self, hostname, response.answer[0].ttl, self.timer())
         self.cache_checks.append((hostname, response, self.timer()))
       else:
         sys.stdout.write('x')
@@ -381,7 +400,6 @@ class NameServer(object):
 
     for test in tests:
       (is_broken, warning, duration) = test()
-      print "%s: %s %s %s" % (self, is_broken, warning, duration)
       self.checks.append((test.__name__, is_broken, warning, duration))
       if warning:
         self.warnings.add(warning)

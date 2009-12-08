@@ -197,7 +197,12 @@ class Benchmark(object):
 
   def BestOverallNameServer(self):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
-    return sorted_averages[0][0]
+    hosts = [ x[0] for x in sorted_averages ]
+    for host in [ x[0] for x in sorted_averages ]:
+      if not host.is_error_prone:
+        return host
+    # return something if none of them are good.
+    return hosts[0]
 
   def NearestNameServers(self, count=2):
     min_responses = sorted(self.FastestNameServerResult(),
@@ -249,7 +254,7 @@ class Benchmark(object):
 
     builtin_servers = util.InternalNameServers()
     system_primary = builtin_servers[0]
-    other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled ]
+    other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled and not x[0].is_error_prone ]
 
     if other_records:
       # First try to compare against our primary DNS

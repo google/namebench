@@ -46,11 +46,18 @@ ul.warnings {
 	font-size: small;
 	border-right:  1px solid #C2CFF1;
 }
+
 .even {
 	background-color: #fff
 }
 .odd {
 	background-color: #ebeff9;
+}
+
+.unhealthy_host {
+    background-color: #FFD6D8;
+    border-bottom: 1px solid #990000;
+    border-top: 1px solid #990000;
 }
 
 .primary_row {

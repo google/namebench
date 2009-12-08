@@ -45,7 +45,7 @@
 </thead>
 {# (ns, overall_average, run_averages, fastest, slowest, failure_count, nx_count) #}
 {% for row in nameserver_details %}
-<tr class="{% if row.0.disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.0.system_position == 0 %} primary_row{% endif %}{% if row.5 > 1 %} unhealthy_host{% endif %}">
+<tr class="{% if row.0.disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.0.system_position == 0 %} primary_row{% endif %}{% if row.0.is_error_prone %} unhealthy_host{% endif %}">
   <td>{{ row.0.ip }}</td>
   <td>{{ row.0.name }}</td>
   <td>{{ row.0.hostname }}</td>
@@ -62,6 +62,9 @@
     	{% for warning in row.0.warnings %}
     		<li>{{ warning|e }}</li>
         {% endfor %}
+    {% endif %}
+    {% if row.0.is_error_prone %}
+      <li>{{ "%0.0f"|format(row.0.error_rate) }}% queries to this host failed.</li>
     {% endif %}
 	</ul>
   </td>
