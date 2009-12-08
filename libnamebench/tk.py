@@ -30,6 +30,8 @@ import history_parser
 import nameserver_list
 import util
 
+THREAD_UNSAFE_TK = 0
+
 def closedWindowHandler():
   print 'Au revoir, mes amis!'
   sys.exit(1)
@@ -37,21 +39,28 @@ def closedWindowHandler():
 global_message_queue = Queue.Queue()
 global_last_message = None
 
-def AddMsg(message, master=None, **kwargs):
+def AddMsg(message, master=None, backup_notifier=None, **kwargs):
   """Add a message to the global queue for output."""
   global global_message_queue
   global global_last_message
+  global THREAD_UNSAFE_TK
 
   new_message = Message(message, **kwargs)
   if new_message != global_last_message:
     global_message_queue.put(new_message)
+    
     if master:
       try:
         master.event_generate('<<msg>>', when='tail')
         global_last_message = new_message
+      # Tk thread-safety workaround #1
       except TclError:
-        print "TCL error encountered, not pushing update to UI:"
-        traceback.print_exc()
+        try:
+          backup_notifier(-1)
+          THREAD_UNSAFE_TK = 1
+        except:   
+          print "TCL error encountered, not pushing update to UI:"
+          traceback.print_exc()
 
 class Message(object):
   """Messages to be passed from to the main thread from children.
@@ -70,10 +79,12 @@ class Message(object):
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
 
-  def __init__(self, primary, secondary, options, history_parser=None, master=None):
+  def __init__(self, primary, secondary, options, history_parser=None, master=None,
+               backup_notifier=None):
     threading.Thread.__init__(self)
     self.status_callback = self.msg
     self.hparser = history_parser
+    self.backup_notifier = backup_notifier
     self.primary = primary
     self.master = master
     self.secondary = secondary
@@ -82,7 +93,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
 
   def msg(self, message, **kwargs):
     """Add messages to the main queue."""
-    return AddMsg(message, master=self.master, **kwargs)
+    return AddMsg(message, master=self.master, backup_notifier=self.backup_notifier, **kwargs)
   
   def run(self):
     self.msg('Started thread', enable_button=False)
@@ -144,7 +155,6 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.data_source = StringVar()
     self.selection_mode = StringVar()
     self.use_global = IntVar()
-    self.broken_tk = False
     self.use_regional = IntVar()
 
     self.master.title("namebench")
@@ -251,10 +261,11 @@ class MainWindow(Frame, base_ui.BaseUI):
     tkMessageBox.showerror(str(title), str(message), master=self.master)
 
   def UpdateRunState(self, running=True):
+    global THREAD_UNSAFE_TK
     # try/except blocks added to work around broken Tcl/Tk libraries
     # shipped with Fedora 11 (not thread-safe).
     # See http://code.google.com/p/namebench/issues/detail?id=23'
-    if self.broken_tk:
+    if THREAD_UNSAFE_TK:
       return
 
     if running:
@@ -262,7 +273,7 @@ class MainWindow(Frame, base_ui.BaseUI):
         self.button.config(state=DISABLED)
         self.button.config(text='Running')
       except TclError:
-        self.broken_tk = True
+        THREAD_UNSAFE_TK = True
         self.UpdateStatus('Unable to disable button due to broken Tk library')
       self.UpdateStatus('Running...')
     else:
@@ -278,7 +289,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.ProcessForm()
     thread = WorkerThread(self.primary, self.secondary, self.options,
                           history_parser=self.hparser,
-                          master=self.master)
+                          master=self.master, backup_notifier=self.MessageHandler)
     thread.start()
 
   def ProcessForm(self):
