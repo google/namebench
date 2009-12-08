@@ -57,6 +57,9 @@ WWW_TPB_RESPONSE = ('194.71.107.',)
 OPENDNS_NS = '208.67.220.220'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
+# How many failures before we disable system nameservers
+MAX_SYSTEM_FAILURES = 4
+
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
 MAX_STORE_ATTEMPTS = 3
@@ -77,6 +80,7 @@ class NameServer(object):
     self.shared_with = set()
     self.disabled = False
     self.checks = []
+    self.failure_count = 0
     self.share_check_count = 0
     self.cache_checks = []
     self.is_slower_replica = False
@@ -126,6 +130,18 @@ class NameServer(object):
 
   def __repr__(self):
     return self.__str__()
+    
+  def AddFailure(self, message):
+    """Add a failure for this nameserver. This will effectively disable it's use."""
+    self.failure_count += 1
+    if self.is_system:
+      print "* System DNS fail #%s/%s: %s %s" % (self.failure_count, MAX_SYSTEM_FAILURES, self, message)      
+      if self.failure_count >= MAX_SYSTEM_FAILURES:
+        print "* Disabling %s - %s failures" % (self, self.failure_count)
+        self.disabled = message
+    else:
+      self.disabled = message
+      
 
   def CreateRequest(self, record, request_type, return_type):
     """Function to work around any dnspython make_query quirks."""
@@ -291,8 +307,7 @@ class NameServer(object):
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
       attempts += 1
       if attempts == MAX_STORE_ATTEMPTS:
-        if not self.is_system:
-          self.disabled = 'Unable to recursively query wildcard hostnames'
+        self.AddFailure('Unable to recursively query wildcard hostnames')
         return False
       domain = random.choice(WILDCARD_DOMAINS)
       hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
@@ -347,9 +362,7 @@ class NameServer(object):
       checked.append(ref_hostname)
       
     if not checked:
-      self.disabled = "Failed to test %s wildcard caches"  % len(other_ns.cache_checks)
-    
-#    print "%s is SHARED to %s" % (self, shared)
+      self.AddFailure('Failed to test %s wildcard caches'  % len(other_ns.cache_checks))    
     return shared
 
   def CheckHealth(self, fast_check=False):
@@ -368,21 +381,14 @@ class NameServer(object):
 
     for test in tests:
       (is_broken, warning, duration) = test()
+      print "%s: %s %s %s" % (self, is_broken, warning, duration)
       self.checks.append((test.__name__, is_broken, warning, duration))
-#      print "%s check %s: %s" % (int(duration), test.__name__, self)
       if warning:
-        if self.is_system:
-          print
-          print "* System DNS is broken: %s [%s] failed %s: %s <%s>" % (self.name, self.ip, test.__name__, warning, duration)
-          print
         self.warnings.add(warning)
       if is_broken:
-        # Do not disable internal nameservers, as it is nice to compare them!
-        if not self.is_system:
-          self.disabled = 'Failed %s: %s' % (test.__name__, warning)
+        self.AddFailure('Failed %s: %s' % (test.__name__, warning))
+      if self.disabled:
         break
 
-#    if self.warnings:
-#      print '%s [%s] - %s' % (self.name, self.ip, self.warnings)
     return self.disabled
 
