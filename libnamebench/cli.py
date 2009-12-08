@@ -44,8 +44,11 @@ class NameBenchCli(object):
     self.version = version
     self.last_msg = (None, None, None, None)
 
-  def msg(self, msg, count=None, total=None, error=False):
+  def msg(self, msg, count=None, total=None, error=False, debug=False):
     if self.last_msg == (msg, count, total, error):
+      return None
+
+    if debug:
       return None
 
     if error:
