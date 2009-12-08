@@ -63,9 +63,6 @@
     		<li>{{ warning|e }}</li>
         {% endfor %}
     {% endif %}
-    {% if row.0.is_error_prone %}
-      <li>{{ "%0.0f"|format(row.0.error_rate) }}% queries to this host failed.</li>
-    {% endif %}
 	</ul>
   </td>
 </tr>
