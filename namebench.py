@@ -58,6 +58,9 @@ if __name__ == '__main__':
 
   if use_tk:
     try:
+      # Workaround for unicode path errors. See http://code.google.com/p/namebench/issues/detail?id=41
+      if hasattr(sys, "winver") and hasattr(sys, "frozen"):
+        os.environ["TCL_LIBRARY"] = os.path.join(os.path.dirname(sys.executable), "tcl", "tcl8.5")
       import Tkinter
     except ImportError:
       if len(sys.argv) == 1:
