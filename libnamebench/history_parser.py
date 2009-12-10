@@ -45,6 +45,7 @@ class HistoryParser(object):
   MIN_FILE_SIZE = 128
   MIN_RECOMMENDED_RECORD_COUNT = 2
   INTERNAL_RE = re.compile('\.prod|\.corp|\.bor|internal|dmz')
+  IP_RE = re.compile('^[\d\.]+$')
   TYPES = {}
 
   def __init__(self):
@@ -105,7 +106,7 @@ class HistoryParser(object):
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
     if not paths:
       if complain:
-        print "* Could not find data for '%s'. Tried:"
+        print "* Could not find data for '%s'. Tried:" % source
         for path in tried:
           print path
       return None
@@ -175,6 +176,9 @@ class HistoryParser(object):
 
       if self.INTERNAL_RE.search(host):
         continue
+        
+      if self.IP_RE.match(host):
+        continue 
 
       if host != last_host:
         if sorted_unique:
@@ -242,6 +246,8 @@ class HistoryParser(object):
   def OperaHistoryPath(self):
     paths = (
         (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences',
+         'global_history.dat'),
+        (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences 10',
          'global_history.dat'),
         (os.getenv('APPDATA', ''), 'Opera', 'Opera', 'global_history.dat'),
         (os.getenv('APPDATA', ''), 'Local', 'Opera', 'Opera', 'global_history.dat'),
