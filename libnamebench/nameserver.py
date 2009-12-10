@@ -48,7 +48,8 @@ if sys.platform == "win32":
 else:
   DEFAULT_TIMER = time.time
 
-GOOGLE_CLASS_B = ('74.125',)
+GOOGLE_SUBNETS = ('74.125', '64.233.169', '72.14.20', '209.85.22', '66.249.81.104')
+
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
 WWW_FACEBOOK_RESPONSE = ('69.63.18')
@@ -273,7 +274,7 @@ class NameServer(object):
 
 
   def TestGoogleComResponse(self):
-    return self.TestAnswers('A', 'google.com.', GOOGLE_CLASS_B)
+    return self.TestAnswers('A', 'google.com.', GOOGLE_SUBNETS)
 
   def TestWwwGoogleComResponse(self):
     return self.TestAnswers('CNAME', 'www.google.com.', WWW_GOOGLE_RESPONSE)
