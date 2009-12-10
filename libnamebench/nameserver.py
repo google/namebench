@@ -48,7 +48,12 @@ if sys.platform == "win32":
 else:
   DEFAULT_TIMER = time.time
 
-GOOGLE_SUBNETS = ('74.125', '64.233.169', '72.14.20', '209.85.153.', '209.85.22', '66.249.81.', '72.14.213.', '66.102.7.')
+# Based on observed behaviour - not authorative, and very subject to change.
+# TODO(tstromberg): Find the best way to determine hijacking without hardcoding.
+GOOGLE_SUBNETS = ('74.125.', '66.102.9.', '66.102.11.', '66.102.13.',
+                  '66.102.7.', '66.102.9.', '209.85.1', '209.85.22',
+                  '209.85.231', '64.233.16', '64.233.17', '64.233.18',
+                  '66.249.8', '66.249.9', '74.14.2')
 
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
