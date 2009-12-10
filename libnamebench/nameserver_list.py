@@ -306,7 +306,7 @@ class NameServers(list):
     secondary_ips = [x.ip for x in self.secondaries]
     checksum = hash(str(sorted(secondary_ips)))
     basefile = '.'.join(map(str, ('namebench', CACHE_VER, len(secondary_ips),
-                                  self.system_nameservers[0],
+                                  '_'.join(self.system_nameservers),
                                   self.requested_health_timeout, checksum)))
     return os.path.join(self.cache_dir, basefile)
 

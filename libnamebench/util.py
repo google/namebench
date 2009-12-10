@@ -70,7 +70,7 @@ def InternalNameServers():
     return dns.resolver.Resolver().nameservers
   except:
     print "Unable to get list of internal DNS servers."
-    return ['127.0.0.1']
+    return []
 
 def ExtractIPsFromString(ip_string):
   return re.findall('\d+\.\d+\.\d+\.+\d+', ip_string)
