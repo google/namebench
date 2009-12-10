@@ -48,7 +48,7 @@ if sys.platform == "win32":
 else:
   DEFAULT_TIMER = time.time
 
-GOOGLE_SUBNETS = ('74.125', '64.233.169', '72.14.20', '209.85.22', '66.249.81.104')
+GOOGLE_SUBNETS = ('74.125', '64.233.169', '72.14.20', '209.85.153.', '209.85.22', '66.249.81.', '72.14.213.', '66.102.7.')
 
 WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
 WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
