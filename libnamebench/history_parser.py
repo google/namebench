@@ -198,6 +198,16 @@ class HistoryParser(object):
         history.append('A %s # %s hits' % (hit, count))
     return history
 
+  def _AddRoamLocalWindowsPaths(self, paths):
+    for path in list(paths):
+      if '\\Roaming\\' in path:
+        paths.append(path.replace('\\Roaming\\', '\\Local\\'))
+        paths.append(path.replace('\\Roaming\\', ''))
+      elif '\\Local\\' in path:
+        paths.append(path.replace('\\Local\\', '\\Roaming\\'))
+        paths.append(path.replace('\\Local\\', ''))
+    return paths
+
   def FindGlobPaths(self, paths):
     """Given a list of glob paths, return a list of matches containing data.
 
@@ -206,6 +216,8 @@ class HistoryParser(object):
     """
     tried = []
     found = []
+    if sys.platform[:3] == 'win':
+      paths = self._AddRoamLocalWindowsPaths(paths)
     for path_elements in paths:
       path = os.path.join(*path_elements)
       tried.append(path)
@@ -225,8 +237,6 @@ class HistoryParser(object):
          'History'),
         (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
          'History'),
-        (os.getenv('APPDATA', ''), 'Local', 'Google', 'Chrome', 'User Data',
-         'Default', 'History'),
         (os.getenv('USERPROFILE', ''), 'Local Settings', 'Application Data',
          'Google', 'Chrome', 'User Data', 'Default', 'History'),
     )
@@ -257,7 +267,6 @@ class HistoryParser(object):
         (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences 10',
          'global_history.dat'),
         (os.getenv('APPDATA', ''), 'Opera', 'Opera', 'global_history.dat'),
-        (os.getenv('APPDATA', ''), 'Local', 'Opera', 'Opera', 'global_history.dat'),
         (os.getenv('HOME', ''), '.opera', 'global_history.dat'),
     )
     return paths
@@ -296,8 +305,9 @@ class HistoryParser(object):
         # XP
         (os.getenv('USERPROFILE', ''), 'Local Settings', 'History',
          'History.IE5', 'index.dat'),
-        # ?
         (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History',
+         'History.IE5', 'index.dat'),
+        (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History', 'Low',
          'History.IE5', 'index.dat'),
     )
     return paths
