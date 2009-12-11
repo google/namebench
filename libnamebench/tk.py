@@ -184,7 +184,11 @@ class MainWindow(Frame, base_ui.BaseUI):
     regional_button.grid(row=3, columnspan=2, sticky=W)
     regional_button.toggle()
 
-    separator = Frame(inner_frame, height=2, width=515, bd=1, relief=SUNKEN)
+    if sys.platform[:3] == 'win':
+      seperator_width = 400
+    else:
+      seperator_width = 515
+    separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
     separator.grid(row=4, padx=5, pady=5, columnspan=2)
 
     ds_label = Label(inner_frame, text="Benchmark Data Source")
@@ -227,7 +231,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
     self.UpdateRunState(running=True)
     self.UpdateRunState(running=False)
-    self.UpdateStatus('Ready')
+    self.UpdateStatus('namebench %s is ready!' % self.version)
 
   def MessageHandler(self, event):
     """Pinged when there is a new message in our queue to handle."""
