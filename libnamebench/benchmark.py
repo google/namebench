@@ -255,7 +255,10 @@ class Benchmark(object):
         ns.warnings.add('%0.0f queries to this host failed' % ns.error_rate)
 
     builtin_servers = util.InternalNameServers()
-    system_primary = builtin_servers[0]
+    if builtin_servers:
+      system_primary = builtin_servers[0]
+    else:
+      system_primary = False
     other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled and not x[0].is_error_prone ]
 
     if other_records:
