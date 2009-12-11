@@ -43,7 +43,7 @@ import dns.resolver
 import util
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:
-if sys.platform == "win32":
+if sys.platform[:3] == 'win':
   DEFAULT_TIMER = time.clock
 else:
   DEFAULT_TIMER = time.time
