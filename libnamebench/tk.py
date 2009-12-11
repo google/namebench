@@ -172,7 +172,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     ns_label.grid(row=0, columnspan=2, sticky=W)
     ns_label['font'] = bold_font
 
-    nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=66)
+    nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=65)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
