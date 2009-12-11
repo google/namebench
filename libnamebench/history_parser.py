@@ -199,14 +199,22 @@ class HistoryParser(object):
     return history
 
   def _AddRoamLocalWindowsPaths(self, paths):
-    for path in list(paths):
-      if '\\Roaming\\' in path:
-        paths.append(path.replace('\\Roaming\\', '\\Local\\'))
-        paths.append(path.replace('\\Roaming\\', ''))
-      elif '\\Local\\' in path:
-        paths.append(path.replace('\\Local\\', '\\Roaming\\'))
-        paths.append(path.replace('\\Local\\', ''))
-    return paths
+    """Windows path munging: Add neutered and swapped paths for Local/roaming dirs."""
+    keywords = ('Local', 'Roaming')
+    new_paths = list(paths)
+    for path in paths:
+      for keyword in keywords:
+        if path[0] and keyword in path[0]:
+          swapped_path = list(path)
+          neutered_path = list(path)
+
+          replacement = keywords[keywords.index(keyword)-1]
+          
+          swapped_path[0] = swapped_path[0].replace('\\%s' % keyword, '\\%s' % replacement)
+          neutered_path[0] = neutered_path[0].replace('\\%s' % keyword, '')
+          new_paths.extend([swapped_path, neutered_path])
+    return new_paths
+  
 
   def FindGlobPaths(self, paths):
     """Given a list of glob paths, return a list of matches containing data.
@@ -218,7 +226,11 @@ class HistoryParser(object):
     found = []
     if sys.platform[:3] == 'win':
       paths = self._AddRoamLocalWindowsPaths(paths)
+    
     for path_elements in paths:
+      # path contains an environment variable that we could not resolve.
+      if False in path_elements:
+        continue
       path = os.path.join(*path_elements)
       tried.append(path)
       for filename in glob.glob(path):
@@ -231,13 +243,13 @@ class HistoryParser(object):
 
   def GoogleChromeHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), 'Library', 'Application Support', 'Google',
+        (os.getenv('HOME', False), 'Library', 'Application Support', 'Google',
          'Chrome', 'Default', 'History'),
-        (os.getenv('HOME', ''), '.config', 'google-chrome', 'Default',
+        (os.getenv('HOME', False), '.config', 'google-chrome', 'Default',
          'History'),
-        (os.getenv('APPDATA', ''), 'Google', 'Chrome', 'User Data', 'Default',
+        (os.getenv('APPDATA', False), 'Google', 'Chrome', 'User Data', 'Default',
          'History'),
-        (os.getenv('USERPROFILE', ''), 'Local Settings', 'Application Data',
+        (os.getenv('USERPROFILE', False), 'Local Settings', 'Application Data',
          'Google', 'Chrome', 'User Data', 'Default', 'History'),
     )
     return paths
@@ -262,40 +274,40 @@ class HistoryParser(object):
 
   def OperaHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences',
+        (os.getenv('HOME', False), 'Library', 'Preferences', 'Opera Preferences',
          'global_history.dat'),
-        (os.getenv('HOME', ''), 'Library', 'Preferences', 'Opera Preferences 10',
+        (os.getenv('HOME', False), 'Library', 'Preferences', 'Opera Preferences 10',
          'global_history.dat'),
-        (os.getenv('APPDATA', ''), 'Opera', 'Opera', 'global_history.dat'),
-        (os.getenv('HOME', ''), '.opera', 'global_history.dat'),
+        (os.getenv('APPDATA', False), 'Opera', 'Opera', 'global_history.dat'),
+        (os.getenv('HOME', False), '.opera', 'global_history.dat'),
     )
     return paths
 
   def SafariHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), 'Library', 'Safari', 'History.plist'),
-        (os.getenv('APPDATA', ''), 'Apple Computer', 'Safari',
+        (os.getenv('HOME', False), 'Library', 'Safari', 'History.plist'),
+        (os.getenv('APPDATA', False), 'Apple Computer', 'Safari',
          'History.plist')
     )
     return paths
 
   def FirefoxHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), 'Library', 'Application Support', 'Firefox',
+        (os.getenv('HOME', False), 'Library', 'Application Support', 'Firefox',
          'Profiles', '*', 'places.sqlite'),
-        (os.getenv('HOME', ''), '.mozilla', 'firefox', '*', 'places.sqlite'),
-        (os.getenv('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles', '*',
+        (os.getenv('HOME', False), '.mozilla', 'firefox', '*', 'places.sqlite'),
+        (os.getenv('APPDATA', False), 'Mozilla', 'Firefox', 'Profiles', '*',
          'places.sqlite')
     )
     return paths
 
   def SeamonkeyHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), 'Library', 'Application Support', 'Seamonkey',
+        (os.getenv('HOME', False), 'Library', 'Application Support', 'Seamonkey',
          'Profiles', '*', 'history.dat'),
-        (os.getenv('HOME', ''), '.mozilla', 'seamonkey', '*', 'history.dat'),
-        (os.getenv('HOME', ''), '.mozilla', 'default', '*', 'history.dat'),
-        (os.getenv('APPDATA', ''), 'Mozilla', 'Seamonkey', 'Profiles', '*',
+        (os.getenv('HOME', False), '.mozilla', 'seamonkey', '*', 'history.dat'),
+        (os.getenv('HOME', False), '.mozilla', 'default', '*', 'history.dat'),
+        (os.getenv('APPDATA', False), 'Mozilla', 'Seamonkey', 'Profiles', '*',
          'history.dat')
     )
     return paths
@@ -303,25 +315,25 @@ class HistoryParser(object):
   def InternetExplorerHistoryPath(self):
     paths = (
         # XP
-        (os.getenv('USERPROFILE', ''), 'Local Settings', 'History',
+        (os.getenv('USERPROFILE', False), 'Local Settings', 'History',
          'History.IE5', 'index.dat'),
-        (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History',
+        (os.getenv('APPDATA', False), 'Microsoft', 'Windows', 'History',
          'History.IE5', 'index.dat'),
-        (os.getenv('APPDATA', ''), 'Microsoft', 'Windows', 'History', 'Low',
+        (os.getenv('APPDATA', False), 'Microsoft', 'Windows', 'History', 'Low',
          'History.IE5', 'index.dat'),
     )
     return paths
 
   def EpiphanyHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), '.gnome2', 'epiphany', 'ephy-history.xml'),
+        (os.getenv('HOME', False), '.gnome2', 'epiphany', 'ephy-history.xml'),
     )
     return paths
 
   def KonquerorHistoryPath(self):
     paths = (
-        (os.getenv('HOME', ''), '.kde4', 'share',  'apps', 'konqueror', 'konq_history'),
-        (os.getenv('HOME', ''), '.kde', 'share',  'apps', 'konqueror', 'konq_history'),
+        (os.getenv('HOME', False), '.kde4', 'share',  'apps', 'konqueror', 'konq_history'),
+        (os.getenv('HOME', False), '.kde', 'share',  'apps', 'konqueror', 'konq_history'),
     )
     return paths
 
