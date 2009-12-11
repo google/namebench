@@ -9,7 +9,7 @@
 		<object class="NSMutableArray" key="IBDocument.EditedObjectIDs">
 			<bool key="EncodedWithXMLCoder">YES</bool>
 			<integer value="29"/>
-			<integer value="371"/>
+			<integer value="372"/>
 		</object>
 		<object class="NSArray" key="IBDocument.PluginDependencies">
 			<bool key="EncodedWithXMLCoder">YES</bool>
@@ -909,13 +909,13 @@
 												<object class="NSButton" id="439010166">
 													<reference key="NSNextResponder" ref="295943993"/>
 													<int key="NSvFlags">268</int>
-													<string key="NSFrame">{{16, 148}, {342, 18}}</string>
+													<string key="NSFrame">{{16, 148}, {467, 18}}</string>
 													<reference key="NSSuperview" ref="295943993"/>
 													<bool key="NSEnabled">YES</bool>
 													<object class="NSButtonCell" key="NSCell" id="393162343">
 														<int key="NSCellFlags">-2080244224</int>
 														<int key="NSCellFlags2">0</int>
-														<string key="NSContents">Include global DNS providers (OpenDNS, UltraDNS)</string>
+														<string key="NSContents">Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS)</string>
 														<reference key="NSSupport" ref="105947925"/>
 														<reference key="NSControlView" ref="439010166"/>
 														<int key="NSButtonFlags">1211912703</int>
