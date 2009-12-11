@@ -100,16 +100,14 @@ class HistoryParser(object):
     else:
       return self.ParseByFilename(path_or_type)
 
-  def ParseByType(self, source, complain=False):
+  def ParseByType(self, source, complain=True):
     """Given a type, parse the newest file and return a list of hosts."""
 
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
     if not paths:
       if complain:
-        print "* Could not find data for '%s'. Tried:" % source
-        for path in tried:
-          print path
-      return None
+        print "- %s: no matches in %s" % (source, tried)
+      return False
     newest = sorted(paths, key=os.path.getmtime)[-1]
     return self.ParseByFilename(newest)
 
@@ -136,14 +134,20 @@ class HistoryParser(object):
 
       if thread.hosts and len(thread.hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
         results[thread.type] = thread.hosts
+      elif thread.hosts == False:
+        pass
+      elif not thread.hosts:
+        print '- No records found in %s' % (thread.type)
+      else:
+        print '- Ignoring %s (only %s records)' % (thread.type, len(thread.hosts))
 
-    print '- %s records read in %ss' % (records, time.time() - start_time)
+    print '- Read %s records from %s in %ss' % (records, ', '.join(results.keys()), time.time() - start_time)
     return results
 
   def ParseByFilename(self, filename):
     # Only matches http://host.domain type entries (needs at least one subdom)
     parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
-    print '- History: %s' % filename
+    print '* Reading %s' % filename
     # binary mode is necessary for running under Windows
     return parse_re.findall(open(filename, 'rb').read())
 
@@ -207,6 +211,8 @@ class HistoryParser(object):
       for filename in glob.glob(path):
         if os.path.getsize(filename) > self.MIN_FILE_SIZE:
           found.append(filename)
+        else:
+          print "* %s exists, but is only %s bytes" % (filename, os.path.getsize(filename))
 
     return (found, tried)
 
