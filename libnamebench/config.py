@@ -25,10 +25,7 @@ import util
 def GetConfiguration(filename='namebench.cfg'):
   (options, args) = DefineAndParseOptions(filename=filename)
   (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
-  supplied_ns = []
-  for arg in args:
-    if '.' in arg:
-      supplied_ns.append((arg, arg))
+  supplied_ns = util.ExtractIPTuplesFromString(' '.join(args))
   return (configured_options, supplied_ns, global_ns, regional_ns)
 
 def DefineAndParseOptions(filename='namebench.cfg'):
