@@ -184,8 +184,8 @@ class NameServerHealthChecks(object):
       else:
         sys.stdout.write('x')
 
-      if not checked:
-        self.checks.append(('cache', exc, exc, duration))
+#      if not checked:
+#        self.checks.append(('cache', exc, exc, duration))
       checked.append(ref_hostname)
       
     if not checked:
@@ -201,7 +201,8 @@ class NameServerHealthChecks(object):
     if fast_check:
       tests = [(self.TestLocalhostResponse,[])]
     else:
-      tests = [(self.TestNegativeResponse,[]), (self.TestReverseResponse, [])]
+      tests = []
+      #[(self.TestNegativeResponse,[])]
       for (check, expected_value) in sanity_checks:
         (req_type, req_name) = check.split(' ')
         expected_values = expected_value.split(',')
@@ -217,7 +218,6 @@ class NameServerHealthChecks(object):
             
       self.checks.append((test_name, is_broken, warning, duration))
       if warning:
-        print "%s: %s" % (self, warning)
         self.warnings.add(warning)
       if is_broken:
         self.AddFailure('Failed %s: %s' % (test_name, warning))

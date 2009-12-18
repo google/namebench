@@ -144,6 +144,7 @@ class NameServer(health_checks.NameServerHealthChecks):
         print "* Disabling %s - %s failures" % (self, self.failed_test_count)
         self.disabled = message
     else:
+#      print "Disabling %s: %s" % (self, message)
       self.disabled = message
       
 
