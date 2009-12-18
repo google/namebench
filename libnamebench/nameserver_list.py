@@ -250,7 +250,7 @@ class NameServers(list):
       # If we have a specific target count to reach, we are in the first phase
       # of narrowing down nameservers. Silently drop bad nameservers.
       if ns.disabled and delete_unwanted and not ns.is_primary:
-        print "Disabled %s (disabled)" % ns
+#        print "Disabled %s (disabled)" % ns
         self.remove(ns)
 
     primary_count = len(self.enabled_primaries)
@@ -262,7 +262,7 @@ class NameServers(list):
       if not ns.is_primary and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           # Silently remove secondaries who's only fault was being too slow.
-          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
+#          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
           self.remove(ns)
         else:
           secondaries_kept += 1
@@ -309,11 +309,12 @@ class NameServers(list):
         # TODO(tstromberg): Have a better way of denoting secondary anycast.
         provider = ns.name.replace('-2', '')
         if provider in seen and not ns.is_system:
-          self.msg('Demoting %s to secondary anycast due to performance.' % ns.name)
+          faster_ns = seen[provider]
+          self.msg('Demoting %s to secondary anycast. %s is faster by %2.2fms' % (ns.name, faster_ns.name, ns.check_duration - faster_ns.check_duration))
           ns.is_primary = False
           ns.warnings.add('Slower anycast address for %s' % provider)
         else:
-          seen[provider]=1
+          seen[provider]=ns
 
   def _SecondaryCachePath(self):
     """Find a usable and unique location to store health results."""
