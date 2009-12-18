@@ -288,6 +288,7 @@ class NameServers(list):
                                   delete_unwanted=True)
 
     self.RunHealthCheckThreads(sanity_checks=sanity_checks)
+    self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
     if not cached:
@@ -299,6 +300,20 @@ class NameServers(list):
 
     if not self.enabled:
       raise TooFewNameservers('None of the nameservers tested are healthy')
+      
+  def _DemoteSecondaryGlobalNameServers(self):
+    """For global nameservers, demote the slower IP to secondary status."""
+    seen = {}
+    for ns in self.SortByFastest():
+      if ns.is_primary:
+        # TODO(tstromberg): Have a better way of denoting secondary anycast.
+        provider = ns.name.replace('-2', '')
+        if provider in seen and not ns.is_system:
+          self.msg('Demoting %s to secondary anycast due to performance.' % ns.name)
+          ns.is_primary = False
+          ns.warnings.add('Slower anycast address for %s' % provider)
+        else:
+          seen[provider]=1
 
   def _SecondaryCachePath(self):
     """Find a usable and unique location to store health results."""
