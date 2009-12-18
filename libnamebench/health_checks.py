@@ -127,6 +127,9 @@ class NameServerHealthChecks(object):
       warning = None
     return (is_broken, warning, duration)
 
+  def TestRootServerResponse(self):
+    return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
+
   def StoreWildcardCache(self):
     """Store a set of wildcard records."""
     timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
@@ -199,9 +202,9 @@ class NameServerHealthChecks(object):
     """Qualify a nameserver to see if it is any good."""
     
     if fast_check:
-      tests = [(self.TestLocalhostResponse,[])]
+      tests = [(self.TestRootServerResponse,[])]
     else:
-      tests = []
+      tests = [(self.TestLocalhostResponse,[])]
       #[(self.TestNegativeResponse,[])]
       for (check, expected_value) in sanity_checks:
         (req_type, req_name) = check.split(' ')
