@@ -44,6 +44,7 @@ class NameBenchCli(object):
     self.version = version
     self.sanity_checks = sanity_checks
     self.last_msg = (None, None, None, None)
+    self.last_msg_count_posted = 0
 
   def msg(self, msg, count=None, total=None, error=False, debug=False):
     if self.last_msg == (msg, count, total, error):
@@ -64,8 +65,10 @@ class NameBenchCli(object):
     if total:
       if count == total:
         sys.stdout.write('%s/%s\n' % (count, total))
-      if count and int(count) % 10 == 0:
-        sys.stdout.write(str(count))
+        
+      if count and (count - self.last_msg_count_posted > (total * 0.10)):
+        sys.stdout.write('.%s' % count)
+        self.last_msg_count_posted = count
       else:
         sys.stdout.write('.')
     sys.stdout.flush()
