@@ -78,7 +78,7 @@ class NameServerHealthChecks(object):
             found_match = True
             break
         if not found_match:
-          print "NO MATCH: %s -> %s" % (expected, answer)
+#          print "NO MATCH: %s -> %s" % (expected, answer)
           unmatched_answers.append(str(answer))
 
     if unmatched_answers:
