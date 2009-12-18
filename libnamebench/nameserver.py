@@ -19,7 +19,6 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import datetime
 import time
 import traceback
-import random
 
 import sys
 
@@ -40,6 +39,7 @@ import dns.rdatatype
 import dns.reversename
 import dns.resolver
 
+import health_checks
 import util
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:
@@ -48,31 +48,12 @@ if sys.platform[:3] == 'win':
 else:
   DEFAULT_TIMER = time.time
 
-# Based on observed behaviour - not authorative, and very subject to change.
-# TODO(tstromberg): Find the best way to determine hijacking without hardcoding.
-GOOGLE_SUBNETS = ('74.125.', '66.102.9.', '66.102.11.', '66.102.13.',
-                  '66.102.7.', '66.102.9.', '209.85.1', '209.85.22',
-                  '209.85.231', '64.233.16', '64.233.17', '64.233.18',
-                  '66.249.8', '66.249.9', '72.14.2', '216.239.59')
-
-WWW_GOOGLE_RESPONSE = ('CNAME www.l.google.com',)
-WWW_PAYPAL_RESPONSE = ('66.211.169.', '64.4.241.')
-WWW_FACEBOOK_RESPONSE = ('69.63.18')
-WINDOWSUPDATE_MICROSOFT_RESPONSE = ('windowsupdate.microsoft.nsatc.net.')
-WWW_TPB_RESPONSE = ('194.71.107.',)
-OPENDNS_NS = '208.67.220.220'
-WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many failures before we disable system nameservers
 MAX_SYSTEM_FAILURES = 4
 ERROR_PRONE_RATE = 10
 
-# How many checks to consider when calculating ns check_duration
-SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
-MAX_STORE_ATTEMPTS = 4
-TOTAL_WILDCARDS_TO_STORE = 2
-
-class NameServer(object):
+class NameServer(health_checks.NameServerHealthChecks):
   """Hold information about a particular nameserver."""
 
   def __init__(self, ip, name=None, internal=False, primary=False):
@@ -81,8 +62,8 @@ class NameServer(object):
     self.is_system = internal
     self.system_position = None
     self.is_primary = primary
-    self.timeout = 60
-    self.health_timeout = 30
+    self.timeout = 10
+    self.health_timeout = 10
     self.warnings = set()
     self.shared_with = set()
     self.disabled = False
@@ -227,47 +208,6 @@ class NameServer(object):
 
     return (response, util.SecondsToMilliseconds(duration), exc)
 
-  def TestAnswers(self, record_type, record, expected, fatal=True):
-    """Test to see that an answer returns correct IP's.
-
-    Args:
-      record_type: text record type for NS query (A, CNAME, etc)
-      record: string to query for
-      expected: tuple of strings expected in all answers
-
-    Returns:
-      (is_broken, warning, duration)
-    """
-    is_broken = False
-    warning = None
-    (response, duration, exc) = self.TimedRequest(record_type, record,
-                                                  timeout=self.health_timeout)
-    failures = []
-    if not response:
-      is_broken = True
-      warning = exc.__class__
-    elif not response.answer:
-      if fatal:
-        is_broken = True
-      # Avoid preferring broken DNS servers that respond quickly
-      duration = self.health_timeout
-      warning = 'No answer for %s' % record
-    else:
-      for a in response.answer:
-        failed = True
-        for string in expected:
-          if string in str(a):
-            failed=False
-            break
-
-        if failed:
-          failures.append(a)
-    if failures:
-      answers = [' + '.join(map(str, x.items)) for x in response.answer]
-      answer_text = ' -> '.join(answers)
-      warning = '%s hijacked (%s)' % (record, answer_text)
-    return (is_broken, warning, duration)
-
   def ResponseToAscii(self, response):
     if not response:
       return None
@@ -276,143 +216,4 @@ class NameServer(object):
       return ' -> '.join(answers)
     else:
       return dns.rcode.to_text(response.rcode())
-
-
-  def TestGoogleComResponse(self):
-    return self.TestAnswers('A', 'google.com.', GOOGLE_SUBNETS)
-
-  def TestWwwGoogleComResponse(self):
-    return self.TestAnswers('CNAME', 'www.google.com.', WWW_GOOGLE_RESPONSE)
-
-  def TestWwwPaypalComResponse(self):
-    return self.TestAnswers('A', 'www.paypal.com.', WWW_PAYPAL_RESPONSE)
-
-  def TestWwwTpbOrgResponse(self):
-    return self.TestAnswers('A', 'www.thepiratebay.org.', WWW_TPB_RESPONSE,
-                            fatal=False)
-
-  def TestWwwFacebookComResponse(self):
-    return self.TestAnswers('A', 'www.facebook.com.', WWW_FACEBOOK_RESPONSE)
-
-  def TestWindowsUpdateMicrosoftResponse(self):
-    return self.TestAnswers('A', 'windowsupdate.microsoft.com.', WINDOWSUPDATE_MICROSOFT_RESPONSE)
-
-
-  def TestLocalhostResponse(self):
-    (response, duration, exc) = self.TimedRequest('A', 'localhost.',
-                                                  timeout=self.health_timeout)
-    if exc:
-      is_broken = True
-      warning = str(exc.__class__.__name__)
-    else:
-      is_broken = False
-      warning = None
-    return (is_broken, warning, duration)
-
-
-  def TestNegativeResponse(self):
-    """Test for NXDOMAIN hijaaking."""
-    is_broken = False
-    warning = None
-    poison_test = 'nb.%s.google.com.' % random.random()
-    (response, duration, exc) = self.TimedRequest('A', poison_test,
-                                                  timeout=self.health_timeout)
-    if not response:
-      is_broken = True
-      warning = str(exc.__class__.__name__)
-    elif response.answer:
-      warning = 'NXDOMAIN Hijacking'
-    return (is_broken, warning, duration)
-
-
-  def StoreWildcardCache(self):
-    """Store a set of wildcard records."""
-    timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
-    attempted = []
-
-    while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
-      if len(attempted) == MAX_STORE_ATTEMPTS:
-        self.AddFailure('Could not recursively query: %s' % ', '.join(attempted))
-        return False
-      domain = random.choice(WILDCARD_DOMAINS)
-      hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
-      attempted.append(hostname)
-      (response, duration, exc) = self.TimedRequest('A', hostname, timeout=timeout)
-      if response and response.answer:
-        self.cache_checks.append((hostname, response, self.timer()))
-      else:
-        sys.stdout.write('x')
-
-
-  def TestSharedCache(self, other_ns):
-    """Is this nameserver sharing a cache with another nameserver?
-
-    Args:
-      other_ns: A nameserver to compare it to.
-
-    Returns:
-      A tuple containing:
-        - Boolean of whether or not this host has a shared cache
-        - The faster NameServer object
-        - The slower NameServer object
-    """
-    timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
-    checked = []
-    shared = False
-
-    if self.disabled or other_ns.disabled:
-      return False
-
-    if not other_ns.cache_checks:
-      print "%s has no cache checks" % other_ns
-      return False
-
-    for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
-      (response, duration, exc) = self.TimedRequest('A', ref_hostname, timeout=timeout)
-      
-      if response and response.answer:
-        ref_ttl = ref_response.answer[0].ttl
-        ttl = response.answer[0].ttl
-        delta = abs(ref_ttl - ttl)
-        query_age = self.timer() - ref_timestamp
-        delta_age_delta = abs(query_age - delta)
-        
-        if delta > 0 and delta_age_delta < 2:
-          return other_ns
-      else:
-        sys.stdout.write('x')
-
-      if not checked:
-        self.checks.append(('cache', exc, exc, duration))
-      checked.append(ref_hostname)
-      
-    if not checked:
-      self.AddFailure('Failed to test %s wildcard caches'  % len(other_ns.cache_checks))    
-    return shared
-
-  def CheckHealth(self, fast_check=False):
-    """Qualify a nameserver to see if it is any good."""
-    
-    if fast_check:
-      tests = [self.TestLocalhostResponse]
-    else:
-      tests = [self.TestWwwGoogleComResponse,
-               self.TestGoogleComResponse,
-               self.TestNegativeResponse,
-               self.TestWwwFacebookComResponse,
-               self.TestWindowsUpdateMicrosoftResponse,
-               self.TestWwwPaypalComResponse,
-               self.TestWwwTpbOrgResponse]
-
-    for test in tests:
-      (is_broken, warning, duration) = test()
-      self.checks.append((test.__name__, is_broken, warning, duration))
-      if warning:
-        self.warnings.add(warning)
-      if is_broken:
-        self.AddFailure('Failed %s: %s' % (test.__name__, warning))
-      if self.disabled:
-        break
-
-    return self.disabled
 

@@ -34,8 +34,8 @@ import util
 
 NS_CACHE_SLACK = 2
 CACHE_VER = 3
-MAX_CONGESTION_MULTIPLIER = 5
-FIRST_CUT_MULTIPLIER = 0.2
+MAX_CONGESTION_MULTIPLIER = 2.5
+FIRST_CUT_MULTIPLIER = 0.15
 GLOBAL_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
 
@@ -66,10 +66,11 @@ class TooFewNameservers(Exception):
 class TestNameServersThread(threading.Thread):
   """Quickly test the health of many nameservers with multiple threads."""
 
-  def __init__(self, nameservers, store_wildcard=False, fast_check=False):
+  def __init__(self, nameservers, store_wildcard=False, fast_check=False, sanity_checks=None):
     threading.Thread.__init__(self)
     self.store_wildcard = store_wildcard
     self.fast_check = fast_check
+    self.sanity_checks = sanity_checks
     self.nameservers = nameservers
     self.results = []
 
@@ -81,7 +82,7 @@ class TestNameServersThread(threading.Thread):
       if self.store_wildcard:
         self.results.append(ns.StoreWildcardCache())
       else:
-        self.results.append(ns.CheckHealth(fast_check=self.fast_check))
+        self.results.append(ns.CheckHealth(fast_check=self.fast_check, sanity_checks=self.sanity_checks))
 
 
 class TestCacheSharingThread(threading.Thread):
@@ -155,9 +156,9 @@ class NameServers(list):
   def enabled(self):
     return [x for x in self if not x.disabled]
     
-  def msg(self, msg, count=None, total=None, error=False):
+  def msg(self, msg, count=None, total=None, **kwargs):
     if self.status_callback:
-      self.status_callback(msg, count=count, total=total, error=error)
+      self.status_callback(msg, count=count, total=total, **kwargs)
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
@@ -204,27 +205,19 @@ class NameServers(list):
     self.seen_names.add(ns.name)
 
   def ApplyCongestionFactor(self):
-    self.msg('Checking connection quality...')
-    cq = conn_quality.ConnectionQuality()
-    (intercepted, congestion, duration) = cq.CheckConnectionQuality()
+    cq = conn_quality.ConnectionQuality(status_callback=self.status_callback)
+    (intercepted, congestion, multiplier) = cq.CheckConnectionQuality()[0:3] 
     if intercepted:
       raise OutgoingUdpInterception(
           'Your Internet Service Provider appears to be intercepting and '
           'redirecting all outgoing DNS requests. This means we cannot '
           'benchmark or utilize alternate DNS servers. Please ask them to stop.'
       )
-    if congestion > 1:
-      if congestion > MAX_CONGESTION_MULTIPLIER:
-        multiplier = MAX_CONGESTION_MULTIPLIER
-      else:
-        multiplier = congestion
-
+    if multiplier > 1:
       self.timeout *= multiplier
       self.health_timeout *= multiplier
-      self.msg('Congestion detected. Applied %.2f multiplier to timeouts'
-               % multiplier)
-    else:
-      self.msg('Connection appears healthy (latency %.2fms)' % duration)
+      self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f standard, %2.1f health.'
+               % (multiplier, self.timeout, self.health_timeout))
 
 
   def InvokeSecondaryCache(self):
@@ -251,7 +244,7 @@ class NameServers(list):
       # If we have a specific target count to reach, we are in the first phase
       # of narrowing down nameservers. Silently drop bad nameservers.
       if ns.disabled and delete_unwanted and not ns.is_primary:
-#        print "Disabled %s (disabled)" % ns
+        print "Disabled %s (disabled)" % ns
         self.remove(ns)
 
     primary_count = len(self.enabled_primaries)
@@ -263,12 +256,12 @@ class NameServers(list):
       if not ns.is_primary and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           # Silently remove secondaries who's only fault was being too slow.
-#          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
+          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
           self.remove(ns)
         else:
           secondaries_kept += 1
 
-  def CheckHealth(self, cache_dir=None):
+  def CheckHealth(self, cache_dir=None, sanity_checks=None):
     """Filter out unhealthy or slow replica servers."""
     if len(self) == 1:
       return None
@@ -288,7 +281,7 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
                                   delete_unwanted=True)
 
-    self.RunHealthCheckThreads()
+    self.RunHealthCheckThreads(sanity_checks=sanity_checks)
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
     if not cached:
@@ -415,7 +408,7 @@ class NameServers(list):
 
     return results
 
-  def RunHealthCheckThreads(self, fast_check=False):
+  def RunHealthCheckThreads(self, fast_check=False, sanity_checks=None):
     """Check the health of all of the nameservers (using threads)."""
     threads = []
     servers = list(self)
@@ -424,7 +417,7 @@ class NameServers(list):
     
     random.shuffle(servers)
     for (index, chunk) in enumerate(util.SplitSequence(servers, self.thread_count)):
-      thread = TestNameServersThread(chunk, fast_check=fast_check)
+      thread = TestNameServersThread(chunk, fast_check=fast_check, sanity_checks=sanity_checks)
       thread.start()
       threads.append(thread)
 

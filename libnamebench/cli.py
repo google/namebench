@@ -36,12 +36,13 @@ import conn_quality
 # duplication.
 
 class NameBenchCli(object):
-  def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
+  def __init__(self, options, supplied_ns, global_ns, regional_ns, sanity_checks, version=None):
     self.options = options
     self.supplied_ns = supplied_ns
     self.global_ns = global_ns
     self.regional_ns = regional_ns
     self.version = version
+    self.sanity_checks = sanity_checks
     self.last_msg = (None, None, None, None)
 
   def msg(self, msg, count=None, total=None, error=False, debug=False):
@@ -90,7 +91,7 @@ class NameBenchCli(object):
     if self.options.invalidate_cache:
       nameservers.InvalidateSecondaryCache()
 
-    nameservers.CheckHealth()
+    nameservers.CheckHealth(sanity_checks=self.sanity_checks)
     print ''
     print 'Final list of nameservers considered:'
     print '-' * 78

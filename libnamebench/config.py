@@ -24,9 +24,9 @@ import util
 
 def GetConfiguration(filename='namebench.cfg'):
   (options, args) = DefineAndParseOptions(filename=filename)
-  (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
+  (configured_options, global_ns, regional_ns, sanity_checks) = ProcessConfigurationFile(options)
   supplied_ns = util.ExtractIPTuplesFromString(' '.join(args))
-  return (configured_options, supplied_ns, global_ns, regional_ns)
+  return (configured_options, supplied_ns, global_ns, regional_ns, sanity_checks)
 
 def DefineAndParseOptions(filename='namebench.cfg'):
   """Get our option configuration setup.
@@ -95,6 +95,7 @@ def ProcessConfigurationFile(options):
   config = ConfigParser.ConfigParser()
   config.read(util.FindDataFile(options.config))
   general = dict(config.items('general'))
+  sanity_checks = config.items('sanity')
 
   if options.only:
     global_ns = []
@@ -116,4 +117,4 @@ def ProcessConfigurationFile(options):
         value = general[option]
       setattr(options, option, value)
 
-  return (options, global_ns, regional_ns)
+  return (options, global_ns, regional_ns, sanity_checks)

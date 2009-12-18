@@ -23,9 +23,22 @@ import nameserver
 import util
 
 OPENDNS_NS = '208.67.220.220'
-EXPECTED_CONGESTION_DURATION = 60.0
+GOOGLE_NS = '8.8.8.8'
+EXPECTED_CONGESTION_DURATION = 50.0
+CONGESTION_OFFSET_MULTIPLIER = 1
+MAX_CONGESTION_MULTIPLIER = 3
 
 class ConnectionQuality(object):
+ 
+  def __init__(self, status_callback=None):
+    self.status_callback = status_callback
+    
+  def msg(self, msg, **kwargs):
+    if self.status_callback:
+      self.status_callback(msg, **kwargs)
+    else:
+      print msg
+
   def GetInterceptionStatus(self):
     """Check if our packets are actually getting to the correct servers."""
 
@@ -41,6 +54,7 @@ class ConnectionQuality(object):
     return (False, duration)
 
   def GetNegativeResponseDuration(self):
+    """Use the built-in DNS server to query for a negative response."""
     internal = util.InternalNameServers()
     # In rare cases, we may not find any to use.
     if not internal:
@@ -50,9 +64,27 @@ class ConnectionQuality(object):
     primary = nameserver.NameServer(primary_ip)
     return primary.TestNegativeResponse()[2]
 
+  def GetGoogleResponseDuration(self):
+    """See how quickly we can query for www.google.com using a remote nameserver."""
+    gdns = nameserver.NameServer(GOOGLE_NS)
+    (response, duration) = gdns.TimedRequest('A', 'www.google.com.')[0:2]
+    return (duration)
+
+
   def CheckConnectionQuality(self):
+    """Look how healthy our DNS connection quality. Pure guesswork."""
+    self.msg('Checking connection quality...')
     (intercepted, i_duration) = self.GetInterceptionStatus()
-    g_duration = self.GetNegativeResponseDuration()
-    duration = util.CalculateListAverage((i_duration, g_duration))
+    n_duration = self.GetNegativeResponseDuration()
+    g_duration = self.GetGoogleResponseDuration()
+    duration = util.CalculateListAverage((i_duration, n_duration, g_duration))
     congestion = duration / EXPECTED_CONGESTION_DURATION
-    return (intercepted, congestion, duration)
+    self.msg('Congestion level is %2.2fX (check duration: %2.2fms)' % (congestion, duration))
+    if congestion > 1:
+      # multiplier is 
+      multiplier = 1 + ((congestion-1) * CONGESTION_OFFSET_MULTIPLIER)
+      if multiplier > MAX_CONGESTION_MULTIPLIER:
+        multiplier = MAX_CONGESTION_MULTIPLIER
+    else:
+      multiplier = 1
+    return (intercepted, congestion, multiplier, duration)
