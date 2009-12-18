@@ -33,7 +33,7 @@ import conn_quality
 import nameserver
 import util
 
-NS_CACHE_SLACK = 2.5
+NS_CACHE_SLACK = 2
 CACHE_VER = 4
 MAX_CONGESTION_MULTIPLIER = 2.5
 FIRST_CUT_MULTIPLIER = 0.2
