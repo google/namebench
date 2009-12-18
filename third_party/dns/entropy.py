@@ -54,7 +54,8 @@ class EntropyPool(object):
             try:
                 bytes[self.pool_index] ^= b
             except IndexError:
-                print "[stir] pool index: %s len bytes: %s" % (self.pool_index, len(bytes))
+                pass
+#                print "[stir] pool index: %s len bytes: %s" % (self.pool_index, len(bytes))
             self.pool_index += 1
         self.pool = ''.join([chr(c) for c in bytes])
 
@@ -69,7 +70,7 @@ class EntropyPool(object):
 	try:
             value = ord(self.digest[self.next_byte])
 	except IndexError:
-	    print "forcing stir [dlen=%s next=%s]" % (len(self.digest), self.next_byte)
+#	    print "forcing stir [dlen=%s next=%s]" % (len(self.digest), self.next_byte)
             self.hash.update(self.pool)
             self.digest = self.hash.digest()
             self.stir(self.digest)
