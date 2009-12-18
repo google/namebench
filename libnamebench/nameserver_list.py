@@ -100,6 +100,8 @@ class QueryThreads(threading.Thread):
           self.results.put(ns.CheckHealth(fast_check=True))
         elif self.action_type == 'health':
           self.results.put(ns.CheckHealth(sanity_checks=self.checks))
+        elif self.action_type == 'final':
+          self.results.put(ns.CheckHealth(sanity_checks=self.checks, final_check=True))
         elif self.action_type == 'store_wildcards':
           self.results.put(ns.StoreWildcardCache())
         else:
@@ -225,8 +227,8 @@ class NameServers(list):
       self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f standard, %2.1f health.'
                % (multiplier, self.timeout, self.health_timeout))
 
-
   def InvokeSecondaryCache(self):
+    """Delete secondary ips that do not exist in the cache file."""
     cached = False
     if self.cache_dir:
       cpath = self._SecondaryCachePath()
@@ -243,6 +245,7 @@ class NameServers(list):
     return cached
 
   def DisableUnwantedServers(self, target_count=None, delete_unwanted=False):
+    """Given a target count, delete nameservers that we do not plan to test."""
     if not target_count:
       target_count = self.num_servers
 
@@ -291,6 +294,7 @@ class NameServers(list):
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
+    self.RunFinalHealthCheckThreads(sanity_checks=sanity_checks)
     if not cached:
       self._UpdateSecondaryCache(cpath)
 
@@ -432,10 +436,9 @@ class NameServers(list):
 
     return results_queue
 
-
   def RunCacheCollusionThreads(self, test_combos):
     """Schedule and manage threading for cache collusion checks."""
-    return self._LaunchQueryThreads('wildcard_check', 'Waiting for cache collusion checks', test_combos)
+    return self._LaunchQueryThreads('wildcard_check', 'Checking for cache-sharing between nameservers', test_combos)
 
   def PingNameServers(self):
     """Quickly ping nameservers to see which are available."""
@@ -443,15 +446,21 @@ class NameServers(list):
     if self.enabled:
       self.msg('%s of %s name servers are available' % (len(self.enabled), len(self)))
 
-  def RunHealthCheckThreads(self, fast_check=False, sanity_checks=None):
+  def RunHealthCheckThreads(self, sanity_checks=None):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('health', 'Checking nameserver health', list(self), checks=sanity_checks)
+    results = self._LaunchQueryThreads('health', 'Running initial health checks', list(self), checks=sanity_checks)
+    if self.enabled:
+      self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
+
+  def RunFinalHealthCheckThreads(self, final_check=False, sanity_checks=None):
+    """Quickly ping nameservers to see which are healthy."""
+    results = self._LaunchQueryThreads('final', 'Running final health checks', list(self), checks=sanity_checks)
     if self.enabled:
       self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
-    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for initial cache check threads', list(self))
+    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries', list(self))
     if self.enabled:
       self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
     

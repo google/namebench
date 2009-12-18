@@ -198,18 +198,23 @@ class NameServerHealthChecks(object):
   def CheckCensorship(self):
     pass
 
-  def CheckHealth(self, fast_check=False, sanity_checks=None):
+  def CheckHealth(self, fast_check=False, final_check=False, sanity_checks=None):
     """Qualify a nameserver to see if it is any good."""
     
     if fast_check:
       tests = [(self.TestRootServerResponse,[])]
+      sanity_checks = []
+    elif final_check:
+      tests = [(self.TestNegativeResponse,[])]
+      sanity_checks = sanity_checks[5:]
     else:
       tests = [(self.TestLocalhostResponse,[])]
-      #[(self.TestNegativeResponse,[])]
-      for (check, expected_value) in sanity_checks:
-        (req_type, req_name) = check.split(' ')
-        expected_values = expected_value.split(',')
-        tests.append((self.TestAnswers, [req_type.upper(), req_name, expected_values]))
+      sanity_checks = sanity_checks[:5]
+      
+    for (check, expected_value) in sanity_checks:
+      (req_type, req_name) = check.split(' ')
+      expected_values = expected_value.split(',')
+      tests.append((self.TestAnswers, [req_type.upper(), req_name, expected_values]))
       
     for test in tests:
       (function, args) = test
@@ -221,6 +226,7 @@ class NameServerHealthChecks(object):
             
       self.checks.append((test_name, is_broken, warning, duration))
       if warning:
+#        print "%s: %s" % (self, warning)
         self.warnings.add(warning)
       if is_broken:
         self.AddFailure('Failed %s: %s' % (test_name, warning))
