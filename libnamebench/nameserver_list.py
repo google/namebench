@@ -33,8 +33,8 @@ import conn_quality
 import nameserver
 import util
 
-NS_CACHE_SLACK = 2
-CACHE_VER = 3
+NS_CACHE_SLACK = 2.5
+CACHE_VER = 4
 MAX_CONGESTION_MULTIPLIER = 2.5
 FIRST_CUT_MULTIPLIER = 0.18
 GLOBAL_HEALTH_TIMEOUT_MULTIPLIER = 1.5
@@ -77,7 +77,10 @@ class QueryThreads(threading.Thread):
     while not self.input.empty():
       # check_wildcards is special: it has a tuple of two nameservers
       if self.action_type == 'wildcard_check':
-        (ns, other_ns) = self.input.get_nowait()
+        try:
+          (ns, other_ns) = self.input.get_nowait()
+        except Queue.Empty:
+          return
         if ns.disabled or other_ns.disabled:
           self.results.put(None)
           continue
@@ -87,19 +90,20 @@ class QueryThreads(threading.Thread):
       else:
         try:
           ns = self.input.get_nowait()
-          if ns.disabled:
-            self.results.put(None)
-            continue
-          if self.action_type == 'ping':
-            self.results.put(ns.CheckHealth(fast_check=True))
-          elif self.action_type == 'health':
-            self.results.put(ns.CheckHealth(sanity_checks=self.checks))
-          elif self.action_type == 'store_wildcards':
-            self.results.put(ns.StoreWildcardCache())
-          else:
-            raise ValueError('Invalid action type: %s' % self.action_type)
         except Queue.Empty:
-          pass
+          return
+
+        if ns.disabled:
+          self.results.put(None)
+          continue
+        if self.action_type == 'ping':
+          self.results.put(ns.CheckHealth(fast_check=True))
+        elif self.action_type == 'health':
+          self.results.put(ns.CheckHealth(sanity_checks=self.checks))
+        elif self.action_type == 'store_wildcards':
+          self.results.put(ns.StoreWildcardCache())
+        else:
+          raise ValueError('Invalid action type: %s' % self.action_type)
 
 class NameServers(list):
 
