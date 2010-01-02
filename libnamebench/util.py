@@ -78,7 +78,7 @@ def ExtractIPsFromString(ip_string):
 
   ips = []
   # IPV6 If this regexp is too loose, see Regexp-IPv6 in CPAN for inspiration.
-  ips.extend(re.findall('[\dabcdef]+:[\dabcdef:]+[\dabcdef]', ip_string, re.IGNORECASE))
+  ips.extend(re.findall('[\dabcdef:]+:[\dabcdef]+', ip_string, re.IGNORECASE))
   ips.extend(re.findall('\d+\.\d+\.\d+\.+\d+', ip_string))
   return ips
 
@@ -113,4 +113,9 @@ def FindDataFile(filename):
 def GetLastExceptionString():
   """Get the last exception and return a good looking string for it."""
   (exc, error) = sys.exc_info()[0:2]
-  return '%s %s' % (exc, error)
+  exc_msg = str(exc)
+  if '<class' in exc_msg:
+    exc = exc_msg.split("'")[1]
+
+  exc_msg = exc_msg.replace('dns.exception.', '')
+  return '%s %s' % (exc_msg, error)
