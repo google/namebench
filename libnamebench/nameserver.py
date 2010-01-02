@@ -17,10 +17,10 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
+import socket
+import sys
 import time
 import traceback
-
-import sys
 
 # See if a third_party library exists -- use it if so.
 try:
@@ -51,6 +51,8 @@ else:
 
 # How many failures before we disable system nameservers
 MAX_SYSTEM_FAILURES = 4
+MAX_PREFERRED_FAILURES = 2
+
 ERROR_PRONE_RATE = 10
 
 class NameServer(health_checks.NameServerHealthChecks):
@@ -77,6 +79,14 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.is_slower_replica = False
     self.timer = DEFAULT_TIMER
 
+    if self.is_system:
+      self.max_failures = MAX_SYSTEM_FAILURES
+    elif self.is_preferred:
+      self.max_failures = MAX_PREFERRED_FAILURES
+    else:
+      self.max_failures = 0
+
+
   @property
   def check_average(self):
     return util.CalculateListAverage([x[3] for x in self.checks])
@@ -98,7 +108,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     if self.disabled:
       return '(excluded: %s)' % self.disabled
     else:
-      return ', '.join(map(str,self.warnings))
+      return ', '.join(map(str, self.warnings))
 
   @property
   def warnings_comment(self):
@@ -139,16 +149,12 @@ class NameServer(health_checks.NameServerHealthChecks):
   def AddFailure(self, message):
     """Add a failure for this nameserver. This will effectively disable it's use."""
     self.failed_test_count += 1
-    if self.is_system:
-      print "* System DNS fail #%s/%s: %s %s" % (self.failed_test_count, MAX_SYSTEM_FAILURES, self, message)
-      if self.failed_test_count >= MAX_SYSTEM_FAILURES:
-        print "\n* Disabling %s - %s failures" % (self, self.failed_test_count)
-        self.disabled = message
-    else:
-      self.disabled = message
-      if self.is_preferred:
-        print "\n* Failed test: %s %s" % (self, message)
 
+    if self.is_system or self.is_preferred:
+      print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, self.max_failures, message)
+
+    if self.failed_test_count >= self.max_failures:
+      self.disabled = message
 
   def CreateRequest(self, record, request_type, return_type):
     """Function to work around any dnspython make_query quirks."""
@@ -166,7 +172,7 @@ class NameServer(health_checks.NameServerHealthChecks):
       timeout: optional timeout (float)
 
     Returns:
-      A tuple of (response, duration in ms [float], exception)
+      A tuple of (response, duration in ms [float], error_msg)
 
     In the case of a DNS response timeout, the response object will be None.
     """
@@ -180,11 +186,12 @@ class NameServer(health_checks.NameServerHealthChecks):
       request = self.CreateRequest(record, request_type, dns.rdataclass.IN)
     except ValueError, exc:
       if not request:
-        return (None, 0, exc)
+        return (None, 0, util.GetLastExceptionString())
 
     if not timeout:
       timeout = self.timeout
 
+    error_msg = None
     exc = None
     duration = None
     try:
@@ -194,13 +201,13 @@ class NameServer(health_checks.NameServerHealthChecks):
     except (dns.exception.Timeout), exc:
       response = None
     except (dns.query.BadResponse, dns.message.TrailingJunk,
-            dns.query.UnexpectedSource), exc:
+            dns.query.UnexpectedSource, socket.error), exc:
       response = None
     except (KeyboardInterrupt, SystemExit, SystemError), exc:
       raise exc
     except:
-      (exc, error) = sys.exc_info()[0:2]
-      print "* Error with %s: %s (%s)" % (self, exc, error)
+      error_msg = util.GetLastExceptionString()
+      print "* Unusual error with %s: %s" % (self, error_msg)
       response = None
 
     if not response:
@@ -209,7 +216,10 @@ class NameServer(health_checks.NameServerHealthChecks):
     if not duration:
       duration = self.timer() - start_time
 
-    return (response, util.SecondsToMilliseconds(duration), exc)
+    if exc and not error_msg:
+      error_msg = util.GetLastExceptionString()
+
+    return (response, util.SecondsToMilliseconds(duration), error_msg)
 
   def ResponseToAscii(self, response):
     if not response:
