@@ -36,7 +36,8 @@ SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
 MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 
-
+# How many health checks are part of the first run?
+INITIAL_HEALTH_CHECK_COUNT = 8
 
 class NameServerHealthChecks(object):
   """Health checks for a nameserver."""
@@ -206,10 +207,10 @@ class NameServerHealthChecks(object):
       sanity_checks = []
     elif final_check:
       tests = [(self.TestNegativeResponse,[])]
-      sanity_checks = sanity_checks[5:]
+      sanity_checks = sanity_checks[INITIAL_HEALTH_CHECK_COUNT:]
     else:
       tests = [(self.TestLocalhostResponse,[])]
-      sanity_checks = sanity_checks[:5]
+      sanity_checks = sanity_checks[:INITIAL_HEALTH_CHECK_COUNT]
       
     for (check, expected_value) in sanity_checks:
       (req_type, req_name) = check.split(' ')
