@@ -56,12 +56,12 @@ ERROR_PRONE_RATE = 10
 class NameServer(health_checks.NameServerHealthChecks):
   """Hold information about a particular nameserver."""
 
-  def __init__(self, ip, name=None, internal=False, primary=False):
+  def __init__(self, ip, name=None, internal=False, preferred=False):
     self.name = name
     self.ip = ip
     self.is_system = internal
     self.system_position = None
-    self.is_primary = primary
+    self.is_preferred = preferred
     self.timeout = 10
     self.health_timeout = 10
     self.warnings = set()
@@ -121,7 +121,7 @@ class NameServer(health_checks.NameServerHealthChecks):
       return True
     else:
       return False
-      
+
   @property
   def error_rate(self):
     if not self.error_count or not self.request_count:
@@ -134,19 +134,19 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   def __repr__(self):
     return self.__str__()
-    
+
   def AddFailure(self, message):
     """Add a failure for this nameserver. This will effectively disable it's use."""
     self.failed_test_count += 1
     if self.is_system:
-      print "* System DNS fail #%s/%s: %s %s" % (self.failed_test_count, MAX_SYSTEM_FAILURES, self, message)      
+      print "* System DNS fail #%s/%s: %s %s" % (self.failed_test_count, MAX_SYSTEM_FAILURES, self, message)
       if self.failed_test_count >= MAX_SYSTEM_FAILURES:
         print "* Disabling %s - %s failures" % (self, self.failed_test_count)
         self.disabled = message
     else:
 #      print "Disabling %s: %s" % (self, message)
       self.disabled = message
-      
+
 
   def CreateRequest(self, record, request_type, return_type):
     """Function to work around any dnspython make_query quirks."""
@@ -172,7 +172,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     record = dns.name.from_text(record_string, None)
     request = None
     self.request_count += 1
-    
+
     # Sometimes it takes great effort just to craft a UDP packet.
     try:
       request = self.CreateRequest(record, request_type, dns.rdataclass.IN)

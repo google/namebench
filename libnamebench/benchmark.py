@@ -266,7 +266,7 @@ class Benchmark(object):
       comparison_record = [x for x in other_records if x[0].system_position == 0]
       # Then the fastest "primary"
       if not comparison_record:
-        comparison_record = [x for x in other_records if x[0].is_primary]
+        comparison_record = [x for x in other_records if x[0].is_preferred]
       # Fall back to the second fastest of any type.
       if not comparison_record:
         comparison_record = other_records

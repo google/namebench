@@ -105,12 +105,12 @@ class controller(NSWindowController, base_ui.BaseUI):
   def ProcessForm(self):
     """Parse the form fields and populate class variables."""
     self.UpdateStatus('Processing form inputs')
-    self.primary = self.supplied_ns
+    self.preferred = self.supplied_ns
 
     if not int(self.include_global.stringValue()):
       self.UpdateStatus('Not using primary')
     else:
-      self.primary.extend(self.global_ns)
+      self.preferred.extend(self.global_ns)
     if not int(self.include_regional.stringValue()):
       self.UpdateStatus('Not using secondary')
       self.secondary = []
@@ -120,7 +120,7 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.options.select_mode = self.selection_mode.titleOfSelectedItem().lower()
     self.options.data_source = self.ParseSourceSelection(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
-    self.primary.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
+    self.preferred.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     self.options.test_count = int(self.num_tests.stringValue())
     self.options.run_count = int(self.num_runs.stringValue())
     self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.data_source, self.options.select_mode, self.options.test_count, self.options.run_count))
@@ -145,7 +145,7 @@ class controller(NSWindowController, base_ui.BaseUI):
       traceback.print_exc(tb)
       error_msg = '\n'.join(traceback.format_tb(tb)[-4:])
       self.UpdateStatus('FAIL: %s' % exception, error=error_msg)
-      
+
     self.spinner.stopAnimation_(self)
     pool.release()
 

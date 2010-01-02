@@ -50,7 +50,7 @@ class BaseUI(object):
   def PrepareBenchmark(self):
     self.UpdateStatus('Building nameserver objects')
     self.nameservers = nameserver_list.NameServers(
-        self.primary,
+        self.preferred,
         self.secondary,
         num_servers=self.options.num_servers,
         timeout=self.options.timeout,

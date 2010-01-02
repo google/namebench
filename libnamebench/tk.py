@@ -48,7 +48,7 @@ def AddMsg(message, master=None, backup_notifier=None, **kwargs):
   new_message = Message(message, **kwargs)
   if new_message != global_last_message:
     global_message_queue.put(new_message)
-    
+
     if master:
       try:
         master.event_generate('<<msg>>', when='tail')
@@ -58,13 +58,13 @@ def AddMsg(message, master=None, backup_notifier=None, **kwargs):
         try:
           backup_notifier(-1)
           THREAD_UNSAFE_TK = 1
-        except:   
+        except:
           print "TCL error encountered, not pushing update to UI:"
           traceback.print_exc()
 
 class Message(object):
   """Messages to be passed from to the main thread from children.
-  
+
   Used to avoid thread issues inherent with Tk.
   """
   def __init__(self, message, error=False, count=False, total=False,
@@ -79,13 +79,13 @@ class Message(object):
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
 
-  def __init__(self, primary, secondary, options, history_parser=None, master=None,
+  def __init__(self, preferred, secondary, options, history_parser=None, master=None,
                backup_notifier=None):
     threading.Thread.__init__(self)
     self.status_callback = self.msg
     self.hparser = history_parser
     self.backup_notifier = backup_notifier
-    self.primary = primary
+    self.preferred = preferred
     self.master = master
     self.secondary = secondary
     self.options = options
@@ -94,7 +94,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
   def msg(self, message, **kwargs):
     """Add messages to the main queue."""
     return AddMsg(message, master=self.master, backup_notifier=self.backup_notifier, **kwargs)
-  
+
   def run(self):
     self.msg('Started thread', enable_button=False)
     try:
@@ -130,7 +130,7 @@ class NameBenchGui(object):
     app.DrawWindow()
     self.root.bind('<<msg>>', app.MessageHandler)
     self.root.mainloop()
-    
+
 
 class MainWindow(Frame, base_ui.BaseUI):
   """The main Tk GUI class."""
@@ -145,7 +145,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.regional_ns = regional_ns
     self.version = version
     self.master.protocol('WM_DELETE_WINDOW', closedWindowHandler)
-  
+
   def DrawWindow(self):
     """Draws the user interface."""
     self.nameserver_form = StringVar()
@@ -291,17 +291,17 @@ class MainWindow(Frame, base_ui.BaseUI):
     """Events that get called when the Start button is pressed."""
 
     self.ProcessForm()
-    thread = WorkerThread(self.primary, self.secondary, self.options,
+    thread = WorkerThread(self.preferred, self.secondary, self.options,
                           history_parser=self.hparser,
                           master=self.master, backup_notifier=self.MessageHandler)
     thread.start()
 
   def ProcessForm(self):
     """Read form and populate instance variables."""
-    self.primary = self.supplied_ns + util.ExtractIPTuplesFromString(self.nameserver_form.get())
+    self.preferred = self.supplied_ns + util.ExtractIPTuplesFromString(self.nameserver_form.get())
 
     if self.use_global.get():
-      self.primary += self.global_ns
+      self.preferred += self.global_ns
     if self.use_regional.get():
       self.secondary = self.regional_ns
     else:
