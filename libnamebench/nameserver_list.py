@@ -263,7 +263,7 @@ class NameServers(list):
       if not ns.is_preferred and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           if len(self) < 25:
-            self.msg(">> %s did not make the %s best cut: %sms [%s]" % (ns, secondaries_needed, ns.check_average, len(ns.checks)))
+            self.msg(">> %s did not make the %s best secondary cut: %0.3fms [%s]" % (ns, secondaries_needed, ns.check_average, len(ns.checks)))
           self.remove(ns)
         else:
           secondaries_kept += 1
