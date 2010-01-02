@@ -264,7 +264,7 @@ class NameServers(list):
       if not ns.is_preferred and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
           if len(self) < 25:
-            print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
+            self.msg(">> %s did not make the %s best cut: %sms [%s]" % (ns, secondaries_needed, ns.check_average, len(ns.checks)))
           self.remove(ns)
         else:
           secondaries_kept += 1
@@ -315,7 +315,7 @@ class NameServers(list):
           faster_ns = seen[provider]
           self.msg('Demoting %s to alternate anycast. %s is faster by %2.2fms' % (ns.name, faster_ns.name, ns.check_duration - faster_ns.check_duration))
           ns.is_preferred = False
-          ns.warnings.add('Alternate anycast address for %s' % provider)
+#          ns.warnings.add('Alternate anycast address for %s' % provider)
         else:
           seen[provider]=ns
 
@@ -387,7 +387,7 @@ class NameServers(list):
 
         if slower.system_position == 0:
           faster.disabled = 'Shares-cache with current primary DNS server'
-          slower.warnings.add('Replica of faster %s' % faster.ip)
+          slower.warnings.add('Replica of %s' % faster.ip)
         elif slower.is_preferred and not faster.is_preferred:
           faster.disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
           slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
