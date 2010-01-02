@@ -1,8 +1,11 @@
-<html>
-<head><title>namebench: {{ timestamp }}</title></head>
-<style type="text/css">
-  {% include "style.css" %}
-</style>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>namebench: {{ timestamp }}</title>
+  <style type="text/css">
+    {% include "style.css" %}
+  </style>
+</head>
 <body>
 
 <div id="container">
@@ -74,18 +77,18 @@
 
 <div id="graphs" class="section">
 <h2>Mean Response Duration</h2>
-<img src="{{ mean_duration_url }}" alt="Mean Duration Graph">
+<img src="{{ mean_duration_url }}" alt="Mean Duration Graph" />
 
 <h3>Fastest Individual Response Duration</h3>
-<img src="{{ min_duration_url }}" alt="Fastest Response Graph">
+<img src="{{ min_duration_url }}" alt="Fastest Response Graph" />
 
 <h3>Response Distribution Chart (First 200ms)</h3>
 
-<img src="{{ distribution_url_200 }}" alt="Response Distribution Graph (first 200ms)">
+<img src="{{ distribution_url_200 }}" alt="Response Distribution Graph (first 200ms)" />
 
 <h3>Response Distribution Chart (Full)</h3>
 
-<img src="{{ distribution_url }}" alt="Response Distribution Graph (full)">
+<img src="{{ distribution_url }}" alt="Response Distribution Graph (full)" />
 </div>
 
 {% if csv_link %}
