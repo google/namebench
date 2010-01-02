@@ -54,13 +54,13 @@ def SecondsToMilliseconds(seconds):
 
 def SplitSequence(seq, size):
   """Recipe From http://code.activestate.com/recipes/425397/
-  
+
   Modified to not return blank values."""
   newseq = []
   splitsize = 1.0/size*len(seq)
   for i in range(size):
     newseq.append(seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
-  
+
   return  [ x for x in newseq if x ]
 
 
@@ -77,7 +77,7 @@ def ExtractIPsFromString(ip_string):
 
   ips = []
   # IPV6 If this regexp is too loose, see Regexp-IPv6 in CPAN for inspiration.
-  ips.extend(re.findall('[\dabcdef]:[\dabcdef:]+[\dabcdef]', ip_string, re.IGNORECASE))
+  ips.extend(re.findall('[\dabcdef]+:[\dabcdef:]+[\dabcdef]', ip_string, re.IGNORECASE))
   ips.extend(re.findall('\d+\.\d+\.\d+\.+\d+', ip_string))
   return ips
 
@@ -90,11 +90,11 @@ def ExtractIPTuplesFromString(ip_string):
 def FindDataFile(filename):
   if os.path.exists(filename):
     return filename
-      
+
   # If it's not a relative path, we can't do anything useful.
   if os.path.isabs(filename):
     return filename
-  
+
   other_places = [os.path.join(sys.prefix, 'namebench'),
                   '/usr/local/etc/namebench',
                   '/etc/namebench']
