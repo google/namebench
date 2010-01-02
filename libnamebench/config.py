@@ -106,7 +106,7 @@ def GetLatestSanityChecks():
     except:
       pass
 
-  if config.has_section('sanity') or not config.has_section('sanity-secondary'):
+  if not config.has_section('sanity') or not config.has_section('sanity-secondary'):
     ref_file = util.FindDataFile('data/hostname_reference.cfg')
     print '- Using built-in sanity reference: %s' % ref_file
     config.read(ref_file)
