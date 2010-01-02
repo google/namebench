@@ -1,7 +1,18 @@
 body {
   font-family: Helvetica, Arial, sans-serif;
-  background-color: #f5f5f5;
+  background-color: #005522;
 }
+
+#container {
+  margin: 4px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 950px;
+  background-color: #f5f5f5;
+  padding: 1em;
+  border: 1px solid #666;
+}
+
 h2 {
 	padding-top: 1em;
 	clear:  both;
@@ -24,15 +35,26 @@ h3 {
 	padding-bottom: 3px;
 	padding-right:  3px;
 	margin-left: 1em;
-	width: 880px
 }
 table#nstable {
 	width:  100%;
-	border-collapse:  collapse;	
+	border-collapse:  collapse;
 }
 #nstable tr {
 	vertical-align:  top;
 }
+
+.ip {
+  margin-left: 1em;
+  font-weight: bold;
+  font-family: monospace;
+  border: 1px solid #999;
+  background-color: #eee;
+  width: 10em;
+  padding: 1px;
+  color: #000;
+}
+
 ul.warnings {
 	padding:  0;
 	margin:  0;
@@ -73,15 +95,11 @@ ul.warnings {
 	color: #fff;
 }
 
-#summary_container {
-  width: 938px;
-}
-
 .greybox {
 	border:  1px solid #bbb;
 	border-radius: .5em;
 	-moz-border-radius: .5em;
-	-webkit-border-radius: .5em;	
+	-webkit-border-radius: .5em;
 	padding:  1em;
 	height:  11em;
 	background-color:  #fff;
@@ -95,7 +113,7 @@ ul.warnings {
 }
 
 #recommended_config {
-        float: right;
+    float: right;
 	display:  inline-table;
 }
 
@@ -139,7 +157,7 @@ h1 {
 }
 
 thead {
-	font-weight:  bold;	
+	font-weight:  bold;
 }
 
 h2:before {

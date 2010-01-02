@@ -5,7 +5,7 @@
 </style>
 <body>
 
-<div id="summary_container">
+<div id="container">
 <div id="big_summary" class="greybox">
 	In this test, <strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is
 	<h1>{{ "%0.0f"|format(comparison.percent) }}% <span id="sumverb">Faster</span></h1>
@@ -18,16 +18,15 @@
 	{% for ns in recommended %}
 	<tr>
 	  <td>{% if loop.index == 1 %}Primary{% elif loop.index == 2 %}Secondary{% else %}Tertiary{% endif %} Server</td>
-    <td><input type="text" disabled=1 value="{{ ns.ip }}"></td><td class="rec_name">{% if ns.name != ns.ip %}{{ ns.name }}{% endif %}</td>
+    <td><div class="ip">{{ ns.ip }}</div></td><td class="rec_name">{% if ns.name != ns.ip %}{{ ns.name }}{% endif %}</td>
 	</tr>
 {% endfor %}
   </table>
 </div>
-</div>
+
 
 <h2>Tested DNS Servers</h2>
 
-<div class="section">
 <div id="nsdetails">
 <table id="nstable">
 <thead>
@@ -69,7 +68,7 @@
 {% endfor %}
 </table>
 </div>
-</div>
+
 
 <h2>Graphs</h2>
 
@@ -110,6 +109,7 @@ View the details in <a href="{{ csv_link }}">Comma Separated Values (csv)</a> fo
 </table>
 </div>
 {% endif %}
+</div>
 </body>
 </html>
 
