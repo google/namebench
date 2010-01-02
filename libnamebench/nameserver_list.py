@@ -292,13 +292,14 @@ class NameServers(list):
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
-    self.RunFinalHealthCheckThreads(sanity_checks=sanity_checks)
     if not cached:
       self._UpdateSecondaryCache(cpath)
 
     if not self.skip_cache_collusion_checks:
       self.CheckCacheCollusion()
     self.DisableUnwantedServers()
+
+    self.RunFinalHealthCheckThreads(sanity_checks=sanity_checks)
 
     if not self.enabled:
       raise TooFewNameservers('None of the nameservers tested are healthy')
@@ -324,6 +325,7 @@ class NameServers(list):
     checksum = hash(str(sorted(secondary_ips)))
     basefile = '.'.join(map(str, ('namebench', CACHE_VER, len(secondary_ips),
                                   '_'.join(self.system_nameservers),
+                                  self.num_servers,
                                   self.requested_health_timeout, checksum)))
     return os.path.join(self.cache_dir, basefile)
 
