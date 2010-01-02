@@ -27,6 +27,7 @@ import httplib2
 
 import history_parser
 import util
+import version
 
 SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/data/hostname_reference.cfg'
 
@@ -149,4 +150,5 @@ def ProcessConfigurationFile(options):
         value = general[option]
       setattr(options, option, value)
 
+  options.version = version.VERSION
   return (options, global_ns, regional_ns)

@@ -17,7 +17,6 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-VERSION = '1.1-dev'
 
 import os
 import sys
@@ -37,7 +36,7 @@ try:
 except ImportError:
   pass
 
-
+from libnamebench import version
 from libnamebench import cli
 from libnamebench import config
 
@@ -74,6 +73,6 @@ if __name__ == '__main__':
   else:
     interface = cli.NameBenchCli
 
-  namebench = interface(options, supplied_ns, global_ns, regional_ns, version=VERSION)
+  namebench = interface(options, supplied_ns, global_ns, regional_ns, version=version.VERSION)
   namebench.Execute()
 
