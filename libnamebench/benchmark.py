@@ -146,11 +146,11 @@ class Benchmark(object):
             self.results[ns] = []
             for run_num in range(self.run_count):
               self.results[ns].append([])
-          (response, duration, exc) = ns.TimedRequest(req_type, record)
-          if exc:
+          (response, duration, error_msg) = ns.TimedRequest(req_type, record)
+          if error_msg:
             duration = ns.timeout
           self.results[ns][test_run].append((record, req_type, duration,
-                                             response))
+                                             response, error_msg))
 
   def ComputeAverages(self):
     """Process all runs for all hosts, yielding an average for each host."""
@@ -165,34 +165,34 @@ class Benchmark(object):
         # x: record, req_type, duration, response
         failure_count += len([x for x in test_run if not x[3]])
         nx_count += len([x for x in test_run if x[3] and not x[3].answer])
-        duration = sum([x[2] for x in test_run])        
+        duration = sum([x[2] for x in test_run])
         run_averages.append(duration / len(test_run))
 
       # This appears to be a safe use of averaging averages
       overall_average = util.CalculateListAverage(run_averages)
       (fastest, slowest) = self.FastestAndSlowestDurationForNameServer(ns)
-      
+
       yield (ns, overall_average, run_averages, fastest, slowest,
              failure_count, nx_count)
 
   def FastestAndSlowestDurationForNameServer(self, ns):
     """For a given nameserver, find the fastest/slowest non-error durations."""
-  
+
     fastest_duration = 2**32
     slowest_duration = -1
     for test_run_results in self.results[ns]:
-      for (host, type, duration, response) in test_run_results:
+      for (host, type, duration, response, error_msg) in test_run_results:
         if response and response.answer:
           if duration < fastest_duration:
             fastest_duration = duration
         if duration > slowest_duration:
-          slowest_duration = duration        
+          slowest_duration = duration
     return (fastest_duration, slowest_duration)
 
   def FastestNameServerResult(self):
     """Process all runs for all hosts, yielding an average for each host."""
     # TODO(tstromberg): This should not count queries which failed.
-    fastest = [(ns, self.FastestAndSlowestDurationForNameServer(ns)[0]) for ns in self.results] 
+    fastest = [(ns, self.FastestAndSlowestDurationForNameServer(ns)[0]) for ns in self.results]
     return sorted(fastest, key=operator.itemgetter(1))
 
   def BestOverallNameServer(self):
@@ -279,7 +279,7 @@ class Benchmark(object):
         'percent': 0,
         'ns': nameserver_details[0][0]
       }
-    
+
     # Fragile, makes assumption about the CSV being in the same path as the HTML file
     if csv_path:
       csv_link = os.path.basename(csv_path)
@@ -354,7 +354,7 @@ class Benchmark(object):
     for ns in self.results:
       self.msg("Saving detailed data for %s" % ns, debug=True)
       for (test_run, test_results) in enumerate(self.results[ns]):
-        for (record, req_type, duration, response) in test_results:
+        for (record, req_type, duration, response, error_msg) in test_results:
           answer_text = ''
           answer_count = -1
           ttl = -1
@@ -364,7 +364,7 @@ class Benchmark(object):
               ttl = response.answer[0].ttl
             answer_text = ns.ResponseToAscii(response)
           output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record,
-                           req_type, duration, ttl, answer_count, answer_text])
+                           req_type, duration, ttl, answer_count, answer_text, error_msg])
     csv_file.close()
     self.msg("%s saved." % filename, debug=True)
 
