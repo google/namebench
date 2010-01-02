@@ -37,9 +37,8 @@ NS_CACHE_SLACK = 2
 CACHE_VER = 4
 MAX_CONGESTION_MULTIPLIER = 2.5
 FIRST_CUT_MULTIPLIER = 0.2
-PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2
+PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 3
-
 
 # Windows behaves in unfortunate ways if too many threads are specified
 if sys.platform == "win32":
@@ -264,8 +263,8 @@ class NameServers(list):
     for (idx, ns) in enumerate(list(self.SortByFastest())):
       if not ns.is_preferred and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
-          # Silently remove secondaries who's only fault was being too slow.
-#          print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
+          if len(self) < 25:
+            print "%s: %s did not make the %s cut: %s [%s]" % (idx, ns, secondaries_needed, ns.check_average, len(ns.checks))
           self.remove(ns)
         else:
           secondaries_kept += 1
@@ -425,7 +424,7 @@ class NameServers(list):
 
     while results_queue.qsize() != len(items):
       self.msg(status_message, count=results_queue.qsize(), total=len(items))
-      time.sleep(0.1)
+      time.sleep(0.2)
 
     self.msg(status_message, count=results_queue.qsize(), total=len(items))
     for thread in threads:
