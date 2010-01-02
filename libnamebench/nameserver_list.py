@@ -268,7 +268,7 @@ class NameServers(list):
         else:
           secondaries_kept += 1
 
-  def CheckHealth(self, cache_dir=None, sanity_checks=None):
+  def CheckHealth(self, sanity_primary, sanity_secondary, cache_dir=None):
     """Filter out unhealthy or slow replica servers."""
     if len(self) == 1:
       return None
@@ -288,7 +288,7 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
                                   delete_unwanted=True)
 
-    self.RunHealthCheckThreads(sanity_checks=sanity_checks)
+    self.RunHealthCheckThreads(sanity_checks=sanity_primary)
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
@@ -299,7 +299,7 @@ class NameServers(list):
       self.CheckCacheCollusion()
     self.DisableUnwantedServers()
 
-    self.RunFinalHealthCheckThreads(sanity_checks=sanity_checks)
+    self.RunFinalHealthCheckThreads(sanity_checks=sanity_secondary)
 
     if not self.enabled:
       raise TooFewNameservers('None of the nameservers tested are healthy')

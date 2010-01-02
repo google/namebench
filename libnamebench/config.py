@@ -17,16 +17,25 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import optparse
 import ConfigParser
+import optparse
+import StringIO
+import tempfile
+
+# from third_party
+import httplib2
+
 import history_parser
 import util
 
+SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/data/hostname_reference.cfg'
+
+
 def GetConfiguration(filename='namebench.cfg'):
   (options, args) = DefineAndParseOptions(filename=filename)
-  (configured_options, global_ns, regional_ns, sanity_checks) = ProcessConfigurationFile(options)
+  (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
   supplied_ns = util.ExtractIPTuplesFromString(' '.join(args))
-  return (configured_options, supplied_ns, global_ns, regional_ns, sanity_checks)
+  return (configured_options, supplied_ns, global_ns, regional_ns)
 
 def DefineAndParseOptions(filename='namebench.cfg'):
   """Get our option configuration setup.
@@ -81,6 +90,30 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     help='Only test nameservers passed as arguments')
   return parser.parse_args()
 
+def GetLatestSanityChecks():
+  """Get the latest copy of the sanity checks config."""
+  h = httplib2.Http(tempfile.gettempdir(), timeout=10)
+  try:
+    resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
+  except exc:
+    print exc
+  config = ConfigParser.ConfigParser()
+
+  if '[sanity]' in content:
+    fp = StringIO.StringIO(content)
+    try:
+      config.readfp(fp)
+    except:
+      pass
+
+  if config.has_section('sanity') or not config.has_section('sanity-secondary'):
+    ref_file = util.FindDataFile('data/hostname_reference.cfg')
+    print '- Using built-in sanity reference: %s' % ref_file
+    config.read(ref_file)
+
+  return (config.items('sanity'), config.items('sanity-secondary'))
+
+
 def ProcessConfigurationFile(options):
   """Process configuration file, merge configuration with OptionParser.
 
@@ -95,7 +128,6 @@ def ProcessConfigurationFile(options):
   config = ConfigParser.ConfigParser()
   config.read(util.FindDataFile(options.config))
   general = dict(config.items('general'))
-  sanity_checks = config.items('sanity')
 
   if options.only:
     global_ns = []
@@ -117,4 +149,4 @@ def ProcessConfigurationFile(options):
         value = general[option]
       setattr(options, option, value)
 
-  return (options, global_ns, regional_ns, sanity_checks)
+  return (options, global_ns, regional_ns)
