@@ -314,9 +314,9 @@ class NameServers(list):
         provider = ns.name.replace('-2', '')
         if provider in seen and not ns.is_system:
           faster_ns = seen[provider]
-          self.msg('Demoting %s to secondary anycast. %s is faster by %2.2fms' % (ns.name, faster_ns.name, ns.check_duration - faster_ns.check_duration))
+          self.msg('Demoting %s to alternate anycast. %s is faster by %2.2fms' % (ns.name, faster_ns.name, ns.check_duration - faster_ns.check_duration))
           ns.is_preferred = False
-          ns.warnings.add('Slower anycast address for %s' % provider)
+          ns.warnings.add('Alternate anycast address for %s' % provider)
         else:
           seen[provider]=ns
 
@@ -438,7 +438,7 @@ class NameServers(list):
 
   def RunCacheCollusionThreads(self, test_combos):
     """Schedule and manage threading for cache collusion checks."""
-    return self._LaunchQueryThreads('wildcard_check', 'Checking for cache-sharing between nameservers', test_combos)
+    return self._LaunchQueryThreads('wildcard_check', 'Running cache-sharing checks', test_combos)
 
   def PingNameServers(self):
     """Quickly ping nameservers to see which are available."""
