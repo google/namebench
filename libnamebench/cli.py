@@ -22,6 +22,7 @@ Designed to assist system administrators in selection and prioritization.
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
+import math
 import sys
 
 import base_ui
@@ -47,6 +48,7 @@ class NameBenchCli(object):
     self.last_msg_count_posted = 0
 
   def msg(self, msg, count=None, total=None, error=False, debug=False):
+    """Status updates for the command-line. A lot of voodoo here."""
     if self.last_msg == (msg, count, total, error):
       return None
 
@@ -58,19 +60,26 @@ class NameBenchCli(object):
       print '* ERROR: %s' % msg
       sys.exit(2)
     elif not total:
+      self.last_msg_count_posted = 0
       sys.stdout.write('- %s\n' % msg)
     elif self.last_msg[0] != msg:
+      self.last_msg_count_posted = 0
       sys.stdout.write('- %s: %s/%s' % (msg, count, total))
+      last_count = 0
+    else:
+      last_count = self.last_msg[1]
 
     if total:
+      if count and (count - last_count > 0):
+        # Write a few dots to catch up to where we should be.
+        catch_up = int(math.ceil((count - last_count) / 2.0))
+        sys.stdout.write('.' * catch_up)
+
       if count == total:
         sys.stdout.write('%s/%s\n' % (count, total))
-        
-      if count and (count - self.last_msg_count_posted > (total * 0.10)):
-        sys.stdout.write('.%s' % count)
+      elif count and (count - self.last_msg_count_posted > (total * 0.20)):
+        sys.stdout.write(str(count))
         self.last_msg_count_posted = count
-      else:
-        sys.stdout.write('.')
     sys.stdout.flush()
     self.last_msg = (msg, count, total, error)
 
@@ -166,4 +175,3 @@ class NameBenchCli(object):
 
     if self.options.open_webbrowser:
       better_webbrowser.open(filename)
-      
