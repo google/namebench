@@ -157,7 +157,7 @@ class NameServer(health_checks.NameServerHealthChecks):
 
     if self.is_system or self.is_preferred:
       # If the preferred host is IPv6 and we have no previous checks, fail quietly.
-      if self.is_ipv6 and not self.checks:
+      if self.is_ipv6 and len(self.checks) <= 1:
         self.disabled = message
       else:
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, self.max_failures, message)
