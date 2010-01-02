@@ -37,8 +37,8 @@ NS_CACHE_SLACK = 2
 CACHE_VER = 4
 MAX_CONGESTION_MULTIPLIER = 2.5
 FIRST_CUT_MULTIPLIER = 0.2
-GLOBAL_HEALTH_TIMEOUT_MULTIPLIER = 1.5
-SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
+PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2
+SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 3
 
 
 # Windows behaves in unfortunate ways if too many threads are specified
@@ -184,7 +184,7 @@ class NameServers(list):
     if ns.is_system:
       ns.health_timeout = self.health_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
     elif ns.is_preferred:
-      ns.health_timeout = self.health_timeout * GLOBAL_HEALTH_TIMEOUT_MULTIPLIER
+      ns.health_timeout = self.health_timeout * PREFERRED_HEALTH_TIMEOUT_MULTIPLIER
     else:
       ns.health_timeout = self.health_timeout
     self.append(ns)
