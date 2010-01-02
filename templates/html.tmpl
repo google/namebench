@@ -56,16 +56,14 @@
   <td>{{ "%0.2f"|format(row.4) }}</td>
   <td {% if row.5 != 0 %}class="error_count"{% endif %}>{{ row.5 }}</td>
   <td>{{ row.6 }}</td>
-  <td><ul class="warnings">
-	{% if row.0.system_position == 0 %}<li>Your current primary DNS server</li>{% endif %}
-	{% if row.0.disabled %}
-	    <li><strong>{{ row.0.disabled|e }}</strong></li>
-	{% else %}
-    	{% for warning in row.0.warnings %}
-    		<li>{{ warning|e }}</li>
-        {% endfor %}
-    {% endif %}
+  <td>
+  {% if row.0.notes %}
+    <ul class="warnings">
+      {% for note in row.0.notes %}
+    		<li>{{ note|e }}</li>
+      {% endfor %}
 	</ul>
+  {% endif %}
   </td>
 </tr>
 {% endfor %}
