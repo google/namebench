@@ -21,6 +21,7 @@ import re
 import util
 import os.path
 import sys
+import traceback
 
 # third party lib
 import dns.resolver
@@ -108,3 +109,8 @@ def FindDataFile(filename):
       return path
 
   return filename
+
+def GetLastExceptionString():
+  """Get the last exception and return a good looking string for it."""
+  (exc, error) = sys.exc_info()[0:2]
+  return '%s %s' % (exc, error)
