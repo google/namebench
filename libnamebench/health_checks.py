@@ -51,23 +51,22 @@ class NameServerHealthChecks(object):
       expected: tuple of strings expected in all answers
 
     Returns:
-      (is_broken, warning, duration)
+      (is_broken, error_msg, duration)
     """
     is_broken = False
     response_text = None
     unmatched_answers = []
     warning = None
-    (response, duration, exc) = self.TimedRequest(record_type, record,
+    (response, duration, error_msg) = self.TimedRequest(record_type, record,
                                                   timeout=self.health_timeout)
     if not response:
       is_broken = True
-      warning = exc.__class__
     elif not response.answer:
       if fatal:
         is_broken = True
       # Avoid preferring broken DNS servers that respond quickly
       duration = self.health_timeout
-      warning = 'No answer for %s' % record
+      error_msg = 'No answer for %s' % record
     else:
       response_text = self.ResponseToAscii(response)
       unmatched_answers = []
@@ -83,23 +82,21 @@ class NameServerHealthChecks(object):
           unmatched_answers.append(str(answer))
 
     if unmatched_answers:
-      warning = '%s hijacked (%s)' % (record, response_text)
-    return (is_broken, warning, duration)
+      error_msg = '%s hijacked (%s)' % (record, response_text)
+    return (is_broken, error_msg, duration)
 
   def TestLocalhostResponse(self):
     """Test to simple localhost. lookup."""
-    
+
     # NOTE: This check uses self.timeout instead of self.health_timeout for
     # performance reasons.
-    (response, duration, exc) = self.TimedRequest('A', 'localhost.',
+    (response, duration, error_msg) = self.TimedRequest('A', 'localhost.',
                                                   timeout=self.timeout)
-    if exc:
+    if error_msg:
       is_broken = True
-      warning = str(exc.__class__.__name__)
     else:
       is_broken = False
-      warning = None
-    return (is_broken, warning, duration)
+    return (is_broken, error_msg, duration)
 
   def TestNegativeResponse(self):
     """Test for NXDOMAIN hijaaking."""
@@ -118,15 +115,13 @@ class NameServerHealthChecks(object):
   def TestReverseResponse(self):
     """Test a reverse lookup of the nameserver."""
     record = dns.reversename.from_address(self.ip)
-    (response, duration, exc) = self.TimedRequest('PTR', str(record),
+    (response, duration, error_msg) = self.TimedRequest('PTR', str(record),
                                                   timeout=self.health_timeout)
     if exc:
       is_broken = True
-      warning = str(exc.__class__.__name__)
     else:
       is_broken = False
-      warning = None
-    return (is_broken, warning, duration)
+    return (is_broken, error_msg, duration)
 
   def TestRootServerResponse(self):
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
@@ -174,34 +169,32 @@ class NameServerHealthChecks(object):
       return False
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
-      (response, duration, exc) = self.TimedRequest('A', ref_hostname, timeout=timeout)
-      
+      (response, duration, error_msg) = self.TimedRequest('A', ref_hostname, timeout=timeout)
+
       if response and response.answer:
         ref_ttl = ref_response.answer[0].ttl
         ttl = response.answer[0].ttl
         delta = abs(ref_ttl - ttl)
         query_age = self.timer() - ref_timestamp
         delta_age_delta = abs(query_age - delta)
-        
+
         if delta > 0 and delta_age_delta < 2:
           return other_ns
       else:
         sys.stdout.write('x')
 
-#      if not checked:
-#        self.checks.append(('cache', exc, exc, duration))
       checked.append(ref_hostname)
-      
+
     if not checked:
-      self.AddFailure('Failed to test %s wildcard caches'  % len(other_ns.cache_checks))    
+      self.AddFailure('Failed to test %s wildcard caches'  % len(other_ns.cache_checks))
     return shared
-    
+
   def CheckCensorship(self):
     pass
 
   def CheckHealth(self, fast_check=False, final_check=False, sanity_checks=None):
     """Qualify a nameserver to see if it is any good."""
-    
+
     if fast_check:
       tests = [(self.TestRootServerResponse,[])]
       sanity_checks = []
@@ -211,12 +204,12 @@ class NameServerHealthChecks(object):
     else:
       tests = [(self.TestLocalhostResponse,[])]
       sanity_checks = sanity_checks[:INITIAL_HEALTH_CHECK_COUNT]
-      
+
     for (check, expected_value) in sanity_checks:
       (req_type, req_name) = check.split(' ')
       expected_values = expected_value.split(',')
       tests.append((self.TestAnswers, [req_type.upper(), req_name, expected_values]))
-      
+
     for test in tests:
       (function, args) = test
       (is_broken, warning, duration) = function(*args)
@@ -224,7 +217,7 @@ class NameServerHealthChecks(object):
         test_name = args[1]
       else:
         test_name = function.__name__
-            
+
       self.checks.append((test_name, is_broken, warning, duration))
       if warning:
 #        print "%s: %s" % (self, warning)
