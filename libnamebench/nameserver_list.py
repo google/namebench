@@ -101,6 +101,8 @@ class QueryThreads(threading.Thread):
           self.results.put(ns.CheckHealth(sanity_checks=self.checks))
         elif self.action_type == 'final':
           self.results.put(ns.CheckHealth(sanity_checks=self.checks, final_check=True))
+        elif self.action_type == 'censorship':
+          self.results.put(ns.CheckCensorship(self.checks))
         elif self.action_type == 'store_wildcards':
           self.results.put(ns.StoreWildcardCache())
         else:
@@ -262,13 +264,13 @@ class NameServers(list):
     for (idx, ns) in enumerate(list(self.SortByFastest())):
       if not ns.is_preferred and not ns.disabled:
         if secondaries_kept >= secondaries_needed:
-          if len(self) < 25:
-            self.msg(">> %s did not make the %s best secondary cut: %0.3fms [%s]" % (ns, secondaries_needed, ns.check_average, len(ns.checks)))
+#          if len(self) < 25:
+#            self.msg(">> %s did not make the %s best secondary cut: %0.3fms [%s]" % (ns, secondaries_needed, ns.check_average, len(ns.checks)))
           self.remove(ns)
         else:
           secondaries_kept += 1
 
-  def CheckHealth(self, sanity_primary, sanity_secondary, cache_dir=None):
+  def CheckHealth(self, sanity_primary, sanity_secondary, cache_dir=None, censor_tests=None):
     """Filter out unhealthy or slow replica servers."""
     if len(self) == 1:
       return None
@@ -288,7 +290,7 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
                                   delete_unwanted=True)
 
-    self.RunHealthCheckThreads(sanity_checks=sanity_primary)
+    self.RunHealthCheckThreads(sanity_primary)
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
@@ -299,10 +301,27 @@ class NameServers(list):
       self.CheckCacheCollusion()
     self.DisableUnwantedServers()
 
-    self.RunFinalHealthCheckThreads(sanity_checks=sanity_secondary)
+    self.RunFinalHealthCheckThreads(sanity_secondary)
+    if censor_tests:
+      self.RunCensorshipCheckThreads(censor_tests)
 
+    self._RemoveGlobalWarnings()
     if not self.enabled:
       raise TooFewNameservers('None of the nameservers tested are healthy')
+
+  def _RemoveGlobalWarnings(self):
+    """If all nameservers have the same warning, remove it. It's likely false."""
+    ns_count = len(self.enabled)
+    seen_counts = {}
+    for ns in self.enabled:
+      for warning in ns.warnings:
+        seen_counts[warning] = seen_counts.get(warning, 0) + 1
+
+    for warning in seen_counts:
+      if seen_counts[warning] == ns_count:
+        self.msg('* All nameservers have warning: %s (likely a false positive)' % warning)
+        for ns in self.enabled:
+          ns.warnings.remove(warning)
 
   def _DemoteSecondaryGlobalNameServers(self):
     """For global nameservers, demote the slower IP to secondary status."""
@@ -446,21 +465,19 @@ class NameServers(list):
     if self.enabled:
       self.msg('%s of %s name servers are available' % (len(self.enabled), len(self)))
 
-  def RunHealthCheckThreads(self, sanity_checks=None):
+  def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('health', 'Running initial health checks', list(self), checks=sanity_checks)
-    if self.enabled:
-      self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
+    results = self._LaunchQueryThreads('health', 'Running initial health checks', list(self), checks=checks)
 
-  def RunFinalHealthCheckThreads(self, final_check=False, sanity_checks=None):
+  def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('final', 'Running final health checks', list(self), checks=sanity_checks)
-    if self.enabled:
-      self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
+    results = self._LaunchQueryThreads('final', 'Running final health checks', list(self), checks=checks)
+
+  def RunCensorshipCheckThreads(self, checks):
+    """Quickly ping nameservers to see which are healthy."""
+    results = self._LaunchQueryThreads('censorship', 'Running censorship checks', list(self), checks=checks)
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
     results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries', list(self))
-    if self.enabled:
-      self.msg('%s of %s name servers are healthy' % (len(self.enabled), len(self)))
 

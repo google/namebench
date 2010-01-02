@@ -292,7 +292,7 @@ class Benchmark(object):
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
-    self.msg('Rendering template: %s' % template_name)
+#    self.msg('Rendering template: %s' % template_name)
     rendered = template.render(
         system_primary=system_primary,
         timestamp = datetime.datetime.now(),
@@ -309,7 +309,6 @@ class Benchmark(object):
         recommended=recommended,
         csv_link=csv_link
     )
-    self.msg('Saving rendered %s output' % format)
     if output_fp:
       output_fp.write(rendered)
     else:

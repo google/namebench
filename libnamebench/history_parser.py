@@ -91,16 +91,12 @@ class HistoryParser(object):
     return self.TYPES[type][1]
 
   def Parse(self, path_or_type):
-    if path_or_type == 'auto':
-      # TODO(tstromberg): complete this method
-      all = self.ParseAllTypes()
-
     if path_or_type.lower() in self.TYPES:
       return self.ParseByType(path_or_type.lower())
     else:
       return self.ParseByFilename(path_or_type)
 
-  def ParseByType(self, source, complain=True):
+  def ParseByType(self, source, complain=True, store=False):
     """Given a type, parse the newest file and return a list of hosts."""
 
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
@@ -109,7 +105,12 @@ class HistoryParser(object):
         print "- %s: no matches in %s" % (source, tried)
       return False
     newest = sorted(paths, key=os.path.getmtime)[-1]
-    return self.ParseByFilename(newest)
+
+    # Do not use this with multiple threads.
+    results = self.ParseByFilename(newest)
+    if store:
+      self.imported_sources[source] = results
+    return results
 
   def ParseAllTypes(self):
     """For each type we know of, attempt to find and parse each of them.
@@ -181,9 +182,9 @@ class HistoryParser(object):
 
       if self.INTERNAL_RE.search(host):
         continue
-        
+
       if self.IP_RE.match(host):
-        continue 
+        continue
 
       if host != last_host:
         if sorted_unique:
@@ -209,12 +210,12 @@ class HistoryParser(object):
           neutered_path = list(path)
 
           replacement = keywords[keywords.index(keyword)-1]
-          
+
           swapped_path[0] = swapped_path[0].replace('\\%s' % keyword, '\\%s' % replacement)
           neutered_path[0] = neutered_path[0].replace('\\%s' % keyword, '')
           new_paths.extend([swapped_path, neutered_path])
     return new_paths
-  
+
 
   def FindGlobPaths(self, paths):
     """Given a list of glob paths, return a list of matches containing data.
@@ -226,7 +227,7 @@ class HistoryParser(object):
     found = []
     if sys.platform[:3] == 'win':
       paths = self._AddRoamLocalWindowsPaths(paths)
-    
+
     for path_elements in paths:
       # path contains an environment variable that we could not resolve.
       if False in path_elements:
@@ -269,7 +270,7 @@ class HistoryParser(object):
         elif part == 'chrome' or part == 'google-chrome':
           new_path[index] = 'chromium'
       paths.append(new_path)
-      
+
     return paths
 
   def OperaHistoryPath(self):

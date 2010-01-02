@@ -50,9 +50,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   parser.add_option('-z', '--config', dest='config', default=filename,
                     help='Config file to use.')
   parser.add_option('-o', '--output', dest='output_file', default=None,
-                    help='Filename to write output to')
-  parser.add_option('-f', '--format', dest='output_format', default='html',
-                    help='Output format for file (ascii, html)')
+                    help='Filename to write HTML output to')
   parser.add_option('-c', '--csv_output', dest='csv_file', default=None,
                     help='Filename to write CSV output to')
   parser.add_option('-j', '--threads', dest='thread_count', type='int',
@@ -64,7 +62,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
   parser.add_option('-d', '--datafile', dest='data_file',
                     default='data/alexa-top-10000-global.txt',
                     help='File containing a list of domain names to query.')
-  parser.add_option('-i', '--import', dest='import_file',
+  parser.add_option('-i', '--import', dest='import_source',
                     help=('Import history from an external application (%s)' %
                           ', '.join(import_types)))
   parser.add_option('-I', '--invalidate_cache', dest='invalidate_cache',
@@ -83,6 +81,8 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     action='store_true', help='Opens the final report in your browser')
   parser.add_option('-x', '--no_gui', dest='no_gui',
                     action='store_true', help='Disable GUI')
+  parser.add_option('-C', '--enable-censorship-checks', dest='enable_censorship_checks',
+                    action='store_true', help='Enable censorship checks')
   # Silly Mac OS X adding -psn_0_xxxx
   parser.add_option('-p', '--psn')
   parser.add_option('-O', '--only', dest='only',
@@ -106,12 +106,12 @@ def GetLatestSanityChecks():
     except:
       pass
 
-  if not config.has_section('sanity') or not config.has_section('sanity-secondary'):
+  if not config.has_section('sanity') or not config.has_section('censorship'):
     ref_file = util.FindDataFile('data/hostname_reference.cfg')
     print '- Using built-in sanity reference: %s' % ref_file
     config.read(ref_file)
 
-  return (config.items('sanity'), config.items('sanity-secondary'))
+  return (config.items('sanity'), config.items('sanity-secondary'), config.items('censorship'))
 
 
 def ProcessConfigurationFile(options):

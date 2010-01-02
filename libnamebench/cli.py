@@ -36,17 +36,18 @@ import conn_quality
 # TODO(tstromberg): Migrate this class to using base_ui.BaseUI for less code
 # duplication.
 
-class NameBenchCli(object):
+class NameBenchCli(base_ui.BaseUI):
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
     self.options = options
     self.supplied_ns = supplied_ns
     self.global_ns = global_ns
+    self.include_internal = True
     self.regional_ns = regional_ns
     self.version = version
     self.last_msg = (None, None, None, None)
     self.last_msg_count_posted = 0
 
-  def msg(self, msg, count=None, total=None, error=False, debug=False):
+  def UpdateStatus(self, msg, count=None, total=None, error=False, debug=False):
     """Status updates for the command-line. A lot of voodoo here."""
     if self.last_msg == (msg, count, total, error):
       return None
@@ -82,97 +83,53 @@ class NameBenchCli(object):
     sys.stdout.flush()
     self.last_msg = (msg, count, total, error)
 
-  def PrepareNameservers(self):
-    include_internal = True
-    if self.options.only:
-      include_internal = False
-      if not self.supplied_ns:
-        print 'If you use --only, you must provide nameservers to use.'
-        sys.exit(1)
-
-    nameservers = nameserver_list.NameServers(
-        self.global_ns + self.supplied_ns, self.regional_ns,
-        num_servers=self.options.num_servers,
-        include_internal=include_internal,
-        timeout=self.options.timeout,
-        health_timeout=self.options.health_timeout,
-        status_callback=self.msg,
-        threads=self.options.thread_count
-    )
-    if self.options.invalidate_cache:
-      nameservers.InvalidateSecondaryCache()
-
-    print '- Checking latest sanity reference'
-    (primary_checks, secondary_checks) = config.GetLatestSanityChecks()
-    nameservers.CheckHealth(primary_checks, secondary_checks)
+  def PrepareNameServers(self):
+    super(NameBenchCli, self).PrepareNameServers()
     print ''
     print 'Final list of nameservers considered:'
     print '-' * 78
-    for n in nameservers.SortByFastest():
+    for n in self.nameservers.SortByFastest():
       print '%-15.15s %-16.16s %-4.0fms | %s' % (n.ip, n.name, n.check_average, n.warnings_string)
     print ''
-    return nameservers
 
-  def PrepareBenchmark(self, nameservers):
-    if self.options.import_file:
-      importer = history_parser.HistoryParser()
-      test_data = importer.GenerateTestDataFromInput(self.options.import_file)
-      if test_data:
-        print '- Imported %s records from %s' % (len(test_data), self.options.import_file)
-      else:
-        print '- Could not import anything from %s' % self.options.import_file
-        sys.exit(2)
-    else:
-      test_data = None
-
-    bmark = benchmark.Benchmark(nameservers,
-                                run_count=self.options.run_count,
-                                test_count=self.options.test_count,
-                                status_callback=self.msg)
-    if test_data:
-      bmark.CreateTests(test_data, select_mode=self.options.select_mode)
-      self.options.data_file = None
-    else:
-      bmark.CreateTestsFromFile(self.options.data_file, select_mode=self.options.select_mode)
-
-    return bmark
+  def RunAndOpenReports(self):
+    self.RunBenchmark()
+    report = self.bmark.CreateReport(format='ascii')
+    print ''
+    print report
+    print ''
+    self.CreateReports()
+    if self.options.open_webbrowser:
+      self.DisplayHtmlReport()
 
   def Execute(self):
+    """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.import_file or self.options.data_file,
+          (self.version, self.options.import_source or self.options.data_file,
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.thread_count, self.options.test_count, self.options.run_count, self.options.timeout,
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    nameservers = self.PrepareNameservers()
-    bmark = self.PrepareBenchmark(nameservers)
-    bmark.Run()
-    print ''
-    print bmark.CreateReport(format='ascii')
+    self.hparser = history_parser.HistoryParser()
+    if self.options.import_source:
+      h = history_parser.HistoryParser()
+      h.Parse(self.options_import_source)
 
-    if self.options.output_file:
-      filename = self.options.output_file
+
+    if self.options.only:
+      if not self.supplied_ns:
+        print 'If you use --only, you must provide nameservers to use.'
+        sys.exit(1)
+      self.preferred = self.supplied_ns
+      self.secondary = []
+      self.include_internal = False
     else:
-      if self.options.output_format == 'ascii':
-        extension = 'txt'
-      else:
-        extension = self.options.output_format
-      filename = base_ui.GenerateOutputFilename(extension)
+      self.preferred = self.supplied_ns + self.global_ns
+      self.secondary = self.regional_ns
+    self.PrepareNameServers()
+    self.PrepareBenchmark()
+    self.RunAndOpenReports()
 
-    if self.options.csv_file:
-      csv_filename = self.options.csv_file
-    else:
-      csv_filename = base_ui.GenerateOutputFilename('csv')
 
-    f = open(filename, 'w')
-    print '* Saving %s summary report to %s' % (self.options.output_format, filename)
-    f.write(bmark.CreateReport(format=self.options.output_format, config=self.options, csv_path=csv_filename))
-    f.close()
-
-    print '* Saving request details to %s' % csv_filename
-    bmark.SaveResultsToCsv(csv_filename)
-
-    if self.options.open_webbrowser:
-      better_webbrowser.open(filename)

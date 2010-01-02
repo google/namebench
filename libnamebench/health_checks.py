@@ -65,21 +65,37 @@ class NameServerHealthChecks(object):
       duration = self.health_timeout
       error_msg = 'No answer for %s' % record
     else:
-      response_text = self.ResponseToAscii(response)
       unmatched_answers = []
-      for answer in response.answer:
-        found_match = False
-        for string in expected:
-          # TODO(tstromberg): Make matching stricter.
-          if string in str(answer):
-            found_match = True
-            break
-        if not found_match:
-#          print "NO MATCH: %s -> %s" % (expected, answer)
-          unmatched_answers.append(str(answer))
+      found_usable_record = False
 
-    if unmatched_answers:
-      error_msg = '%s hijacked (%s)' % (record, response_text)
+      for answer in response.answer:
+        if found_usable_record:
+          break
+
+        # Process the first sane rdata object available in the answers
+        for rdata in answer:
+          # CNAME
+          if rdata.rdtype == 5:
+            reply = str(rdata.target)
+          # A Record
+          elif rdata.rdtype ==  1:
+            reply = str(rdata.address)
+          else:
+            print '%s: %s' % (record, self.ResponseToAscii(response))
+            continue
+
+          found_usable_record = True
+          found_match = False
+          for string in expected:
+            if reply.startswith(string) or reply.endswith(string):
+              found_match = True
+              break
+          if not found_match:
+            unmatched_answers.append(reply)
+
+      if unmatched_answers:
+        error_msg = 'Incorrect result for %s: %s' % (record, ', '.join(unmatched_answers))
+
     return (is_broken, error_msg, duration)
 
   def TestLocalhostResponse(self):
@@ -186,10 +202,17 @@ class NameServerHealthChecks(object):
       self.AddFailure('Failed to test %s wildcard caches'  % len(other_ns.cache_checks))
     return shared
 
-  def CheckCensorship(self):
-    pass
+  def CheckCensorship(self, tests):
+     """Check to see if results from a nameserver are being censored."""
+     for (check, expected) in tests:
+       (req_type, req_name) = check.split(' ')
+       expected_values = expected.split(',')
+       result = self.TestAnswers(req_type.upper(), req_name, expected_values)
+       warning = result[1]
+       if warning:
+         self.warnings.add(warning)
 
-  def CheckHealth(self, sanity_checks, fast_check=False, final_check=False):
+  def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False):
     """Qualify a nameserver to see if it is any good."""
 
     if fast_check:

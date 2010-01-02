@@ -85,6 +85,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
     self.status_callback = self.msg
     self.hparser = history_parser
     self.backup_notifier = backup_notifier
+    self.include_internal = False
     self.preferred = preferred
     self.master = master
     self.secondary = secondary

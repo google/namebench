@@ -21,6 +21,7 @@ import urllib
 import better_webbrowser
 
 import benchmark
+import config
 import history_parser
 import nameserver_list
 
@@ -47,11 +48,14 @@ class BaseUI(object):
     else:
       print msg
 
-  def PrepareBenchmark(self):
-    self.UpdateStatus('Building nameserver objects')
+  def PrepareNameServers(self):
+    if self.options.invalidate_cache:
+      nameservers.InvalidateSecondaryCache()
+
     self.nameservers = nameserver_list.NameServers(
         self.preferred,
         self.secondary,
+        include_internal=self.include_internal,
         num_servers=self.options.num_servers,
         timeout=self.options.timeout,
         health_timeout=self.options.health_timeout,
@@ -59,21 +63,33 @@ class BaseUI(object):
     )
 
     self.nameservers.cache_dir = tempfile.gettempdir()
+
+    # Don't waste time checking the health of the only nameserver in the list.
     if len(self.nameservers) > 1:
       self.nameservers.thread_count = int(self.options.thread_count)
       self.nameservers.cache_dir = tempfile.gettempdir()
 
+    self.UpdateStatus('Checking latest sanity reference')
+    (primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
+    if not self.options.enable_censorship_checks:
+      censor_tests = []
+    else:
+      self.UpdateStatus('Censorship checks enabled: %s found.' % len(censor_tests))
+
     self.UpdateStatus('Checking nameserver health')
-    self.nameservers.CheckHealth()
+    self.nameservers.CheckHealth(primary_checks, secondary_checks, censor_tests=censor_tests)
+
+  def PrepareBenchmark(self):
     self.bmark = benchmark.Benchmark(self.nameservers,
                                      test_count=self.options.test_count,
                                      run_count=self.options.run_count,
                                      status_callback=self.UpdateStatus)
+
     self.bmark.UpdateStatus = self.UpdateStatus
     self.UpdateStatus('Creating test records using %s' % self.options.select_mode)
-    if self.options.data_source:
-      hosts = self.hparser.GetParsedSource(self.options.data_source)
-      self.UpdateStatus('%s has %s hosts' % (self.options.data_source, len(hosts)))
+    if self.options.import_source:
+      hosts = self.hparser.GetParsedSource(self.options.import_source)
+      self.UpdateStatus('%s has %s hosts' % (self.options.import_source, len(hosts)))
       test_data = self.hparser.GenerateTestData(hosts)
       self.UpdateStatus('%s records available in test pool' % len(test_data))
       self.bmark.CreateTests(test_data, select_mode=self.options.select_mode)
@@ -81,12 +97,11 @@ class BaseUI(object):
       # The Alexa data (by default)
       self.bmark.CreateTestsFromFile(self.options.data_file,
                                      select_mode=self.options.select_mode)
-    self.UpdateStatus('Benchmark preparation is complete.')
 
   def RunBenchmark(self):
-    self.UpdateStatus('Running the benchmark')
     self.bmark.Run()
-    self.UpdateStatus('Calculating the best nameserver')
+
+  def RunAndOpenReports(self):
     best = self.bmark.BestOverallNameServer()
     self.CreateReports()
     self.DisplayHtmlReport()
@@ -94,17 +109,23 @@ class BaseUI(object):
 
   def CreateReports(self):
     """Create CSV & HTML reports for the latest run."""
-    self.html_path = GenerateOutputFilename('html')
-    self.csv_path = GenerateOutputFilename('csv')
+    if self.options.output_file:
+      self.html_path = self.options.output_file
+    else:
+      self.html_path = GenerateOutputFilename('html')
 
-    self.UpdateStatus('Saving HTML report')
+    if self.options.csv_file:
+      self.csv_path = self.options_csv_file
+    else:
+      self.csv_path = GenerateOutputFilename('csv')
+
+    self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
     self.bmark.CreateReport(format='html', output_fp=f, config=self.options, csv_path=self.csv_path)
     f.close()
 
-    self.UpdateStatus('Saving query details (CSV)')
+    self.UpdateStatus('Saving query details (CSV) to %s' % self.csv_path)
     self.bmark.SaveResultsToCsv(self.csv_path)
-    self.UpdateStatus('Reports saved.')
 
   def DisplayHtmlReport(self):
     self.UpdateStatus('Opening %s' % self.html_path)

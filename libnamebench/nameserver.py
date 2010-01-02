@@ -221,7 +221,7 @@ class NameServer(health_checks.NameServerHealthChecks):
       raise exc
     except:
       error_msg = util.GetLastExceptionString()
-      print "* Unusual error with %s: %s" % (self, error_msg)
+      print "* Unusual error with %s:%s on %s: %s" % (type_string, record_string, self, error_msg)
       response = None
 
     if not response:

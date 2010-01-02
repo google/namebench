@@ -26,7 +26,7 @@ import time
 
 def create_win32_http_cmd(url):
   """Create a command-line tuple to launch a web browser for a given URL.
-  
+
   At the moment, this ignores all default arguments to the browser.
   TODO(tstromberg): Properly parse the command-line arguments.
   """
@@ -38,15 +38,15 @@ def create_win32_http_cmd(url):
                         'Software\Classes\http\shell\open\command')
   except:
     return False
-  
+
   cmd = _winreg.EnumValue(key, 0)[1]
   # "C:\blah blah\iexplore.exe" -nohome
-  # "C:\blah blah\firefox.exe" -requestPending -osint -url "%1"  
+  # "C:\blah blah\firefox.exe" -requestPending -osint -url "%1"
   if '"' in cmd:
     executable = cmd.split('"')[1]
   else:
     executable = cmd.split(' ')[0]
-    
+
   if not os.path.exists(executable):
     print "Default HTTP browser does not exist: %s" % executable
     return False
@@ -68,7 +68,7 @@ if sys.platform[:3] == 'win':
       if not command_args:
         print "Could not find HTTP handler"
         return False
-    
+
       print command_args
       try:
         browser = subprocess.Popen(command_args)
@@ -77,9 +77,8 @@ if sys.platform[:3] == 'win':
         traceback.print_exc()
         print "* Failed to run HTTP handler, trying next browser."
         return False
-        
+
   webbrowser.register("windows-http", WindowsHttpDefault, update_tryorder=-1)
 
 def open(url):
-  print "Opening: %s" % url
   webbrowser.open(url)
