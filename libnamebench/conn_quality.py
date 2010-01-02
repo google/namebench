@@ -17,6 +17,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import sys
+import time
 sys.path.append('third_party')
 
 import nameserver
@@ -24,15 +25,15 @@ import util
 
 OPENDNS_NS = '208.67.220.220'
 GOOGLE_NS = '8.8.8.8'
-EXPECTED_CONGESTION_DURATION = 50.0
+EXPECTED_CONGESTION_DURATION = 40.0
 CONGESTION_OFFSET_MULTIPLIER = 1
 MAX_CONGESTION_MULTIPLIER = 3
 
 class ConnectionQuality(object):
- 
+
   def __init__(self, status_callback=None):
     self.status_callback = status_callback
-    
+
   def msg(self, msg, **kwargs):
     if self.status_callback:
       self.status_callback(msg, **kwargs)
@@ -74,14 +75,20 @@ class ConnectionQuality(object):
   def CheckConnectionQuality(self):
     """Look how healthy our DNS connection quality. Pure guesswork."""
     self.msg('Checking connection quality...')
-    (intercepted, i_duration) = self.GetInterceptionStatus()
-    n_duration = self.GetNegativeResponseDuration()
-    g_duration = self.GetGoogleResponseDuration()
-    duration = util.CalculateListAverage((i_duration, n_duration, g_duration))
+    durations  = []
+
+    for i in range(2):
+      (intercepted, i_duration) = self.GetInterceptionStatus()
+      n_duration = self.GetNegativeResponseDuration()
+      g_duration = self.GetGoogleResponseDuration()
+      durations.extend([i_duration, n_duration, g_duration])
+      time.sleep(0.5)
+
+    duration = util.CalculateListAverage(durations)
     congestion = duration / EXPECTED_CONGESTION_DURATION
     self.msg('Congestion level is %2.2fX (check duration: %2.2fms)' % (congestion, duration))
     if congestion > 1:
-      # multiplier is 
+      # multiplier is
       multiplier = 1 + ((congestion-1) * CONGESTION_OFFSET_MULTIPLIER)
       if multiplier > MAX_CONGESTION_MULTIPLIER:
         multiplier = MAX_CONGESTION_MULTIPLIER
