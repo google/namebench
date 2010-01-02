@@ -141,11 +141,12 @@ class NameServer(health_checks.NameServerHealthChecks):
     if self.is_system:
       print "* System DNS fail #%s/%s: %s %s" % (self.failed_test_count, MAX_SYSTEM_FAILURES, self, message)
       if self.failed_test_count >= MAX_SYSTEM_FAILURES:
-        print "* Disabling %s - %s failures" % (self, self.failed_test_count)
+        print "\n* Disabling %s - %s failures" % (self, self.failed_test_count)
         self.disabled = message
     else:
-#      print "Disabling %s: %s" % (self, message)
       self.disabled = message
+      if self.is_preferred:
+        print "\n* Failed test: %s %s" % (self, message)
 
 
   def CreateRequest(self, record, request_type, return_type):
