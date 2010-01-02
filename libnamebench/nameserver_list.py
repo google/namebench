@@ -251,8 +251,7 @@ class NameServers(list):
     for ns in list(self.SortByFastest()):
       # If we have a specific target count to reach, we are in the first phase
       # of narrowing down nameservers. Silently drop bad nameservers.
-      if ns.disabled and delete_unwanted and not ns.is_preferred:
-#        print "Disabled %s (disabled)" % ns
+      if ns.disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
         self.remove(ns)
 
     preferred_count = len(self.enabled_preferred)

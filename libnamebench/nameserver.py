@@ -79,6 +79,11 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.is_slower_replica = False
     self.timer = DEFAULT_TIMER
 
+    if ':' in self.ip:
+      self.is_ipv6 = True
+    else:
+      self.is_ipv6 = False
+
     if self.is_system:
       self.max_failures = MAX_SYSTEM_FAILURES
     elif self.is_preferred:
