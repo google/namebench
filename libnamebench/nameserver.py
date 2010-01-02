@@ -58,7 +58,8 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   def __init__(self, ip, name=None, internal=False, preferred=False):
     self.name = name
-    self.ip = ip
+    # We use _ for IPV6 representation in our configuration due to ConfigParser issues.
+    self.ip = ip.replace('_', ':')
     self.is_system = internal
     self.system_position = None
     self.is_preferred = preferred
