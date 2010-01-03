@@ -144,7 +144,6 @@ class NameServers(list):
       for ip in self.system_nameservers:
         self.AddServer(ip, 'SYS-%s' % ip, preferred=True)
 
-
   @property
   def preferred(self):
     return [x for x in self if x.is_preferred]
@@ -256,19 +255,40 @@ class NameServers(list):
       if ns.disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
         self.remove(ns)
 
+    # Magic secondary mixing algorithm:
+    # - Half of them should be the "nearest" nameservers
+    # - Half of them should be the "fastest average" nameservers    
     preferred_count = len(self.enabled_preferred)
-    secondaries_kept = 0
     secondaries_needed = target_count - preferred_count
+    if secondaries_needed < 1 or not self.secondaries:
+      return
+    nearest_needed = int(secondaries_needed / 2.0)
+    
+    if secondaries_needed < 50:
+      self.msg("Picking %s secondary servers to use (%s nearest, %s fastest)" %
+               (secondaries_needed, nearest_needed, secondaries_needed - nearest_needed))
 
-    # Phase two is removing all of the slower secondary servers
-    for (idx, ns) in enumerate(list(self.SortByFastest())):
+    # Phase two is picking the nearest secondary server
+    secondaries_to_keep = []
+    for ns in self.SortByNearest():
+      
       if not ns.is_preferred and not ns.disabled:
-        if secondaries_kept >= secondaries_needed:
-#          if len(self) < 25:
-#            self.msg(">> %s did not make the %s best secondary cut: %0.3fms [%s]" % (ns, secondaries_needed, ns.check_average, len(ns.checks)))
-          self.remove(ns)
-        else:
-          secondaries_kept += 1
+        if not secondaries_to_keep and secondaries_needed < 15:
+          self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
+        secondaries_to_keep.append(ns)
+        if len(secondaries_to_keep) >= nearest_needed:
+          break
+
+    # Phase three is removing all of the slower secondary servers
+    for ns in self.SortByFastest():
+      if not ns.is_preferred and not ns.disabled and ns not in secondaries_to_keep:
+        secondaries_to_keep.append(ns)
+        if len(secondaries_to_keep) == secondaries_needed:
+          break
+
+    for ns in self.secondaries:
+      if ns not in secondaries_to_keep:
+        self.remove(ns)
 
   def CheckHealth(self, sanity_primary, sanity_secondary, cache_dir=None, censor_tests=None):
     """Filter out unhealthy or slow replica servers."""
@@ -287,7 +307,7 @@ class NameServers(list):
     # If we have a lot of nameservers, make a first cut.
     if len(self) > (self.num_servers / FIRST_CUT_MULTIPLIER):
       self.PingNameServers()
-      self.DisableUnwantedServers(target_count=len(self) * FIRST_CUT_MULTIPLIER,
+      self.DisableUnwantedServers(target_count=int(len(self) * FIRST_CUT_MULTIPLIER),
                                   delete_unwanted=True)
 
     self.RunHealthCheckThreads(sanity_primary)
@@ -376,6 +396,10 @@ class NameServers(list):
   def SortByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
     return sorted(self, key=operator.attrgetter('check_average'))
+
+  def SortByNearest(self):
+    """Return a list of healthy servers in fastest-first order."""
+    return sorted(self, key=operator.attrgetter('fastest_check_duration'))
 
   def CheckCacheCollusion(self):
     """Mark if any nameservers share cache, especially if they are slower."""

@@ -95,6 +95,10 @@ class NameServer(health_checks.NameServerHealthChecks):
   @property
   def check_average(self):
     return util.CalculateListAverage([x[3] for x in self.checks])
+    
+  @property
+  def fastest_check_duration(self):
+    return min([x[3] for x in self.checks])
 
   @property
   def check_duration(self):
