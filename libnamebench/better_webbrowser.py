@@ -18,11 +18,13 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import os.path
+import threading
 import subprocess
 import sys
 import traceback
 import webbrowser
 import time
+
 
 def create_win32_http_cmd(url):
   """Create a command-line tuple to launch a web browser for a given URL.
@@ -30,12 +32,15 @@ def create_win32_http_cmd(url):
   At the moment, this ignores all default arguments to the browser.
   TODO(tstromberg): Properly parse the command-line arguments.
   """
+  browser_type = None
   try:
     key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
                         'Software\Classes\http\shell\open\command')
+    browser_type = 'user'
   except WindowsError:
     key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
                         'Software\Classes\http\shell\open\command')
+    browser_type = 'machine'
   except:
     return False
 
@@ -48,10 +53,10 @@ def create_win32_http_cmd(url):
     executable = cmd.split(' ')[0]
 
   if not os.path.exists(executable):
-    print "Default HTTP browser does not exist: %s" % executable
+    print "$ Default HTTP browser does not exist: %s" % executable
     return False
   else:
-    print "HTTP handler: %s" % executable
+    print "$ %s HTTP handler: %s" % (browser_type, executable)
   return (executable, url)
 
 
@@ -64,20 +69,29 @@ if sys.platform[:3] == 'win':
 
     def open(self, url, new=0, autoraise=1):
       command_args = create_win32_http_cmd(url)
-      print command_args
       if not command_args:
-        print "Could not find HTTP handler"
+        print "$ Could not find HTTP handler"
         return False
 
+      print "$ Arguments"
       print command_args
+      print
+      # Avoid some unicode path issues by moving our current directory
+      old_pwd = os.getcwd()
+      os.chdir('C:\\')
       try:
-        browser = subprocess.Popen(command_args)
+        p = subprocess.Popen(command_args)
+        print '$ Launched command'
+        status = not p.wait()
+        os.chdir(old_pwd)
         return True
       except:
         traceback.print_exc()
-        print "* Failed to run HTTP handler, trying next browser."
+        print "$ Failed to run HTTP handler, trying next browser."
+        os.chdir(old_pwd)
         return False
-
+      
+        
   webbrowser.register("windows-http", WindowsHttpDefault, update_tryorder=-1)
 
 def open(url):
