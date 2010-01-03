@@ -492,15 +492,15 @@ class NameServers(list):
 
   def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('health', 'Running initial health checks', list(self), checks=checks)
+    results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled), list(self), checks=checks)
 
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('final', 'Running final health checks', list(self), checks=checks)
+    results = self._LaunchQueryThreads('final', 'Running final health checks on %s servers' % len(self.enabled), list(self), checks=checks)
 
   def RunCensorshipCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('censorship', 'Running censorship checks', list(self), checks=checks)
+    results = self._LaunchQueryThreads('censorship', 'Running censorship checks on %s servers' % len(self.enabled), list(self), checks=checks)
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
