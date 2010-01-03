@@ -101,6 +101,7 @@ def FindDataFile(filename):
                   os.path.join(sys.prefix, 'namebench'),
                   '/usr/local/share/namebench'
                   '/usr/local/etc/namebench',
+                  '/usr/local/namebench',
                   '/etc/namebench',
                   '/usr/share/namebench',
                   '/usr/namebench']
