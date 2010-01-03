@@ -231,7 +231,10 @@ class NameServer(health_checks.NameServerHealthChecks):
       duration = self.timer() - start_time
 
     if exc and not error_msg:
-      error_msg = util.GetLastExceptionString()
+      error_msg = '%s: %s' % (record_string, util.GetLastExceptionString())
+
+#    if error_msg:
+#      print '%s will report: %s' % (self, error_msg)
 
     return (response, util.SecondsToMilliseconds(duration), error_msg)
 

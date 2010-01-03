@@ -77,7 +77,7 @@ class NameBenchCli(base_ui.BaseUI):
 
       if count == total:
         sys.stdout.write('%s/%s\n' % (count, total))
-      elif count and (count - self.last_msg_count_posted > (total * 0.20)):
+      elif total > 20 and count and (count - self.last_msg_count_posted > (total * 0.20)):
         sys.stdout.write(str(count))
         self.last_msg_count_posted = count
     sys.stdout.flush()

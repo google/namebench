@@ -49,8 +49,6 @@ class BaseUI(object):
       print msg
 
   def PrepareNameServers(self):
-    if self.options.invalidate_cache:
-      nameservers.InvalidateSecondaryCache()
 
     self.nameservers = nameserver_list.NameServers(
         self.preferred,
@@ -61,6 +59,8 @@ class BaseUI(object):
         health_timeout=self.options.health_timeout,
         status_callback=self.UpdateStatus
     )
+    if self.options.invalidate_cache:
+      self.nameservers.InvalidateSecondaryCache()
 
     self.nameservers.cache_dir = tempfile.gettempdir()
 

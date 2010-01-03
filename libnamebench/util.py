@@ -115,7 +115,7 @@ def GetLastExceptionString():
   (exc, error) = sys.exc_info()[0:2]
   exc_msg = str(exc)
   if '<class' in exc_msg:
-    exc = exc_msg.split("'")[1]
+    exc_msg = exc_msg.split("'")[1]
 
   exc_msg = exc_msg.replace('dns.exception.', '')
   return '%s %s' % (exc_msg, error)

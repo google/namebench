@@ -33,13 +33,14 @@ WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
+CENSORSHIP_TIMEOUT_MULTIPLIER = 5
 MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 
 class NameServerHealthChecks(object):
   """Health checks for a nameserver."""
 
-  def TestAnswers(self, record_type, record, expected, fatal=True):
+  def TestAnswers(self, record_type, record, expected, fatal=True, timeout=None):
     """Test to see that an answer returns correct IP's.
 
     Args:
@@ -54,8 +55,9 @@ class NameServerHealthChecks(object):
     response_text = None
     unmatched_answers = []
     warning = None
-    (response, duration, error_msg) = self.TimedRequest(record_type, record,
-                                                  timeout=self.health_timeout)
+    if not timeout:
+      timeout = self.health_timeout
+    (response, duration, error_msg) = self.TimedRequest(record_type, record, timeout)
     if not response:
       is_broken = True
     elif not response.answer:
@@ -81,7 +83,6 @@ class NameServerHealthChecks(object):
           elif rdata.rdtype ==  1:
             reply = str(rdata.address)
           else:
-            print '%s: %s' % (record, self.ResponseToAscii(response))
             continue
 
           found_usable_record = True
@@ -116,25 +117,14 @@ class NameServerHealthChecks(object):
     is_broken = False
     warning = None
     poison_test = 'nb.%s.google.com.' % random.random()
-    (response, duration, exc) = self.TimedRequest('A', poison_test,
+    (response, duration, error_msg) = self.TimedRequest('A', poison_test,
                                                   timeout=self.health_timeout)
     if not response:
       is_broken = True
-      warning = str(exc.__class__.__name__)
     elif response.answer:
       warning = 'NXDOMAIN Hijacking'
-    return (is_broken, warning, duration)
 
-  def TestReverseResponse(self):
-    """Test a reverse lookup of the nameserver."""
-    record = dns.reversename.from_address(self.ip)
-    (response, duration, error_msg) = self.TimedRequest('PTR', str(record),
-                                                  timeout=self.health_timeout)
-    if exc:
-      is_broken = True
-    else:
-      is_broken = False
-    return (is_broken, error_msg, duration)
+    return (is_broken, warning, duration)
 
   def TestRootServerResponse(self):
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
@@ -207,7 +197,8 @@ class NameServerHealthChecks(object):
      for (check, expected) in tests:
        (req_type, req_name) = check.split(' ')
        expected_values = expected.split(',')
-       result = self.TestAnswers(req_type.upper(), req_name, expected_values)
+       result = self.TestAnswers(req_type.upper(), req_name, expected_values,
+                                 timeout=self.health_timeout * CENSORSHIP_TIMEOUT_MULTIPLIER)
        warning = result[1]
        if warning:
          self.warnings.add(warning)
@@ -238,10 +229,9 @@ class NameServerHealthChecks(object):
 
       self.checks.append((test_name, is_broken, warning, duration))
       if warning:
-#        print "%s: %s" % (self, warning)
         self.warnings.add(warning)
       if is_broken:
-        self.AddFailure('Failed %s: %s' % (test_name, warning))
+        self.AddFailure('%s: %s' % (test_name, warning))
       if self.disabled:
         break
 

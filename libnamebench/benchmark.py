@@ -251,8 +251,20 @@ class Benchmark(object):
     for ns in self.nameservers:
       if ns.disabled:
         nameserver_details.append((ns, 0.0, [], 0, 0, 0))
+
+      # TODO(tstromberg): Do this properly without injecting variables into the nameserver object.
+      ns.notes = []
+      if ns.system_position == 0:
+        ns.notes.append('The current preferred DNS server.')
+      elif ns.system_position:
+        ns.notes.append('A backup DNS server for this system.')
       if ns.is_error_prone:
-        ns.warnings.add('%0.0f queries to this host failed' % ns.error_rate)
+        ns.notes.append('%0.0f queries to this host failed' % ns.error_rate)
+      if ns.disabled:
+        ns.notes.append(ns.disabled)
+      else:
+        for warning in ns.warnings:
+          ns.notes.append(warning)
 
     builtin_servers = util.InternalNameServers()
     if builtin_servers:
