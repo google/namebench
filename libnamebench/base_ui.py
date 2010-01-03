@@ -102,6 +102,7 @@ class BaseUI(object):
     self.bmark.Run()
 
   def RunAndOpenReports(self):
+    self.RunBenchmark()
     best = self.bmark.BestOverallNameServer()
     self.CreateReports()
     self.DisplayHtmlReport()

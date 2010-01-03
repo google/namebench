@@ -444,7 +444,7 @@ class NameServers(list):
 
     while results_queue.qsize() != len(items):
       self.msg(status_message, count=results_queue.qsize(), total=len(items))
-      time.sleep(0.2)
+      time.sleep(0.5)
 
     self.msg(status_message, count=results_queue.qsize(), total=len(items))
     for thread in threads:

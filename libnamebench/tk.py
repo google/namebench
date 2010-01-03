@@ -99,9 +99,9 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
   def run(self):
     self.msg('Started thread', enable_button=False)
     try:
+      self.PrepareNameServers()
       self.PrepareBenchmark()
-      self.UpdateStatus('Here comes the pain...')
-      self.RunBenchmark()
+      self.RunAndOpenReports()
     except nameserver_list.OutgoingUdpInterception:
       (exc_type, exception, tb) = sys.exc_info()
       self.msg('Outgoing requests were intercepted!', error=exception)
@@ -157,6 +157,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.selection_mode = StringVar()
     self.use_global = IntVar()
     self.use_regional = IntVar()
+    self.use_censor_checks = IntVar()
 
     self.master.title("namebench")
     outer_frame = Frame(self.master)
@@ -185,51 +186,54 @@ class MainWindow(Frame, base_ui.BaseUI):
     regional_button.grid(row=3, columnspan=2, sticky=W)
     regional_button.toggle()
 
+    censorship_button = Checkbutton(inner_frame, text="Include censorship checks", variable=self.use_censor_checks)
+    censorship_button.grid(row=4, columnspan=2, sticky=W)
+
     if sys.platform[:3] == 'win':
       seperator_width = 400
     else:
       seperator_width = 515
     separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
-    separator.grid(row=4, padx=5, pady=5, columnspan=2)
+    separator.grid(row=5, padx=5, pady=5, columnspan=2)
 
     ds_label = Label(inner_frame, text="Benchmark Data Source")
-    ds_label.grid(row=5, column=0, sticky=W)
+    ds_label.grid(row=10, column=0, sticky=W)
     ds_label['font'] = bold_font
 
     numtests_label = Label(inner_frame, text="Number of tests")
-    numtests_label.grid(row=5, column=1, sticky=W)
+    numtests_label.grid(row=10, column=1, sticky=W)
     numtests_label['font'] = bold_font
 
     self.DiscoverSources()
     source_titles = [history_parser.sourceToTitle(x) for x in self.sources]
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
     data_source.configure(width=35)
-    data_source.grid(row=6, column=0, sticky=W)
+    data_source.grid(row=11, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
     num_tests = Entry(inner_frame, bg="white", textvariable=self.num_tests)
-    num_tests.grid(row=6, column=1, sticky=W, padx=4)
+    num_tests.grid(row=11, column=1, sticky=W, padx=4)
     self.num_tests.set(self.options.test_count)
 
     bds_label = Label(inner_frame, text="Benchmark Data Selection")
-    bds_label.grid(row=7, column=0, sticky=W)
+    bds_label.grid(row=12, column=0, sticky=W)
     bds_label['font'] = bold_font
 
     num_runs_label = Label(inner_frame, text="Number of runs")
-    num_runs_label.grid(row=7, column=1, sticky=W)
+    num_runs_label.grid(row=12, column=1, sticky=W)
     num_runs_label['font'] = bold_font
 
     selection_mode = OptionMenu(inner_frame, self.selection_mode, "Weighted", "Random", "Chunk")
     selection_mode.configure(width=35)
-    selection_mode.grid(row=8, column=0, sticky=W)
+    selection_mode.grid(row=13, column=0, sticky=W)
     self.selection_mode.set('Weighted')
 
     num_runs = Entry(inner_frame, bg="white", textvariable=self.num_runs)
-    num_runs.grid(row=8, column=1, sticky=W, padx=4)
+    num_runs.grid(row=13, column=1, sticky=W, padx=4)
     self.num_runs.set(self.options.run_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
-    self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
+    self.button.grid(row=20, sticky=E, column=1, pady=4, padx=1)
     self.UpdateRunState(running=True)
     self.UpdateRunState(running=False)
     self.UpdateStatus('namebench %s is ready!' % self.version)
@@ -311,3 +315,4 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.options.test_count = self.num_tests.get()
     self.options.data_source = self.ParseSourceSelection(self.data_source.get())
     self.options.select_mode = self.selection_mode.get().lower()
+    self.options.enable_censorship_checks = self.use_censor_checks.get()

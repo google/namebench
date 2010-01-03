@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		697CE1ED10DA048D00D5C46F /* tools in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1E910DA048D00D5C46F /* tools */; };
+		697CE1EE10DA048D00D5C46F /* third_party in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1EA10DA048D00D5C46F /* third_party */; };
+		697CE1EF10DA048D00D5C46F /* templates in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1EB10DA048D00D5C46F /* templates */; };
+		697CE1F010DA048D00D5C46F /* libnamebench in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1EC10DA048D00D5C46F /* libnamebench */; };
+		697CE2B110DA04D600D5C46F /* data in Resources */ = {isa = PBXBuildFile; fileRef = 697CE2AB10DA04D600D5C46F /* data */; };
+		697CE2C110DA05F300D5C46F /* namebench.cfg in Resources */ = {isa = PBXBuildFile; fileRef = 697CE2C010DA05F300D5C46F /* namebench.cfg */; };
 		77631A270C06C501005415CB /* Python.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77631A260C06C501005415CB /* Python.framework */; };
 		77631A3F0C0748CF005415CB /* main.py in Resources */ = {isa = PBXBuildFile; fileRef = 77631A3E0C0748CF005415CB /* main.py */; };
 		7790198F0C07548A00326F66 /* namebenchAppDelegate.py in Resources */ = {isa = PBXBuildFile; fileRef = 7790198E0C07548A00326F66 /* namebenchAppDelegate.py */; };
@@ -26,6 +32,12 @@
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		32CA4F630368D1EE00C91783 /* namebench_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = namebench_Prefix.pch; sourceTree = "<group>"; };
+		697CE1E910DA048D00D5C46F /* tools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = tools; path = ../tools; sourceTree = SOURCE_ROOT; };
+		697CE1EA10DA048D00D5C46F /* third_party */ = {isa = PBXFileReference; lastKnownFileType = folder; name = third_party; path = ../third_party; sourceTree = SOURCE_ROOT; };
+		697CE1EB10DA048D00D5C46F /* templates */ = {isa = PBXFileReference; lastKnownFileType = folder; name = templates; path = ../templates; sourceTree = SOURCE_ROOT; };
+		697CE1EC10DA048D00D5C46F /* libnamebench */ = {isa = PBXFileReference; lastKnownFileType = folder; name = libnamebench; path = ../libnamebench; sourceTree = SOURCE_ROOT; };
+		697CE2AB10DA04D600D5C46F /* data */ = {isa = PBXFileReference; lastKnownFileType = folder; name = data; path = ../data; sourceTree = SOURCE_ROOT; };
+		697CE2C010DA05F300D5C46F /* namebench.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = namebench.cfg; path = ../namebench.cfg; sourceTree = SOURCE_ROOT; };
 		77631A260C06C501005415CB /* Python.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Python.framework; path = /System/Library/Frameworks/Python.framework; sourceTree = "<absolute>"; };
 		77631A3E0C0748CF005415CB /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
 		7790198E0C07548A00326F66 /* namebenchAppDelegate.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = namebenchAppDelegate.py; sourceTree = "<group>"; };
@@ -92,7 +104,6 @@
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
-				DCC47242107F4BB1009BBD14 /* controller.py */,
 			);
 			name = namebench;
 			sourceTree = "<group>";
@@ -110,6 +121,13 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				DCC47242107F4BB1009BBD14 /* controller.py */,
+				697CE2C010DA05F300D5C46F /* namebench.cfg */,
+				697CE2AB10DA04D600D5C46F /* data */,
+				697CE1E910DA048D00D5C46F /* tools */,
+				697CE1EA10DA048D00D5C46F /* third_party */,
+				697CE1EB10DA048D00D5C46F /* templates */,
+				697CE1EC10DA048D00D5C46F /* libnamebench */,
 				DCDB6B57108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns */,
 				77C8C1F70C07829500965286 /* MainMenu.xib */,
 				8D1107310486CEB800E47090 /* Info.plist */,
@@ -176,6 +194,12 @@
 				77C8C1F90C07829500965286 /* MainMenu.xib in Resources */,
 				DCC47243107F4BB1009BBD14 /* controller.py in Resources */,
 				DCDB6B58108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns in Resources */,
+				697CE1ED10DA048D00D5C46F /* tools in Resources */,
+				697CE1EE10DA048D00D5C46F /* third_party in Resources */,
+				697CE1EF10DA048D00D5C46F /* templates in Resources */,
+				697CE1F010DA048D00D5C46F /* libnamebench in Resources */,
+				697CE2B110DA04D600D5C46F /* data in Resources */,
+				697CE2C110DA05F300D5C46F /* namebench.cfg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -247,8 +271,11 @@
 		C01FCF4F08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ONLY_ACTIVE_ARCH_PRE_XCODE_3_1)";
+				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH_PRE_XCODE_3_1 = "$(NATIVE_ARCH_ACTUAL)";
 				PREBINDING = NO;
 				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
 			};
@@ -257,10 +284,9 @@
 		C01FCF5008A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					ppc,
-					i386,
-				);
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "ppc i386 ppc64 x86_64";
+				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
