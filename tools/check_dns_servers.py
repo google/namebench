@@ -44,23 +44,24 @@ if not check_ns:
 else:
   print "%s servers to check" % len(check_ns)
 print '-' * 80
-    
+
 nameservers = nameserver_list.NameServers(
     check_ns,
-    timeout=18,
-    health_timeout=18,
+    timeout=5,
+    health_timeout=5,
     threads=250,
     skip_cache_collusion_checks=True,
 )
-nameservers.CheckHealth()
+try:
+  nameservers.CheckHealth()
+except:
+  print "Health checks failed. Ohwell."
 print '-' * 80
 geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 
-for ns in nameservers.enabled:
+for ns in nameservers:
   details = geo_city.record_by_addr(ns.ip)
   city = details.get('city', '')
   country = details.get('country_name', '')
   region = details.get('region_name', '')
   print "%s=%s %s (%s, %s) %s" % (ns.ip, ns.hostname, city, region, country, ns.warnings_comment)
-
-
