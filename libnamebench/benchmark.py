@@ -41,7 +41,10 @@ import charts
 import selectors
 import util
 
-
+FAQ_MAP = {
+  'NXDOMAIN': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"NXDOMAIN_hijacking"_mean?',
+  'Incorrect result': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"Incorrect_result_for..."_mean?'
+}
 
 class Benchmark(object):
   """The main benchmarking class."""
@@ -253,18 +256,23 @@ class Benchmark(object):
         nameserver_details.append((ns, 0.0, [], 0, 0, 0))
 
       # TODO(tstromberg): Do this properly without injecting variables into the nameserver object.
+      # Tuples: Note, URL
       ns.notes = []
       if ns.system_position == 0:
-        ns.notes.append('The current preferred DNS server.')
+        ns.notes.append(('The current preferred DNS server.', None))
       elif ns.system_position:
-        ns.notes.append('A backup DNS server for this system.')
+        ns.notes.append(('A backup DNS server for this system.', None))
       if ns.is_error_prone:
-        ns.notes.append('%0.0f queries to this host failed' % ns.error_rate)
+        ns.notes.append(('%0.0f queries to this host failed' % ns.error_rate, None))
       if ns.disabled:
-        ns.notes.append(ns.disabled)
+        ns.notes.append((ns.disabled, None))
       else:
         for warning in ns.warnings:
-          ns.notes.append(warning)
+          use_url = None
+          for keyword in FAQ_MAP:
+            if keyword in warning:
+              use_url = FAQ_MAP[keyword]
+          ns.notes.append((warning, use_url))
 
     builtin_servers = util.InternalNameServers()
     if builtin_servers:

@@ -59,8 +59,12 @@
   <td>
   {% if row.0.notes %}
     <ul class="warnings">
-      {% for note in row.0.notes %}
-    		<li>{{ note|e }}</li>
+      {% for note_data in row.0.notes %}
+		<li>
+        {% if note_data.1 %}<a href="{{ note_data.1|e }}">{% endif %}
+    		{{ note_data.0|e }}
+	    {% if note_data.1 %}</a>{% endif %}
+	    </li>
       {% endfor %}
 	</ul>
   {% endif %}
