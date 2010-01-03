@@ -57,9 +57,11 @@ class controller(NSWindowController, base_ui.BaseUI):
 
   def awakeFromNib(self):
     """Initializes our class, called automatically by Cocoa"""
-
+    NSLog("pwd: %s" % os.getcwd())
+    NSLog('argv[0]: %s' % sys.argv[0])
     self.resource_dir = os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources')
-    conf_file = os.path.join(self.resource_dir, 'namebench.cfg')
+    
+    conf_file = util.FindDataFile('namebench.cfg')
     NSLog("Using configuration: %s" % conf_file)
     (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.

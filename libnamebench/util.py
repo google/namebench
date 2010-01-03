@@ -97,6 +97,7 @@ def FindDataFile(filename):
     return filename
 
   other_places = [os.getcwd(),
+                  os.path.join(os.path.dirname(os.path.dirname(sys.argv[0])), 'Contents', 'Resources'),
                   os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources'),
                   os.path.join(sys.prefix, 'namebench'),
                   '/usr/local/share/namebench'
@@ -114,6 +115,9 @@ def FindDataFile(filename):
     if os.path.exists(path):
       return path
 
+  print "I could not find your beloved '%s'. Tried:" % filename
+  for path in other_places:
+    print "  %s" % path
   return filename
 
 def GetLastExceptionString():
