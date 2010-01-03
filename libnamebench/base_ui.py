@@ -39,7 +39,7 @@ def GenerateOutputFilename(extension):
   return os.path.join(output_dir, '%s.%s' % (output_base, extension))
 
 class BaseUI(object):
-  """Common methods for UI implementations."""
+  """Common methods for all UI implementations."""
 
   def UpdateStatus(self, msg, **kwargs):
     """Update the little status message on the bottom of the window."""
@@ -49,7 +49,7 @@ class BaseUI(object):
       print msg
 
   def PrepareNameServers(self):
-
+    """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = nameserver_list.NameServers(
         self.preferred,
         self.secondary,
@@ -80,6 +80,7 @@ class BaseUI(object):
     self.nameservers.CheckHealth(primary_checks, secondary_checks, censor_tests=censor_tests)
 
   def PrepareBenchmark(self):
+    """Setup the benchmark object with the appropriate dataset."""
     self.bmark = benchmark.Benchmark(self.nameservers,
                                      test_count=self.options.test_count,
                                      run_count=self.options.run_count,
@@ -99,9 +100,11 @@ class BaseUI(object):
                                      select_mode=self.options.select_mode)
 
   def RunBenchmark(self):
+    """Run the benchmark."""
     self.bmark.Run()
 
   def RunAndOpenReports(self):
+    """Run the benchmark and open up the HTML report on completion."""
     self.RunBenchmark()
     best = self.bmark.BestOverallNameServer()
     self.CreateReports()

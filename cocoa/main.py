@@ -16,6 +16,11 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import platform
+print "Starting up on Python %s [%s] compiled with %s" % (platform.python_version(),
+                                                          platform.platform(),
+                                                          platform.python_compiler())
+
 #import modules required by application
 import objc
 import Foundation

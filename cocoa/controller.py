@@ -32,16 +32,6 @@ import sys
 import os
 import re
 
-# TODO(tstromberg): Research best practices for bundling cocoa frontends.
-pwd = os.getcwd()
-if 'namebench/cocoa' in pwd:
-  NSLog("Enabling development mode resource hack")
-  RSRC_DIR = pwd[0:pwd.index('/cocoa')]
-  sys.path.append(RSRC_DIR)
-else:
-  RSRC_DIR = os.path.dirname(__file__)
-
-NSLog("Resource directory is %s" % RSRC_DIR)
 import third_party
 from libnamebench import base_ui
 from libnamebench import config
@@ -55,17 +45,19 @@ class controller(NSWindowController, base_ui.BaseUI):
   nameserver_form = IBOutlet()
   include_global = IBOutlet()
   include_regional = IBOutlet()
+  include_censorship_checks = IBOutlet()
   data_source = IBOutlet()
   selection_mode = IBOutlet()
   num_tests = IBOutlet()
   num_runs = IBOutlet()
   status = IBOutlet()
   spinner = IBOutlet()
+  button = IBOutlet()
 
   def awakeFromNib(self):
     """Initializes our class, called automatically by Cocoa"""
 
-    self.resource_dir = RSRC_DIR
+    self.resource_dir = os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources')
     conf_file = os.path.join(self.resource_dir, 'namebench.cfg')
     NSLog("Using configuration: %s" % conf_file)
     (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
@@ -106,7 +98,8 @@ class controller(NSWindowController, base_ui.BaseUI):
     """Parse the form fields and populate class variables."""
     self.UpdateStatus('Processing form inputs')
     self.preferred = self.supplied_ns
-
+    self.include_internal = False
+    
     if not int(self.include_global.stringValue()):
       self.UpdateStatus('Not using primary')
     else:
@@ -117,6 +110,8 @@ class controller(NSWindowController, base_ui.BaseUI):
     else:
       self.secondary = self.regional_ns
 
+    if int(self.include_censorship_checks.stringValue()):
+      self.options.enable_censorship_checks = True
     self.options.select_mode = self.selection_mode.titleOfSelectedItem().lower()
     self.options.data_source = self.ParseSourceSelection(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
@@ -129,10 +124,12 @@ class controller(NSWindowController, base_ui.BaseUI):
     """Run the benchmarks, designed to be run in a thread."""
     pool = NSAutoreleasePool.alloc().init()
     self.spinner.startAnimation_(self)
+    self.button.setEnabled_(False)
     self.UpdateStatus('Preparing benchmark')
     try:
+      self.PrepareNameServers()
       self.PrepareBenchmark()
-      self.RunBenchmark()
+      self.RunAndOpenReports()
     except nameserver_list.OutgoingUdpInterception:
       (exc_type, exception, tb) = sys.exc_info()
       self.UpdateStatus('Outgoing requests were intercepted!',
@@ -147,6 +144,7 @@ class controller(NSWindowController, base_ui.BaseUI):
       self.UpdateStatus('FAIL: %s' % exception, error=error_msg)
 
     self.spinner.stopAnimation_(self)
+    self.button.setEnabled_(True)
     pool.release()
 
   def displayError(self, msg, details):

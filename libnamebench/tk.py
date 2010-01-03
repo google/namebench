@@ -178,7 +178,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
-    global_button = Checkbutton(inner_frame, text="Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS)", variable=self.use_global)
+    global_button = Checkbutton(inner_frame, text="Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS, etc.)", variable=self.use_global)
     global_button.grid(row=2, columnspan=2, sticky=W)
     global_button.toggle()
 
