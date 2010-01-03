@@ -19,7 +19,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import os
-from namebench import VERSION
+from libnamebench import version
 from distutils.core import setup
 try:
     import py2exe
@@ -39,6 +39,7 @@ else:
       'third_party/dns/rdtypes/IN',
       'third_party/graphy',
       'third_party/jinja2',
+      'third_party/httplib2',
       'third_party/graphy/backends',
       'third_party/graphy/backends/google_chart_api'
   ]
@@ -89,7 +90,7 @@ rt90_manifest = """<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVe
 """
 
 setup(name='namebench',
-      version=VERSION,
+      version=version.VERSION,
       py_modules=['namebench'],
       description='DNS service benchmarking tool',
       author='Thomas Stromberg',
@@ -119,7 +120,8 @@ setup(name='namebench',
                 'templates/style.css'
            ]
           ),
-          ('namebench/data', ['data/alexa-top-10000-global.txt'])
+          ('namebench/data', ['data/alexa-top-10000-global.txt',
+                              'data/hostname_reference.cfg'])
       ],
 
       # py2exe specific garbarge below.
@@ -128,7 +130,7 @@ setup(name='namebench',
                 'bundle_files': 3, # 1 nor 2 does not work
                 'ascii': False,
                 'packages': ['third_party'],
-                'excludes': ['dns', 'jinja2', 'graphy'],
+                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2'],
                 'dll_excludes': ["w9xpopen.exe","MSVCP90.dll", "MSVCR90.DLL"],
             }
         },
