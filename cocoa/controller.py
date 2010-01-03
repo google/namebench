@@ -34,11 +34,12 @@ import re
 
 import third_party
 from libnamebench import base_ui
-from libnamebench import config
-from libnamebench import nameserver_list
 from libnamebench import benchmark
-from libnamebench import util
+from libnamebench import config
 from libnamebench import history_parser
+from libnamebench import nameserver_list
+from libnamebench import util
+from libnamebench import version
 
 class controller(NSWindowController, base_ui.BaseUI):
   """Controller class associated with the main window."""
@@ -66,7 +67,7 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.DiscoverSources()
     self.UpdateStatus('Populating Form...')
     self.setFormDefaults()
-    self.UpdateStatus('Ready')
+    self.UpdateStatus('namebench %s is ready!' % version.VERSION)
 
   @IBAction
   def startJob_(self, sender):
