@@ -61,6 +61,7 @@ class HistoryParser(object):
         'seamonkey': ('Mozilla Seamonkey', self.SeamonkeyHistoryPath),
         'squid': ('Squid Web Proxy', self.SquidLogPath),
     }
+    self.imported_sources = {}
 
   def GetTypes(self):
     """Return a tuple of type names with a description."""
@@ -90,9 +91,9 @@ class HistoryParser(object):
   def GetTypeMethod(self, type):
     return self.TYPES[type][1]
 
-  def Parse(self, path_or_type):
+  def Parse(self, path_or_type, store=False):
     if path_or_type.lower() in self.TYPES:
-      return self.ParseByType(path_or_type.lower())
+      return self.ParseByType(path_or_type.lower(), store=store)
     else:
       return self.ParseByFilename(path_or_type)
 

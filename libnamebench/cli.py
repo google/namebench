@@ -77,7 +77,7 @@ class NameBenchCli(base_ui.BaseUI):
 
       if count == total:
         sys.stdout.write('%s/%s\n' % (count, total))
-      elif total > 20 and count and (count - self.last_msg_count_posted > (total * 0.20)):
+      elif total > 25 and count and (count - self.last_msg_count_posted > (total * 0.20)):
         sys.stdout.write(str(count))
         self.last_msg_count_posted = count
     sys.stdout.flush()
@@ -114,9 +114,7 @@ class NameBenchCli(base_ui.BaseUI):
 
     self.hparser = history_parser.HistoryParser()
     if self.options.import_source:
-      h = history_parser.HistoryParser()
-      h.Parse(self.options_import_source)
-
+      self.hparser.Parse(self.options.import_source, store=True)
 
     if self.options.only:
       if not self.supplied_ns:
