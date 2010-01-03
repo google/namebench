@@ -217,9 +217,10 @@ class NameServers(list):
     (intercepted, congestion, multiplier) = cq.CheckConnectionQuality()[0:3]
     if intercepted:
       raise OutgoingUdpInterception(
-          'Your Internet Service Provider appears to be intercepting and '
-          'redirecting all outgoing DNS requests. This means we cannot '
-          'benchmark or utilize alternate DNS servers. Please ask them to stop.'
+          'Your router or Internet Service Provider appears to be intercepting '
+          'and redirecting all outgoing DNS requests. This means you cannot '
+          'benchmark or utilize alternate DNS servers. Please adjust your '
+          'router configuration or file a support request with your ISP.'
       )
     if multiplier > 1:
       self.timeout *= multiplier
