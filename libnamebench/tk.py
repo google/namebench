@@ -233,7 +233,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.num_runs.set(self.options.run_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
-    self.button.grid(row=20, sticky=E, column=1, pady=4, padx=1)
+    self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
     self.UpdateRunState(running=True)
     self.UpdateRunState(running=False)
     self.UpdateStatus('namebench %s is ready!' % self.version)
