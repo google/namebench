@@ -96,11 +96,14 @@ def FindDataFile(filename):
   if os.path.isabs(filename):
     return filename
 
-  other_places = [os.path.join(sys.prefix, 'namebench'),
+  other_places = [os.getcwd(),
+                  os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources'),
+                  os.path.join(sys.prefix, 'namebench'),
+                  '/usr/local/share/namebench'
                   '/usr/local/etc/namebench',
                   '/etc/namebench',
-                  os.getcwd(),
-                  os.path.join((os.getcwd(), 'namebench.app', 'Contents', 'Resources'))]
+                  '/usr/share/namebench',
+                  '/usr/namebench']
   for dir in reversed(sys.path):
     other_places.append(dir)
     other_places.append(os.path.join(dir, 'namebench'))
