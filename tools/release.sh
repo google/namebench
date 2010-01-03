@@ -18,7 +18,7 @@
 tmp=$$
 cd /tmp
 svn checkout http://namebench.googlecode.com/svn/trunk/ namebench-$$
-version=`grep '^VERSION' namebench-$$/namebench.py | cut -d\' -f2`
+version=`grep '^VERSION' namebench-$$/libnamebench/version.py | cut -d\' -f2`
 mv namebench-$$ namebench-$version
 cd namebench-$version
 ./namebench.py -t2 -r1 -j40 -o /tmp/$$.csv 208.67.220.220

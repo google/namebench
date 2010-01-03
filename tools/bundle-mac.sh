@@ -15,13 +15,14 @@
 
 PKG_DIR="$HOME/Desktop"
 
-tmp="/tmp/namebench-$$"
-svn checkout http://namebench.googlecode.com/svn/trunk/ $tmp
 
 rm -Rf $PKG_DIR/namebench.app
-cp -Rp cocoa/build/Debug/namebench.app $PKG_DIR/
-rsync -va --exclude ".svn/" --exclude "*~" --exclude "*.pyc" $tmp/ $PKG_DIR/namebench.app/Contents/Resources/
-version=`grep "^VERSION" namebench.py | cut -d\' -f2`
+cp -Rp cocoa/build/Release/namebench.app $PKG_DIR/
+# No longer required now that our Xcode project was setup properly.
+#tmp="/tmp/namebench-$$"
+#svn checkout http://namebench.googlecode.com/svn/trunk/ $tmp
+#rsync -va --exclude ".svn/" --exclude "*~" --exclude "*.pyc" $tmp/ $PKG_DIR/namebench.app/Contents/Resources/
+version=`grep "^VERSION" libnamebench/version.py | cut -d\' -f2`
 dmg="$PKG_DIR/namebench-${version}.dmg"
 if [ -f "$dmg" ]; then
   rm -f "$dmg"
