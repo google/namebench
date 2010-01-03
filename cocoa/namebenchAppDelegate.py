@@ -23,3 +23,6 @@ from AppKit import *
 class namebenchAppDelegate(NSObject):
     def applicationDidFinishLaunching_(self, sender):
         NSLog("Application did finish launching.")
+
+    def applicationShouldTerminateAfterLastWindowClosed_(self, sender):
+      return True
