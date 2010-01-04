@@ -509,6 +509,8 @@ class NameServers(list):
     # count a bit. 
     if self.thread_count > MAX_INITIAL_HEALTH_THREAD_COUNT:
       thread_count = MAX_INITIAL_HEALTH_THREAD_COUNT
+    else:
+      thread_count = self.thread_count
     results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
                                        list(self), checks=checks, thread_count=thread_count)
 
