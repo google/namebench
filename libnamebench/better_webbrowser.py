@@ -95,4 +95,22 @@ if sys.platform[:3] == 'win':
   webbrowser.register("windows-http", WindowsHttpDefault, update_tryorder=-1)
 
 def open(url):
-  webbrowser.open(url)
+  try:
+    webbrowser.open(url)
+  # If the user is missing the osascript binary - see http://code.google.com/p/namebench/issues/detail?id=88
+  except:
+    print 'Failed to open: [%s] - trying alternate methods.' % url
+    failed = True
+    try:
+      p = subprocess.Popen(('open', url))
+      p.wait()
+      failed = False
+    except:
+      print 'open did not seem to work'
+
+    if failed:
+      try:
+        p2 = subprocess.Popen(('start.exe', url))
+        p2.wait()
+      except:
+        print 'start.exe did not seem to work'

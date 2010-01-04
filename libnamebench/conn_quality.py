@@ -71,7 +71,6 @@ class ConnectionQuality(object):
     (response, duration) = gdns.TimedRequest('A', 'www.google.com.')[0:2]
     return (duration)
 
-
   def CheckConnectionQuality(self):
     """Look how healthy our DNS connection quality. Pure guesswork."""
     durations  = []

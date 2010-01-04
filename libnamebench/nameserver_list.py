@@ -306,7 +306,7 @@ class NameServers(list):
     try:
       cached = self.InvokeSecondaryCache()
     except:
-      self.msg('Failed to use secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString())
+      self.msg('Failed to use secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString()))
       cached = False
     if not cached:
       self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
@@ -326,7 +326,7 @@ class NameServers(list):
       try:
         self._UpdateSecondaryCache(cpath)
       except:
-        self.msg('Failed to save secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString())
+        self.msg('Failed to save secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString()))
 
     if not self.skip_cache_collusion_checks:
       self.CheckCacheCollusion()
