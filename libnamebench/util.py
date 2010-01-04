@@ -78,7 +78,7 @@ def ExtractIPsFromString(ip_string):
 
   ips = []
   # IPV6 If this regexp is too loose, see Regexp-IPv6 in CPAN for inspiration.
-  ips.extend(re.findall('[\dabcdef:]+:[\dabcdef]+', ip_string, re.IGNORECASE))
+  ips.extend(re.findall('[\dabcdef:]+:[\dabcdef:]+', ip_string, re.IGNORECASE))
   ips.extend(re.findall('\d+\.\d+\.\d+\.+\d+', ip_string))
   return ips
 
