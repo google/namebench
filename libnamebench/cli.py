@@ -89,7 +89,7 @@ class NameBenchCli(base_ui.BaseUI):
     print 'Final list of nameservers considered:'
     print '-' * 78
     for n in self.nameservers.SortByFastest():
-      print '%-15.15s %-16.16s %-4.0fms | %s' % (n.ip, n.name, n.check_average, n.warnings_string)
+      print '%-15.15s %-18.18s %-4.0fms | %s' % (n.ip, n.name, n.check_average, n.warnings_string)
     print ''
 
   def RunAndOpenReports(self):
