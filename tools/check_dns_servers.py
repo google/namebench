@@ -27,6 +27,8 @@ from libnamebench import nameserver_list
 from libnamebench import config
 from libnamebench import util
 
+import check_nameserver_popularity
+
 (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
 has_ip = [ x[0] for x in regional_ns ]
 has_ip.extend([ x[0] for x in global_ns ])
@@ -60,8 +62,15 @@ print '-' * 80
 geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 
 for ns in nameservers:
-  details = geo_city.record_by_addr(ns.ip)
+  if ':' in ns.ip:
+    details = {}
+  else:
+    details = geo_city.record_by_addr(ns.ip)
   city = details.get('city', '')
   country = details.get('country_name', '')
   region = details.get('region_name', '')
-  print "%s=%s %s (%s, %s) %s" % (ns.ip, ns.hostname, city, region, country, ns.warnings_comment)
+  results = check_nameserver_popularity.CheckPopularity(ns.ip)
+  urls = [ x['Url'] for x in results ]
+  if urls:
+    print "%s=%s %s:%s (%s, %s) %s # %s" % (ns.ip, ns.hostname, len(urls),
+                                            city, region, country, ns.warnings_comment, urls[:2])
