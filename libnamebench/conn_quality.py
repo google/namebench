@@ -79,7 +79,7 @@ class ConnectionQuality(object):
     durations.append(i_duration)
 
     for i in range(2):
-      self.msg('Checking connection quality', count=i, total=2)
+      self.msg('Checking connection quality', count=i+1, total=2)
       n_duration = self.GetNegativeResponseDuration()
       g_duration = self.GetGoogleResponseDuration()
       durations.extend([n_duration, g_duration])
