@@ -303,7 +303,10 @@ class NameServers(list):
       self.cache_dir = cache_dir
 
     cpath = self._SecondaryCachePath()
-    cached = self.InvokeSecondaryCache()
+    try:
+      cached = self.InvokeSecondaryCache()
+    except:
+      self.msg('Failed to use secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString())
     if not cached:
       self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
                (len(self), self.thread_count))
@@ -319,7 +322,11 @@ class NameServers(list):
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
     if not cached:
-      self._UpdateSecondaryCache(cpath)
+      try:
+        self._UpdateSecondaryCache(cpath)
+      except:
+        self.msg('Failed to save secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString())
+        
 
     if not self.skip_cache_collusion_checks:
       self.CheckCacheCollusion()
