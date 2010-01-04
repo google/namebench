@@ -115,7 +115,8 @@ class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
                include_internal=False, threads=20, status_callback=None,
-               timeout=5, health_timeout=5, skip_cache_collusion_checks=False):
+               timeout=5, health_timeout=5, skip_cache_collusion_checks=False,
+               ipv6_only=False):
     self.seen_ips = set()
     self.seen_names = set()
     self.timeout = timeout
@@ -125,13 +126,13 @@ class NameServers(list):
     self.health_timeout = health_timeout
     self.status_callback = status_callback
     self.cache_dir = tempfile.gettempdir()
+    self.ipv6_only = ipv6_only
     if threads > MAX_SANE_THREAD_COUNT:
       self.msg('Lowing thread count from %s to sane limit of %s' %
                (threads, MAX_SANE_THREAD_COUNT))
       self.thread_count = MAX_SANE_THREAD_COUNT
     else:
       self.thread_count = threads
-
 
     self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
@@ -177,6 +178,9 @@ class NameServers(list):
     """Add a server to the list given an IP and name."""
 
     ns = nameserver.NameServer(ip, name=name, preferred=preferred)
+    if self.ipv6_only and not ns.is_ipv6:
+      return
+    
     if ip in self.system_nameservers:
       ns.is_system = True
       ns.is_preferred = True

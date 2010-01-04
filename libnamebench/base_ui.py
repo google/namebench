@@ -57,6 +57,7 @@ class BaseUI(object):
         num_servers=self.options.num_servers,
         timeout=self.options.timeout,
         health_timeout=self.options.health_timeout,
+        ipv6_only=self.options.ipv6_only,
         status_callback=self.UpdateStatus
     )
     if self.options.invalidate_cache:

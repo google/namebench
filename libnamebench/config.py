@@ -84,6 +84,8 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     action='store_true', help='Disable GUI')
   parser.add_option('-C', '--enable-censorship-checks', dest='enable_censorship_checks',
                     action='store_true', help='Enable censorship checks')
+  parser.add_option('-6', '--ipv6_only', dest='ipv6_only',
+                    action='store_true', help='Only include IPv6 name servers')
   # Silly Mac OS X adding -psn_0_xxxx
   parser.add_option('-p', '--psn')
   parser.add_option('-O', '--only', dest='only',
