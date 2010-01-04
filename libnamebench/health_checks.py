@@ -33,7 +33,8 @@ WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
-CENSORSHIP_TIMEOUT_MULTIPLIER = 5
+ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
+CENSORSHIP_TIMEOUT_MULTIPLIER = 3.5
 MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 
@@ -127,6 +128,7 @@ class NameServerHealthChecks(object):
     return (is_broken, warning, duration)
 
   def TestRootServerResponse(self):
+    timeout = self.health_timeout * ROOT_SERVER_TIMEOUT_MULTIPLIER
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
 
   def StoreWildcardCache(self):

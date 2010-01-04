@@ -74,14 +74,16 @@ class ConnectionQuality(object):
 
   def CheckConnectionQuality(self):
     """Look how healthy our DNS connection quality. Pure guesswork."""
-    self.msg('Checking connection quality...')
     durations  = []
+    self.msg('Checking query interception status...')
+    (intercepted, i_duration) = self.GetInterceptionStatus()
+    durations.append(i_duration)
 
     for i in range(2):
-      (intercepted, i_duration) = self.GetInterceptionStatus()
+      self.msg('Checking connection quality', count=i, total=2)
       n_duration = self.GetNegativeResponseDuration()
       g_duration = self.GetGoogleResponseDuration()
-      durations.extend([i_duration, n_duration, g_duration])
+      durations.extend([n_duration, g_duration])
       time.sleep(0.5)
 
     duration = util.CalculateListAverage(durations)

@@ -46,6 +46,9 @@ if sys.platform == "win32":
 else:
   MAX_SANE_THREAD_COUNT = 250
 
+# Slow down for these, as they are used for timing.
+MAX_INITIAL_HEALTH_THREAD_COUNT = 32
+
 class OutgoingUdpInterception(Exception):
 
   def __init__(self, value):
@@ -325,8 +328,9 @@ class NameServers(list):
     self.RunFinalHealthCheckThreads(sanity_secondary)
     if censor_tests:
       self.RunCensorshipCheckThreads(censor_tests)
-
-    self._RemoveGlobalWarnings()
+    else:
+      # If we aren't doing censorship checks, quiet any possible false positives.
+      self._RemoveGlobalWarnings()
     if not self.enabled:
       raise TooFewNameservers('None of the nameservers tested are healthy')
 
@@ -440,7 +444,8 @@ class NameServers(list):
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
           faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
 
-  def _LaunchQueryThreads(self, action_type, status_message, items, **kwargs):
+  def _LaunchQueryThreads(self, action_type, status_message, items,
+                          thread_count=None, **kwargs):
     """Launch query threads for a given action type.
 
     Args:
@@ -457,7 +462,8 @@ class NameServers(list):
     for item in items:
       input_queue.put(item)
 
-    thread_count = self.thread_count
+    if not thread_count:
+      thread_count = self.thread_count
     if thread_count > len(items):
       thread_count = len(items)
 
@@ -482,7 +488,7 @@ class NameServers(list):
 
   def RunCacheCollusionThreads(self, test_combos):
     """Schedule and manage threading for cache collusion checks."""
-    return self._LaunchQueryThreads('wildcard_check', 'Running cache-sharing checks', test_combos)
+    return self._LaunchQueryThreads('wildcard_check', 'Running cache-sharing checks on %s servers' % len(self.enabled), test_combos)
 
   def PingNameServers(self):
     """Quickly ping nameservers to see which are available."""
@@ -492,7 +498,12 @@ class NameServers(list):
 
   def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled), list(self), checks=checks)
+    # Since we use this to decide which nameservers to include, cool down the thread
+    # count a bit. 
+    if self.thread_count > MAX_INITIAL_HEALTH_THREAD_COUNT:
+      thread_count = MAX_INITIAL_HEALTH_THREAD_COUNT
+    results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
+                                       list(self), checks=checks, thread_count=thread_count)
 
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
@@ -504,5 +515,5 @@ class NameServers(list):
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
-    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries', list(self))
+    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries from %s servers' % len(self.enabled), list(self))
 
