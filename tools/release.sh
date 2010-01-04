@@ -26,5 +26,5 @@ svn log > ChangeLog.txt
 find . -name "*.pyc" -delete
 find . -name ".svn" -exec rm -Rf {} \; 2>/dev/null
 cd ..
-tar -zcvf namebench-${version}.tgz namebench-${version}/
+GZIP=9 tar -zcvf namebench-${version}.tgz namebench-${version}/
 rm -Rf namebench-${version}
