@@ -15,8 +15,15 @@
 
 PKG_DIR="$HOME/Desktop"
 
+if [ ! -d "cocoa" ]; then
+  echo "cocoa/ directory not find in pwd"
+  exit 1
+fi
 
 rm -Rf $PKG_DIR/namebench.app
+find cocoa/build/Release -name "*.pyc" -delete
+find cocoa/build/Release -name "*~" -delete
+find cocoa/build/Release -name "*." -delete
 cp -Rp cocoa/build/Release/namebench.app $PKG_DIR/
 # No longer required now that our Xcode project was setup properly.
 #tmp="/tmp/namebench-$$"
@@ -27,6 +34,7 @@ dmg="$PKG_DIR/namebench-${version}.dmg"
 if [ -f "$dmg" ]; then
   rm -f "$dmg"
 fi
-hdiutil create -srcfolder $PKG_DIR/namebench.app $dmg
+hdiutil create -srcfolder $PKG_DIR/namebench.app bundle.dmg
 rm -Rf $PKG_DIR/namebench.app
-
+hdiutil convert -imagekey zlib-level=9 -format UDZO -o $dmg bundle.dmg
+open $dmg
