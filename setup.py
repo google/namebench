@@ -130,7 +130,7 @@ setup(name='namebench',
                 'bundle_files': 3, # 1 nor 2 does not work
                 'ascii': False,
                 'packages': ['third_party'],
-                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2'],
+                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2', 'tcl'],
                 'dll_excludes': ["w9xpopen.exe","MSVCP90.dll", "MSVCR90.DLL"],
             }
         },
