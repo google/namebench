@@ -34,7 +34,7 @@ WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 5
 ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
-CENSORSHIP_TIMEOUT_MULTIPLIER = 3.5
+CENSORSHIP_TIMEOUT_MULTIPLIER = 4
 MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 
