@@ -96,25 +96,32 @@ def DefineAndParseOptions(filename='namebench.cfg'):
 def GetLatestSanityChecks():
   """Get the latest copy of the sanity checks config."""
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
+  http_version_usable = False
   try:
     resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
   except exc:
     print exc
-  config = ConfigParser.ConfigParser()
+  http_config = ConfigParser.ConfigParser()
 
-  if '[sanity]' in content:
+  if '[base]' in content:
     fp = StringIO.StringIO(content)
     try:
-      config.readfp(fp)
+      http_config.readfp(fp)
+      http_version_usable = True
     except:
       pass
 
-  if not config.has_section('sanity') or not config.has_section('censorship'):
-    ref_file = util.FindDataFile('data/hostname_reference.cfg')
-    print '- Using built-in sanity reference: %s' % ref_file
-    config.read(ref_file)
+  ref_file = util.FindDataFile('data/hostname_reference.cfg')
+  local_config = ConfigParser.ConfigParser()
+  local_config.read(ref_file)
 
-  return (config.items('sanity'), config.items('sanity-secondary'), config.items('censorship'))
+  use_config = local_config
+  if http_version_usable:
+    if int(http_config.get('base', 'version')) > int(config.get('base', 'version')):
+      print "- Using %s" % SANITY_REFERENCE_URL      
+      use_config = http_config
+
+  return (use_config.items('sanity'), use_config.items('sanity-secondary'), use_config.items('censorship'))
 
 
 def ProcessConfigurationFile(options):
