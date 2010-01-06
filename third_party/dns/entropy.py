@@ -48,35 +48,21 @@ class EntropyPool(object):
     def stir(self, entropy):
         bytes = [ord(c) for c in self.pool]
         for c in entropy:
-            if self.pool_index == self.hash_len or self.pool_index >= len(bytes):
+            if self.pool_index == self.hash_len or self.pool_index >= len(bytes)-1:
                 self.pool_index = 0
             b = ord(c) & 0xff
-            try:
-                bytes[self.pool_index] ^= b
-            except IndexError:
-                pass
-#                print "[stir] pool index: %s len bytes: %s" % (self.pool_index, len(bytes))
+            bytes[self.pool_index] ^= b
             self.pool_index += 1
         self.pool = ''.join([chr(c) for c in bytes])
 
     def random_8(self):
-        if self.digest is None or self.next_byte == self.hash_len or self.next_byte >= len(self.digest):
+        if self.digest is None or self.next_byte == self.hash_len or self.next_byte >= len(self.digest)-1:
             self.hash.update(self.pool)
             self.digest = self.hash.digest()
             self.stir(self.digest)
             self.next_byte = 0
-
-	# I'm not sure why the if statement above isn't triggering here.
-	try:
-            value = ord(self.digest[self.next_byte])
-	except IndexError:
-#	    print "forcing stir [dlen=%s next=%s]" % (len(self.digest), self.next_byte)
-            self.hash.update(self.pool)
-            self.digest = self.hash.digest()
-            self.stir(self.digest)
-            self.next_byte = 0
-            value = ord(self.digest[self.next_byte])
-	    
+        
+        value = ord(self.digest[self.next_byte])
         self.next_byte += 1
         return value
 
