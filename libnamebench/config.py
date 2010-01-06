@@ -97,6 +97,7 @@ def GetLatestSanityChecks():
   """Get the latest copy of the sanity checks config."""
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   http_version_usable = False
+  use_config = None
   try:
     resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
   except exc:
@@ -114,12 +115,14 @@ def GetLatestSanityChecks():
   ref_file = util.FindDataFile('data/hostname_reference.cfg')
   local_config = ConfigParser.ConfigParser()
   local_config.read(ref_file)
-
-  use_config = local_config
+  
   if http_version_usable:
-    if int(http_config.get('base', 'version')) > int(config.get('base', 'version')):
+    if int(http_config.get('base', 'version')) > int(local_config.get('base', 'version')):
       print "- Using %s" % SANITY_REFERENCE_URL      
       use_config = http_config
+
+  if not use_config:
+    use_config = local_config
 
   return (use_config.items('sanity'), use_config.items('sanity-secondary'), use_config.items('censorship'))
 
