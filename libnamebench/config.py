@@ -100,8 +100,8 @@ def GetLatestSanityChecks():
   use_config = None
   try:
     resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
-  except exc:
-    print exc
+  except:
+    print 'Unable to fetch latest reference: %s' % util.GetLastExceptionString()
   http_config = ConfigParser.ConfigParser()
 
   if '[base]' in content:
