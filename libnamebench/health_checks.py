@@ -100,19 +100,6 @@ class NameServerHealthChecks(object):
 
     return (is_broken, error_msg, duration)
 
-  def TestLocalhostResponse(self):
-    """Test to simple localhost. lookup."""
-
-    # NOTE: This check uses self.timeout instead of self.health_timeout for
-    # performance reasons.
-    (response, duration, error_msg) = self.TimedRequest('A', 'localhost.',
-                                                  timeout=self.timeout)
-    if error_msg:
-      is_broken = True
-    else:
-      is_broken = False
-    return (is_broken, error_msg, duration)
-
   def TestNegativeResponse(self):
     """Test for NXDOMAIN hijaaking."""
     is_broken = False
@@ -214,7 +201,7 @@ class NameServerHealthChecks(object):
     elif final_check:
       tests = [(self.TestNegativeResponse,[])]
     else:
-      tests = [(self.TestLocalhostResponse,[])]
+      tests = []
 
     for (check, expected_value) in sanity_checks:
       (req_type, req_name) = check.split(' ')
