@@ -84,12 +84,6 @@ class NameServer(health_checks.NameServerHealthChecks):
     else:
       self.is_ipv6 = False
 
-    if self.is_system:
-      self.max_failures = MAX_SYSTEM_FAILURES
-    elif self.is_preferred:
-      self.max_failures = MAX_PREFERRED_FAILURES
-    else:
-      self.max_failures = 0
 
 
   @property
@@ -157,6 +151,13 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   def AddFailure(self, message):
     """Add a failure for this nameserver. This will effectively disable it's use."""
+    if self.is_system:
+      max = MAX_SYSTEM_FAILURES
+    elif self.is_preferred:
+      max = MAX_PREFERRED_FAILURES
+    else:
+      max = 0
+
     self.failed_test_count += 1
 
     if self.is_system or self.is_preferred:
@@ -164,9 +165,9 @@ class NameServer(health_checks.NameServerHealthChecks):
       if self.is_ipv6 and len(self.checks) <= 1:
         self.disabled = message
       else:
-        print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, self.max_failures, message)
+        print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max, message)
 
-    if self.failed_test_count >= self.max_failures:
+    if self.failed_test_count >= max:
       self.disabled = message
 
   def CreateRequest(self, record, request_type, return_type):
