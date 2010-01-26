@@ -100,19 +100,28 @@ class NameServerHealthChecks(object):
 
     return (is_broken, error_msg, duration)
 
-  def TestNegativeResponse(self):
+  def TestNegativeResponse(self, prefix=None):
     """Test for NXDOMAIN hijaaking."""
     is_broken = False
     warning = None
-    poison_test = 'nb.%s.google.com.' % random.random()
+    if prefix:
+      hostname = prefix
+      warning_suffix = ' (%s)' % prefix
+    else:
+      hostname = 'test'
+      warning_suffix = ''
+    poison_test = '%s.nb%s.google.com.' % (hostname, random.random())
     (response, duration, error_msg) = self.TimedRequest('A', poison_test,
                                                   timeout=self.health_timeout)
     if not response:
       is_broken = True
     elif response.answer:
-      warning = 'NXDOMAIN Hijacking'
+      warning = 'NXDOMAIN Hijacking' + warning_suffix
 
     return (is_broken, warning, duration)
+  
+  def TestWwwNegativeResponse(self):
+    return self.TestNegativeResponse(prefix='www')
 
   def TestRootServerResponse(self):
     timeout = self.health_timeout * ROOT_SERVER_TIMEOUT_MULTIPLIER
@@ -196,12 +205,12 @@ class NameServerHealthChecks(object):
     """Qualify a nameserver to see if it is any good."""
 
     if fast_check:
-      tests = [(self.TestRootServerResponse,[])]
+      tests = [(self.TestRootServerResponse, [])]
       sanity_checks = []
     elif final_check:
-      tests = [(self.TestNegativeResponse,[])]
+      tests = [(self.TestWwwNegativeResponse, [])]
     else:
-      tests = []
+      tests = [(self.TestNegativeResponse, [])]
 
     for (check, expected_value) in sanity_checks:
       (req_type, req_name) = check.split(' ')
@@ -217,10 +226,12 @@ class NameServerHealthChecks(object):
         test_name = function.__name__
 
       self.checks.append((test_name, is_broken, warning, duration))
-      if warning:
-        self.warnings.add(warning)
       if is_broken:
         self.AddFailure('%s: %s' % (test_name, warning))
+      if warning:
+        # Special case for NXDOMAIN de-duplication
+        if not ('NXDOMAIN' in warning and 'NXDOMAIN Hijacking' in self.warnings):
+          self.warnings.add(warning)
       if self.disabled:
         break
 
