@@ -35,15 +35,15 @@ class ParserThread(threading.Thread):
 
   def run(self):
     hp = HistoryParser()
-    self.hosts = hp.ParseByType(self.type)
+    self.hosts = hp.ParseByType(self.type, complain=False, max_age_days=60)
     return self.hosts
 
 class HistoryParser(object):
   """Parse the history file from files and web browsers and such."""
 
   MAX_NON_UNIQUE_RECORD_COUNT = 500000
-  MIN_FILE_SIZE = 128
-  MIN_RECOMMENDED_RECORD_COUNT = 2
+  MIN_FILE_SIZE = 7500
+  MIN_RECOMMENDED_RECORD_COUNT = 100
   INTERNAL_RE = re.compile('\.prod|\.corp|\.bor|internal|dmz')
   IP_RE = re.compile('^[\d\.]+$')
   TYPES = {}
@@ -97,7 +97,7 @@ class HistoryParser(object):
     else:
       return self.ParseByFilename(path_or_type)
 
-  def ParseByType(self, source, complain=True, store=False):
+  def ParseByType(self, source, complain=True, store=False, max_age_days=None):
     """Given a type, parse the newest file and return a list of hosts."""
 
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
@@ -106,6 +106,11 @@ class HistoryParser(object):
         print "- %s: no matches in %s" % (source, tried)
       return False
     newest = sorted(paths, key=os.path.getmtime)[-1]
+    if max_age_days:
+      age_days = (time.time() - os.path.getmtime(newest)) / 86400
+      if age_days > max_age_days:
+        print '- Ignoring history for %s source (%2.0f days old)' % (source, age_days)
+        return []
 
     # Do not use this with multiple threads.
     results = self.ParseByFilename(newest)
@@ -300,6 +305,12 @@ class HistoryParser(object):
         (os.getenv('HOME', False), '.mozilla', 'firefox', '*', 'places.sqlite'),
         (os.getenv('APPDATA', False), 'Mozilla', 'Firefox', 'Profiles', '*',
          'places.sqlite')
+        # firefox v2.0
+        (os.getenv('HOME', False), 'Library', 'Application Support', 'Firefox',
+         'Profiles', '*', 'history.dat'),
+        (os.getenv('HOME', False), '.mozilla', 'firefox', '*', 'history.dat'),
+        (os.getenv('APPDATA', False), 'Mozilla', 'Firefox', 'Profiles', '*',
+         'history.dat')
     )
     return paths
 
