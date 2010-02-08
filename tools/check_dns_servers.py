@@ -37,6 +37,9 @@ check_ns = []
 for line in sys.stdin:
   ips = util.ExtractIPsFromString(line)
   for ip in ips:
+    # disable IPV6 by default
+    if ':' in ip:
+      continue  
     if ip not in has_ip:
       check_ns.append((ip, ip))
 
@@ -71,6 +74,6 @@ for ns in nameservers:
   region = details.get('region_name', '')
   results = check_nameserver_popularity.CheckPopularity(ns.ip)
   urls = [ x['Url'] for x in results ]
-  if urls:
+  if urls:   
     print "%s=%s %s:%s (%s, %s) %s # %s" % (ns.ip, ns.hostname, len(urls),
                                             city, region, country, ns.warnings_comment, urls[:2])
