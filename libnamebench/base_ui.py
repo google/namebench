@@ -98,9 +98,8 @@ class BaseUI(object):
     self.UpdateStatus('Creating test records using %s' % self.options.select_mode)
     if self.options.import_source:
       hosts = self.hparser.GetParsedSource(self.options.import_source)
-      self.UpdateStatus('%s has %s hosts' % (self.options.import_source, len(hosts)))
       test_data = self.hparser.GenerateTestData(hosts)
-      self.UpdateStatus('%s records available in test pool' % len(test_data))
+      self.UpdateStatus('%s sanitized records available in test pool' % len(test_data))
       self.bmark.CreateTests(test_data, select_mode=self.options.select_mode)
     else:
       # The Alexa data (by default)

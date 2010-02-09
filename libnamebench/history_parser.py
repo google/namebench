@@ -119,7 +119,7 @@ class HistoryParser(object):
     if max_age_days:
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
       if age_days > max_age_days:
-        self.msg('Ignoring history for %s source (%2.0f days old)' % (source, age_days))
+#        self.msg('Ignoring history for %s source (%2.0f days old)' % (source, age_days))
         return []
 
     # Do not use this with multiple threads.
@@ -163,18 +163,23 @@ class HistoryParser(object):
         self.msg('%s: Too few records to consider (%s)' %
                  (self.GetTypeName(thread.type), len(thread.hosts)))
 
-    duration = time.time() - start_time
-    if duration > 5:
-      self.msg('Read %s total history records in %0.2fs' % (records, duration))
     return results
 
-  def ParseByFilename(self, filename):
+  def ParseByFilename(self, filename, store=False):
     # Only matches http://host.domain type entries (needs at least one subdom)
     parse_re = re.compile('https*://([\-\w]+\.[\-\w\.]+)')
     size_mb =  os.path.getsize(filename) / 1024.0 / 1024.0
     self.msg('Reading %s (%0.0fMB)' % (filename, size_mb))
     # binary mode is necessary for running under Windows
-    return parse_re.findall(open(filename, 'rb').read())
+    start_time = time.time()
+    results = parse_re.findall(open(filename, 'rb').read())
+    if store:
+      self.imported_sources[filename] = results
+    duration = time.time() - start_time
+    if duration > 5:
+      self.msg('Read %s total history records in %0.2fs' %
+               (len(results), duration))
+    return results
 
   def GenerateTestDataFromInput(self, path_or_type):
     hosts = self.Parse(path_or_type)
