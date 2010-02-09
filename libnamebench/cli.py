@@ -106,6 +106,9 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
+    self.DiscoverSources()
+    self.options.data_source = self.sources[0][0]
+    
     if self.options.import_source:
       self.hparser.Parse(self.options.import_source, store=True)
 

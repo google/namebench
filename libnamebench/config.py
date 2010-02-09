@@ -60,8 +60,7 @@ def DefineAndParseOptions(filename='namebench.cfg'):
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='health check timeout (in seconds)')
-  parser.add_option('-d', '--datafile', dest='data_file',
-                    default='data/alexa-top-10000-global.txt',
+  parser.add_option('-d', '--datafile', dest='data_file', default=None,
                     help='File containing a list of domain names to query.')
   parser.add_option('-i', '--import', dest='import_source',
                     help=('Import history from an external application (%s)' %

@@ -149,7 +149,6 @@ class BaseUI(object):
     self.UpdateStatus('Searching for usable data sources')
     self.hparser = history_parser.HistoryParser()
     self.sources = self.hparser.GetAvailableHistorySources()
-    self.UpdateStatus('All available sources have been parsed.')
 
   def ParseSourceSelection(self, selection):
     self.UpdateStatus('Matching "%s" to %s' % (selection, self.sources))

@@ -303,7 +303,7 @@ class HistoryParser(object):
          'Profiles', '*', 'places.sqlite'),
         (os.getenv('HOME', False), '.mozilla', 'firefox', '*', 'places.sqlite'),
         (os.getenv('APPDATA', False), 'Mozilla', 'Firefox', 'Profiles', '*',
-         'places.sqlite')
+         'places.sqlite'),
         # firefox v2.0
         (os.getenv('HOME', False), 'Library', 'Application Support', 'Firefox',
          'Profiles', '*', 'history.dat'),
