@@ -34,7 +34,7 @@ class ParserThread(threading.Thread):
 
   def run(self):
     hp = HistoryParser()
-    self.hosts = hp.ParseByType(self.type, complain=False, max_age_days=60)
+    self.hosts = hp.ParseByType(self.type, complain=False, max_age_days=30)
     return self.hosts
 
 class HistoryParser(object):
@@ -133,6 +133,8 @@ class HistoryParser(object):
     threads = []
 
     for type in self.GetTypes():
+      if not self.GetTypeMethod(type):
+        continue
       thread = ParserThread(type)
       thread.start()
       threads.append(thread)
