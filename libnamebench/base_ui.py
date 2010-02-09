@@ -47,7 +47,7 @@ class BaseUI(object):
     self.bmark = None
     self.html_path = None
     self.csv_path = None
-    self.hparser = history_parser.HistoryParser()
+    self.hparser = history_parser.HistoryParser(status_callback=self.UpdateStatus)
     self.sources = {}
 
   def UpdateStatus(self, msg, **kwargs):

@@ -47,7 +47,7 @@ class HistoryParser(object):
   IP_RE = re.compile('^[\d\.]+$')
   TYPES = {}
 
-  def __init__(self):
+  def __init__(self, status_callback=None):
     self.TYPES = {
         'alexa': ('Alexa Top 10000 Domains', None),
         'chrome': ('Google Chrome', self.GoogleChromeHistoryPath),
@@ -62,6 +62,13 @@ class HistoryParser(object):
         'squid': ('Squid Web Proxy', self.SquidLogPath),
     }
     self.imported_sources = {}
+    self.status_callback = status_callback
+
+  def msg(self, msg, **kwargs):
+    if self.status_callback:
+      self.status_callback(msg, **kwargs)
+    else:
+      print '- %s' % msg
 
   def GetTypeName(self, name):
     return self.TYPES[name][0]
@@ -106,13 +113,13 @@ class HistoryParser(object):
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
     if not paths:
       if complain:
-        print "- %s: no matches in %s" % (source, tried)
+        self.msg('%s: no matches in %s' % (source, tried))
       return False
     newest = sorted(paths, key=os.path.getmtime)[-1]
     if max_age_days:
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
       if age_days > max_age_days:
-        print '- Ignoring history for %s source (%2.0f days old)' % (source, age_days)
+        self.msg('Ignoring history for %s source (%2.0f days old)' % (source, age_days))
         return []
 
     # Do not use this with multiple threads.
@@ -146,25 +153,26 @@ class HistoryParser(object):
 
       if thread.hosts and len(thread.hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
         results[thread.type] = thread.hosts
-        print "- %s: Found %s useful hostnames" % (self.GetTypeName(thread.type),
-                                                   len(thread.hosts))
+        self.msg('%s: Found %s useful hostnames' % (self.GetTypeName(thread.type),
+                                                    len(thread.hosts)))
       elif thread.hosts == False:
         pass
       elif not thread.hosts:
-        print '- %s: No records found!' % (self.GetTypeName(thread.type))
+        self.msg('%s: No records found!' % (self.GetTypeName(thread.type)))
       else:
-        print '- %s: Too few records to consider (%s)' % (self.GetTypeName(thread.type),
-                                                          len(thread.hosts))
+        self.msg('%s: Too few records to consider (%s)' %
+                 (self.GetTypeName(thread.type), len(thread.hosts)))
 
     duration = time.time() - start_time
     if duration > 5:
-      print '- Read %s total records in %0.2fs' % (records, duration)
+      self.msg('Read %s total history records in %0.2fs' % (records, duration))
     return results
 
   def ParseByFilename(self, filename):
     # Only matches http://host.domain type entries (needs at least one subdom)
-    parse_re = re.compile('\w+://([\-\w]+\.[\-\w\.]+)')
-    print '* Reading %s' % filename
+    parse_re = re.compile('https*://([\-\w]+\.[\-\w\.]+)')
+    size_mb =  os.path.getsize(filename) / 1024.0 / 1024.0
+    self.msg('Reading %s (%0.0fMB)' % (filename, size_mb))
     # binary mode is necessary for running under Windows
     return parse_re.findall(open(filename, 'rb').read())
 
@@ -253,7 +261,7 @@ class HistoryParser(object):
         if os.path.getsize(filename) > self.MIN_FILE_SIZE:
           found.append(filename)
         else:
-          print "* %s exists, but is only %s bytes" % (filename, os.path.getsize(filename))
+          self.msg('%s exists, but is only %s byte' % (filename, os.path.getsize(filename)))
 
     return (found, tried)
 

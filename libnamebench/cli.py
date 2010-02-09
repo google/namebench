@@ -112,6 +112,7 @@ class NameBenchCli(base_ui.BaseUI):
     elif self.options.import_source:
       self.hparser.Parse(self.options.import_source, store=True)
     else:
+      print '- No input source provided, searching for the best available...'
       self.DiscoverSources()
       if self.available_sources:
         self.options.import_source = self.available_sources[0][0]
