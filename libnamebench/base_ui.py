@@ -17,13 +17,13 @@
 import datetime
 import os
 import tempfile
-import urllib
 import better_webbrowser
 
-import benchmark
-import config
-import history_parser
-import nameserver_list
+from . import benchmark
+from . import config
+from . import history_parser
+from . import nameserver_list
+from . import reporter
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
@@ -40,6 +40,14 @@ def GenerateOutputFilename(extension):
 
 class BaseUI(object):
   """Common methods for all UI implementations."""
+
+  def __init__(self):
+    self.reporter = None
+    self.nameservers = None
+    self.bmark = None
+    self.html_path = None
+    self.csv_path = None
+    self.hparser = history_parser.HistoryParser()
 
   def UpdateStatus(self, msg, **kwargs):
     """Update the little status message on the bottom of the window."""
@@ -86,8 +94,6 @@ class BaseUI(object):
                                      test_count=self.options.test_count,
                                      run_count=self.options.run_count,
                                      status_callback=self.UpdateStatus)
-
-    self.bmark.UpdateStatus = self.UpdateStatus
     self.UpdateStatus('Creating test records using %s' % self.options.select_mode)
     if self.options.import_source:
       hosts = self.hparser.GetParsedSource(self.options.import_source)
@@ -102,12 +108,13 @@ class BaseUI(object):
 
   def RunBenchmark(self):
     """Run the benchmark."""
-    self.bmark.Run()
+    results = self.bmark.Run()
+    self.reporter = reporter.ReportGenerator(self.nameservers, results)
 
   def RunAndOpenReports(self):
     """Run the benchmark and open up the HTML report on completion."""
     self.RunBenchmark()
-    best = self.bmark.BestOverallNameServer()
+    best = self.reporter.BestOverallNameServer()
     self.CreateReports()
     self.DisplayHtmlReport()
     self.UpdateStatus('Complete! %s [%s] is the best.' % (best.name, best.ip))
@@ -126,11 +133,12 @@ class BaseUI(object):
 
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
-    self.bmark.CreateReport(format='html', output_fp=f, config=self.options, csv_path=self.csv_path)
+    self.reporter.CreateReport(format='html', output_fp=f, config=self.options,
+                               csv_path=self.csv_path)
     f.close()
 
     self.UpdateStatus('Saving query details (CSV) to %s' % self.csv_path)
-    self.bmark.SaveResultsToCsv(self.csv_path)
+    self.reporter.SaveResultsToCsv(self.csv_path)
 
   def DisplayHtmlReport(self):
     self.UpdateStatus('Opening %s' % self.html_path)

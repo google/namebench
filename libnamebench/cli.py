@@ -25,19 +25,12 @@ import datetime
 import math
 import sys
 
-import base_ui
-import benchmark
-import config
-import history_parser
-import nameserver_list
-import better_webbrowser
-import conn_quality
-
-# TODO(tstromberg): Migrate this class to using base_ui.BaseUI for less code
-# duplication.
+from . import base_ui
+from . import history_parser
 
 class NameBenchCli(base_ui.BaseUI):
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
+
     self.options = options
     self.supplied_ns = supplied_ns
     self.global_ns = global_ns
@@ -46,6 +39,9 @@ class NameBenchCli(base_ui.BaseUI):
     self.version = version
     self.last_msg = (None, None, None, None)
     self.last_msg_count_posted = 0
+    self.preferred = []
+    self.secondary = []
+    super(NameBenchCli, self).__init__()
 
   def UpdateStatus(self, msg, count=None, total=None, error=False, debug=False):
     """Status updates for the command-line. A lot of voodoo here."""
@@ -89,16 +85,13 @@ class NameBenchCli(base_ui.BaseUI):
     print 'Final list of nameservers considered:'
     print '-' * 78
     for n in self.nameservers.SortByFastest():
-      print '%-15.15s %-18.18s %-4.0fms | %s' % (n.ip, n.name, n.check_average, n.warnings_string)
+      print '%-15.15s %-18.18s %-4.0fms | %s' % (n.ip, n.name, n.check_average,
+                                                 n.warnings_string)
     print ''
 
   def RunAndOpenReports(self):
     self.RunBenchmark()
-    report = self.bmark.CreateReport(format='ascii')
-    print ''
-    print report
-    print ''
-    self.CreateReports()
+    print "\n%s\n" % self.reporter.CreateReport(format='ascii')
     if self.options.open_webbrowser:
       self.DisplayHtmlReport()
 
@@ -108,11 +101,11 @@ class NameBenchCli(base_ui.BaseUI):
           (self.version, self.options.import_source or self.options.data_file,
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
-           (self.options.thread_count, self.options.test_count, self.options.run_count, self.options.timeout,
+           (self.options.thread_count, self.options.test_count,
+            self.options.run_count, self.options.timeout,
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    self.hparser = history_parser.HistoryParser()
     if self.options.import_source:
       self.hparser.Parse(self.options.import_source, store=True)
 
