@@ -13,17 +13,37 @@ body {
   border: 2px solid #000;
 }
 
+h1 {
+  color: #00CC33;
+  font-size: 75px;
+  text-shadow: 3px 3px #eee;
+  margin: 0;
+}
+
 h2 {
   padding-top: 1em;
   clear:  both;
-  font-size: 1.1em;
+  font-size: 1em;
 }
 
 h3 {
-  font-size: 0.9em;
+  font-size: 0.8em;
   padding-top:  0;
-  margin-top: 0;
+  margin: 0;
 }
+
+h4 {
+  margin: 0;
+  padding: 0;
+}
+
+h5 {
+  font-size:  30px;
+  font-style: italic;
+  color: #009911;
+  margin: 0;
+}
+
 
 #nsdetails {
   display: block;
@@ -119,20 +139,11 @@ ul.warnings {
   display:  inline-table;
 }
 
-h1 {
-  color: #00CC33;
-  font-size: 86px;
-  text-shadow: 3px 3px #eee;
-  margin: 0;
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
+#recommended_config table {
+  margin-top: 1em;
 }
 
-#sumverb {
-  font-size:  0.45em;
-  font-style: italic;
-  text-shadow: none;
-}
+
 
 .rec_name {
   margin-left:  8px;

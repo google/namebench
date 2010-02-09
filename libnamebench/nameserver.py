@@ -125,7 +125,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     try:
       answer = dns.resolver.query(dns.reversename.from_address(self.ip), 'PTR')
       if answer:
-        return str(answer[0])
+        return str(answer[0]).rstrip('.')
     except:
       return ''
 

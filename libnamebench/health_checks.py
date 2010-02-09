@@ -96,7 +96,8 @@ class NameServerHealthChecks(object):
             unmatched_answers.append(reply)
 
       if unmatched_answers:
-        error_msg = 'Incorrect result for %s: %s' % (record, ', '.join(unmatched_answers))
+        error_msg = ('Wrong result for %s: %s' %
+                     (record.rstrip('.'), ', '.join(unmatched_answers).rstrip('.')))
 
     return (is_broken, error_msg, duration)
 

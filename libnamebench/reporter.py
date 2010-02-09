@@ -37,7 +37,8 @@ FAQ_MAP = {
   'Incorrect result': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"Incorrect_result_for..."_mean?'
 }
 
-
+# Only bother showing a percentage if we have this many tests.
+MIN_RELEVANT_COUNT = 40
 
 class ReportGenerator(object):
   """Generate reports - ASCII, HTML, etc."""
@@ -66,6 +67,7 @@ class ReportGenerator(object):
 
       for test_run in self.results[ns]:
         # x: record, req_type, duration, response
+        total_count = len(test_run)
         failure_count += len([x for x in test_run if not x[3]])
         nx_count += len([x for x in test_run if x[3] and not x[3].answer])
         duration = sum([x[2] for x in test_run])
@@ -76,7 +78,7 @@ class ReportGenerator(object):
       (fastest, slowest) = self.FastestAndSlowestDurationForNameServer(ns)
 
       yield (ns, overall_average, run_averages, fastest, slowest,
-             failure_count, nx_count)
+             failure_count, nx_count, total_count)
 
   def FastestAndSlowestDurationForNameServer(self, ns):
     """For a given nameserver, find the fastest/slowest non-error durations."""
@@ -151,7 +153,7 @@ class ReportGenerator(object):
     nameserver_details = list(sorted_averages)
     for ns in self.nameservers:
       if ns.disabled:
-        nameserver_details.append((ns, 0.0, [], 0, 0, 0))
+        nameserver_details.append((ns, 0.0, [], 0, 0, 0, 0))
 
       # TODO(tstromberg): Do this properly without injecting variables into the nameserver object.
       # Tuples: Note, URL
@@ -188,13 +190,24 @@ class ReportGenerator(object):
       # Fall back to the second fastest of any type.
       if not comparison_record:
         comparison_record = other_records
-      comparison = {
-        'percent': ((comparison_record[0][1] / nameserver_details[0][1])-1) * 100,
-        'ns': comparison_record[0][0]
-      }
+
+      percent = ((comparison_record[0][1] / nameserver_details[0][1])-1) * 100
+      if nameserver_details[0][-1] > MIN_RELEVANT_COUNT:
+        comparison = {
+          'title': "%0.0f%%" % percent,
+          'subtitle': 'Faster',
+          'ns': comparison_record[0][0]
+        }
+      else:
+        comparison = {
+          'title': 'Undecided',
+          'subtitle': 'Too few tests (try %s)' % MIN_RELEVANT_COUNT,
+          'ns': None
+        }
     else:
       comparison = {
-        'percent': 0,
+        'title': None,
+        'subtitle': None,
         'ns': nameserver_details[0][0]
       }
 
