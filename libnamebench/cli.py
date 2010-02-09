@@ -92,6 +92,7 @@ class NameBenchCli(base_ui.BaseUI):
   def RunAndOpenReports(self):
     self.RunBenchmark()
     print "\n%s\n" % self.reporter.CreateReport(format='ascii')
+    self.CreateReports()
     if self.options.open_webbrowser:
       self.DisplayHtmlReport()
 
@@ -106,11 +107,14 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    self.DiscoverSources()
-    self.options.data_source = self.sources[0][0]
-    
     if self.options.import_source:
       self.hparser.Parse(self.options.import_source, store=True)
+    else:
+      self.DiscoverSources()
+      self.options.import_source = self.available_sources[0][0]
+
+    print '> Using History Source: %s' % self.hparser.GetTypeName(self.options.import_source)
+    print ''
 
     if self.options.only:
       if not self.supplied_ns:

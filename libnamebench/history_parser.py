@@ -41,8 +41,8 @@ class HistoryParser(object):
   """Parse the history file from files and web browsers and such."""
 
   MAX_NON_UNIQUE_RECORD_COUNT = 500000
-  MIN_FILE_SIZE = 7500
-  MIN_RECOMMENDED_RECORD_COUNT = 100
+  MIN_FILE_SIZE = 10000
+  MIN_RECOMMENDED_RECORD_COUNT = 200
   INTERNAL_RE = re.compile('\.prod|\.corp|\.bor|internal|dmz')
   IP_RE = re.compile('^[\d\.]+$')
   TYPES = {}
@@ -62,9 +62,12 @@ class HistoryParser(object):
     }
     self.imported_sources = {}
 
+  def GetTypeName(self, name):
+    return self.TYPES[name][0]
+
   def GetTypes(self):
     """Return a tuple of type names with a description."""
-    return dict([(x, self.TYPES[x][0]) for x in self.TYPES])
+    return dict([(x, self.GetTypeName(x)) for x in self.TYPES])
 
   def GetParsedSource(self, type):
     return self.imported_sources[type]
@@ -94,7 +97,7 @@ class HistoryParser(object):
     if path_or_type.lower() in self.TYPES:
       return self.ParseByType(path_or_type.lower(), store=store)
     else:
-      return self.ParseByFilename(path_or_type)
+      return self.ParseByFilename(path_or_type, store=store)
 
   def ParseByType(self, source, complain=True, store=False, max_age_days=None):
     """Given a type, parse the newest file and return a list of hosts."""
@@ -140,15 +143,19 @@ class HistoryParser(object):
 
       if thread.hosts and len(thread.hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
         results[thread.type] = thread.hosts
-        print "- Found %s records from %s" % (len(thread.hosts), thread.type)
+        print "- %s: Found %s useful hostnames" % (self.GetTypeName(thread.type),
+                                                   len(thread.hosts))
       elif thread.hosts == False:
         pass
       elif not thread.hosts:
-        print '- No records found in %s' % (thread.type)
+        print '- %s: No records found!' % (self.GetTypeName(thread.type))
       else:
-        print '- Ignoring %s (only %s records)' % (thread.type, len(thread.hosts))
+        print '- %s: Too few records to consider (%s)' % (self.GetTypeName(thread.type),
+                                                          len(thread.hosts))
 
-    print '- Read %s records from %s in %ss' % (records, ', '.join(results.keys()), time.time() - start_time)
+    duration = time.time() - start_time
+    if duration > 5:
+      print '- Read %s total records in %0.2fs' % (records, duration)
     return results
 
   def ParseByFilename(self, filename):

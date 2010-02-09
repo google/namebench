@@ -48,6 +48,7 @@ class BaseUI(object):
     self.html_path = None
     self.csv_path = None
     self.hparser = history_parser.HistoryParser()
+    self.sources = {}
 
   def UpdateStatus(self, msg, **kwargs):
     """Update the little status message on the bottom of the window."""
@@ -146,13 +147,12 @@ class BaseUI(object):
 
   def DiscoverSources(self):
     """Seek out and create a list of valid data sources."""
-    self.UpdateStatus('Searching for usable data sources')
-    self.hparser = history_parser.HistoryParser()
-    self.sources = self.hparser.GetAvailableHistorySources()
+    self.UpdateStatus('Searching for usable sources of hostnames for testing...')
+    self.available_sources = self.hparser.GetAvailableHistorySources()
 
   def ParseSourceSelection(self, selection):
-    self.UpdateStatus('Matching "%s" to %s' % (selection, self.sources))
-    for source in self.sources:
+    self.UpdateStatus('Matching "%s" to %s' % (selection, self.available_sources))
+    for source in self.available_sources:
       parsed_name = history_parser.sourceToTitle(source)
       if parsed_name.lower() == selection.lower():
         src_type = source[0]
