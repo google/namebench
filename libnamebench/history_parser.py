@@ -49,6 +49,7 @@ class HistoryParser(object):
 
   def __init__(self):
     self.TYPES = {
+        'alexa': ('Alexa Top 10000 Domains', None),
         'chrome': ('Google Chrome', self.GoogleChromeHistoryPath),
         'chromium': ('Chromium', self.ChromiumHistoryPath),
         'epiphany': ('Epiphany', self.EpiphanyHistoryPath),
