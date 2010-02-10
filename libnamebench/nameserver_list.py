@@ -47,7 +47,7 @@ else:
   MAX_SANE_THREAD_COUNT = 250
 
 # Slow down for these, as they are used for timing.
-MAX_INITIAL_HEALTH_THREAD_COUNT = 32
+MAX_INITIAL_HEALTH_THREAD_COUNT = 35
 
 class OutgoingUdpInterception(Exception):
 
@@ -298,7 +298,7 @@ class NameServers(list):
       if ns not in secondaries_to_keep:
         self.remove(ns)
 
-  def CheckHealth(self, sanity_primary, sanity_secondary, cache_dir=None, censor_tests=None):
+  def CheckHealth(self, primary_checks, secondary_checks, cache_dir=None, censor_tests=None):
     """Filter out unhealthy or slow replica servers."""
     if len(self) == 1:
       return None
@@ -322,7 +322,7 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=int(len(self) * FIRST_CUT_MULTIPLIER),
                                   delete_unwanted=True)
 
-    self.RunHealthCheckThreads(sanity_primary)
+    self.RunHealthCheckThreads(primary_checks)
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
@@ -336,7 +336,7 @@ class NameServers(list):
       self.CheckCacheCollusion()
     self.DisableUnwantedServers()
 
-    self.RunFinalHealthCheckThreads(sanity_secondary)
+    self.RunFinalHealthCheckThreads(secondary_checks)
     if censor_tests:
       self.RunCensorshipCheckThreads(censor_tests)
     else:
@@ -452,6 +452,7 @@ class NameServers(list):
           faster.disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
           slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
         else:
+          self.msg("Disabling %s [%s] (slower replica of %s [%s])" % (slower.name, slower.check_average, faster.name, faster.check_average))
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
           faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
 

@@ -36,6 +36,7 @@ import third_party
 from libnamebench import base_ui
 from libnamebench import benchmark
 from libnamebench import config
+from libnamebench import conn_quality
 from libnamebench import history_parser
 from libnamebench import nameserver_list
 from libnamebench import util
@@ -136,6 +137,9 @@ class controller(NSWindowController, base_ui.BaseUI):
     except nameserver_list.TooFewNameservers:
       (exc_type, exception, tb) = sys.exc_info()
       self.UpdateStatus('Too few nameservers to test', error=str(exception))
+    except conn_quality.OfflineConnection:
+      (exc_type, exception, tb) = sys.exc_info()
+      self.UpdateStatus('The connection appears to be offline!', error=str(exception))
     except:
       (exc_type, exception, tb) = sys.exc_info()
       traceback.print_exc(tb)

@@ -97,13 +97,14 @@ def GetLatestSanityChecks():
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   http_version_usable = False
   use_config = None
+  content = None
   try:
     resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
   except:
-    print 'Unable to fetch latest reference: %s' % util.GetLastExceptionString()
+    print '* Unable to fetch latest reference: %s' % util.GetLastExceptionString()
   http_config = ConfigParser.ConfigParser()
 
-  if '[base]' in content:
+  if content and '[base]' in content:
     fp = StringIO.StringIO(content)
     try:
       http_config.readfp(fp)

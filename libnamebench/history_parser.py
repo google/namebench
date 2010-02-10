@@ -119,7 +119,7 @@ class HistoryParser(object):
     if max_age_days:
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
       if age_days > max_age_days:
-#        self.msg('Ignoring history for %s source (%2.0f days old)' % (source, age_days))
+        self.msg('Ignoring %s from %s (%2.0f days old)' % (newest, source, age_days))
         return []
 
     # Do not use this with multiple threads.
@@ -266,7 +266,7 @@ class HistoryParser(object):
         if os.path.getsize(filename) > self.MIN_FILE_SIZE:
           found.append(filename)
         else:
-          self.msg('%s exists, but is only %s byte' % (filename, os.path.getsize(filename)))
+          self.msg('Ignoring %s (only %s bytes)' % (filename, os.path.getsize(filename)))
 
     return (found, tried)
 

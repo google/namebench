@@ -25,10 +25,11 @@ import Queue
 from Tkinter import *
 import tkMessageBox
 
-import base_ui
-import history_parser
-import nameserver_list
-import util
+from . import base_ui
+from . import conn_quality
+from . import history_parser
+from . import nameserver_list
+from . import util
 
 THREAD_UNSAFE_TK = 0
 
@@ -108,6 +109,9 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
     except nameserver_list.TooFewNameservers:
       (exc_type, exception, tb) = sys.exc_info()
       self.msg('Too few nameservers to test', error=exception)
+    except conn_quality.OfflineConnection:
+      (exc_type, exception, tb) = sys.exc_info()
+      self.msg('The connection appears to be offline!', error=exception)
     except:
       (exc_type, exception, tb) = sys.exc_info()
       traceback.print_exc(tb)

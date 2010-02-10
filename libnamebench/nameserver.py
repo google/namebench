@@ -65,8 +65,8 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.is_system = internal
     self.system_position = None
     self.is_preferred = preferred
-    self.timeout = 10
-    self.health_timeout = 10
+    self.timeout = 6
+    self.health_timeout = 6
     self.warnings = set()
     self.shared_with = set()
     self.disabled = False

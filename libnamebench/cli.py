@@ -27,6 +27,8 @@ import sys
 
 from . import base_ui
 from . import history_parser
+from . import nameserver_list
+from . import conn_quality
 
 class NameBenchCli(base_ui.BaseUI):
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
@@ -99,7 +101,7 @@ class NameBenchCli(base_ui.BaseUI):
   def Execute(self):
     """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.import_source or self.options.data_file,
+          (self.version, self.options.import_source or self.options.data_file or 'best history source',
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.thread_count, self.options.test_count,
@@ -129,8 +131,15 @@ class NameBenchCli(base_ui.BaseUI):
     else:
       self.preferred = self.supplied_ns + self.global_ns
       self.secondary = self.regional_ns
-    self.PrepareNameServers()
-    self.PrepareBenchmark()
-    self.RunAndOpenReports()
+      
+    try:
+      self.PrepareNameServers()
+      self.PrepareBenchmark()
+      self.RunAndOpenReports()
+    except (nameserver_list.OutgoingUdpInterception, nameserver_list.TooFewNameservers,
+           conn_quality.OfflineConnection):
+      (exc_type, exception, tb) = sys.exc_info()
+      self.UpdateStatus("%s - %s" % (exc_type, exception), error=True)
+      
 
 
