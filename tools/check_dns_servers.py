@@ -52,15 +52,16 @@ print '-' * 80
 
 nameservers = nameserver_list.NameServers(
     check_ns,
-    timeout=5,
-    health_timeout=5,
+    timeout=10,
+    health_timeout=10,
     threads=250,
     skip_cache_collusion_checks=True,
 )
+(primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
 try:
-  nameservers.CheckHealth()
-except:
-  print "Health checks failed. Ohwell."
+  nameservers.CheckHealth(primary_checks, secondary_checks)
+except nameserver_list.TooFewNameservers:
+  pass
 print '-' * 80
 geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 
@@ -69,6 +70,9 @@ for ns in nameservers:
     details = {}
   else:
     details = geo_city.record_by_addr(ns.ip)
+    
+  if not details:
+    details = {}
   city = details.get('city', '')
   country = details.get('country_name', '')
   region = details.get('region_name', '')
