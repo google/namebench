@@ -71,7 +71,10 @@ class HistoryParser(object):
       print '- %s' % msg
 
   def GetTypeName(self, name):
-    return self.TYPES[name][0]
+    if name in self.TYPES:
+      return self.TYPES[name][0]
+    else:
+      return name
 
   def GetTypes(self):
     """Return a tuple of type names with a description."""
