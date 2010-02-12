@@ -51,7 +51,7 @@ else:
 
 # How many failures before we disable system nameservers
 MAX_SYSTEM_FAILURES = 4
-MAX_PREFERRED_FAILURES = 2
+MAX_PREFERRED_FAILURES = 3
 
 ERROR_PRONE_RATE = 10
 
@@ -67,24 +67,13 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.is_preferred = preferred
     self.timeout = 6
     self.health_timeout = 6
-    self.warnings = set()
-    self.shared_with = set()
-    self.disabled = False
-    self.checks = []
-    self.request_count = 0
-    self.error_count = 0
-    self.failed_test_count = 0
-    self.share_check_count = 0
-    self.cache_checks = []
-    self.is_slower_replica = False
+    self.ResetTestStatus()
     self.timer = DEFAULT_TIMER
 
     if ':' in self.ip:
       self.is_ipv6 = True
     else:
       self.is_ipv6 = False
-
-
 
   @property
   def check_average(self):
@@ -148,6 +137,19 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   def __repr__(self):
     return self.__str__()
+
+  def ResetTestStatus(self):
+    """Reset testing status of this host."""    
+    self.warnings = set()
+    self.shared_with = set()
+    self.disabled = False
+    self.checks = []
+    self.request_count = 0
+    self.error_count = 0
+    self.failed_test_count = 0
+    self.share_check_count = 0
+    self.cache_checks = []
+    self.is_slower_replica = False
 
   def AddFailure(self, message):
     """Add a failure for this nameserver. This will effectively disable it's use."""
