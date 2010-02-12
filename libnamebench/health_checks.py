@@ -60,6 +60,8 @@ class NameServerHealthChecks(object):
       timeout = self.health_timeout
     (response, duration, error_msg) = self.TimedRequest(record_type, record, timeout)
     if not response:
+      if not error_msg:
+        error_msg = "No response"
       is_broken = True
     elif not response.answer:
       if fatal:
@@ -115,11 +117,13 @@ class NameServerHealthChecks(object):
     (response, duration, error_msg) = self.TimedRequest('A', poison_test,
                                                   timeout=self.health_timeout)
     if not response:
+      if not error_msg:
+        error_msg = "No response"
       is_broken = True
     elif response.answer:
-      warning = 'NXDOMAIN Hijacking' + warning_suffix
+      error_msg = 'NXDOMAIN Hijacking' + warning_suffix
 
-    return (is_broken, warning, duration)
+    return (is_broken, error_msg, duration)
   
   def TestWwwNegativeResponse(self):
     return self.TestNegativeResponse(prefix='www')
