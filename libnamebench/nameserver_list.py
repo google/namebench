@@ -35,10 +35,13 @@ import util
 
 NS_CACHE_SLACK = 2
 CACHE_VER = 4
-MAX_CONGESTION_MULTIPLIER = 2.5
 FIRST_CUT_MULTIPLIER = 0.2
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 3
+
+# If we can't ping more than this, go into slowmode.
+MIN_PINGABLE_PERCENT = 20
+SLOW_MODE_THREAD_COUNT = 8
 
 # Windows behaves in unfortunate ways if too many threads are specified
 if sys.platform == "win32":
@@ -416,6 +419,10 @@ class NameServers(list):
   def SortByNearest(self):
     """Return a list of healthy servers in fastest-first order."""
     return sorted(self, key=operator.attrgetter('fastest_check_duration'))
+  
+  def ResetTestResults(self):
+    """Reset the testng status of all disabled hosts."""
+    return [ ns.ResetTestStatus() for ns in self ]
 
   def CheckCacheCollusion(self):
     """Mark if any nameservers share cache, especially if they are slower."""
@@ -479,6 +486,8 @@ class NameServers(list):
     if thread_count > len(items):
       thread_count = len(items)
 
+    status_message = status_message + ' [%s threads]' % thread_count
+
     self.msg(status_message, count=0, total=len(items))
     for thread_num in range(0, thread_count):
       thread = QueryThreads(input_queue, results_queue, action_type, **kwargs)
@@ -505,8 +514,17 @@ class NameServers(list):
   def PingNameServers(self):
     """Quickly ping nameservers to see which are available."""
     results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
+    
+    success_rate = (float(len(self.enabled)) / float(len(self))) * 100
+    if success_rate < MIN_PINGABLE_PERCENT:
+      self.msg('How odd! Only %0.1f%% of my nameservers were pingable. Trying again with %s threads (slow)'
+               % (success_rate, SLOW_MODE_THREAD_COUNT))
+      self.ResetTestResults()
+      self.thread_count = SLOW_MODE_THREAD_COUNT
+      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
     if self.enabled:
-      self.msg('%s of %s name servers are available' % (len(self.enabled), len(self)))
+      success_rate = (float(len(self.enabled)) / float(len(self))) * 100
+      self.msg('%s of %s name servers are available (%0.1f%%)' % (len(self.enabled), len(self), success_rate))
 
   def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
