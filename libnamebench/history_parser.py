@@ -28,13 +28,14 @@ def sourceToTitle(source):
   return '%s (%s)' % (full_name, num_hosts)
 
 class ParserThread(threading.Thread):
-  def __init__(self, record_type):
+  def __init__(self, record_type, path):
     threading.Thread.__init__(self)
     self.type = record_type
+    self.path = path
 
   def run(self):
     hp = HistoryParser()
-    self.hosts = hp.ParseByType(self.type, complain=False, max_age_days=30)
+    self.hosts = hp.ParseByType(self.type, path=self.path, max_age_days=30)
     return self.hosts
 
 class HistoryParser(object):
@@ -110,23 +111,25 @@ class HistoryParser(object):
     else:
       return self.ParseByFilename(path_or_type, store=store)
 
-  def ParseByType(self, source, complain=True, store=False, max_age_days=None):
-    """Given a type, parse the newest file and return a list of hosts."""
-
+  def FindBestFileForType(self, source, max_age_days=None):
     (paths, tried) = self.FindGlobPaths(self.GetTypeMethod(source)())
     if not paths:
-      if complain:
-        self.msg('%s: no matches in %s' % (source, tried))
-      return False
+      return None
     newest = sorted(paths, key=os.path.getmtime)[-1]
+
     if max_age_days:
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
       if age_days > max_age_days:
         self.msg('Ignoring %s from %s (%2.0f days old)' % (newest, source, age_days))
-        return []
+        return None
+    else:
+      return newest
 
-    # Do not use this with multiple threads.
-    results = self.ParseByFilename(newest)
+  def ParseByType(self, source, path=None, store=False, max_age_days=None):
+    """Given a type, parse the newest file and return a list of hosts."""
+    if not path:
+      path = self.FindBestFileForType(source, max_age_days=max_age_days)
+    results = self.ParseByFilename(path)
     if store:
       self.imported_sources[source] = results
     return results
@@ -141,13 +144,16 @@ class HistoryParser(object):
     results = {}
     records = 0
     threads = []
+    history_paths = []
 
     for type in self.GetTypes():
       if not self.GetTypeMethod(type):
         continue
-      thread = ParserThread(type)
-      thread.start()
-      threads.append(thread)
+      found_path = self.FindBestFileForType(type)
+      if found_path:
+        thread = ParserThread(type, found_path)
+        thread.start()
+        threads.append(thread)
 
     for thread in threads:
       thread.join()
