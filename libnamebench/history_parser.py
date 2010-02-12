@@ -153,8 +153,8 @@ class HistoryParser(object):
 
       if thread.hosts and len(thread.hosts) >= self.MIN_RECOMMENDED_RECORD_COUNT:
         results[thread.type] = thread.hosts
-        self.msg('%s: Found %s useful hostnames' % (self.GetTypeName(thread.type),
-                                                    len(thread.hosts)))
+        self.msg('%s: Found %s good records' % (self.GetTypeName(thread.type),
+                                                len(thread.hosts)))
       elif thread.hosts == False:
         pass
       elif not thread.hosts:
