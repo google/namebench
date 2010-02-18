@@ -153,7 +153,7 @@ def ProcessConfigurationFile(options):
     regional_ns = []
 
   for option in general:
-    if not getattr(options, option):
+    if not hasattr(options, option) or not getattr(options, option):
       if 'timeout' in option:
         value = float(general[option])
       elif 'count' in option or 'num' in option:
