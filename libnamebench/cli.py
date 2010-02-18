@@ -109,18 +109,25 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    if self.options.data_file or self.options.import_source == 'alexa':
+    if self.options.data_file:
+      source_name = self.options.data_file
       self.options.import_source = None
     elif self.options.import_source:
       self.hparser.Parse(self.options.import_source, store=True)
+      source_name = self.hparser.GetTypeName(self.options.import_source)
     else:
       print '- No input source provided, searching for the best available...'
       self.DiscoverSources()
       if self.available_sources:
-        self.options.import_source = self.available_sources[0][0]
-        print '> Using History Source: %s' % self.hparser.GetTypeName(self.options.import_source)
-        print ''
+        (source_type, source_name, source_records) = self.available_sources[0]
+        if source_type == 'alexa':
+          self.options.data_file = self.options.alexa_path
+        else:
+          self.options.import_source = source_type
 
+    print '> Using History Source: %s' % source_name
+    print ''
+          
     if self.options.only:
       if not self.supplied_ns:
         print 'If you use --only, you must provide nameservers to use.'
