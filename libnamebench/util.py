@@ -99,6 +99,7 @@ def FindDataFile(filename):
   other_places = [os.getcwd(),
                   os.path.join(os.path.dirname(os.path.dirname(sys.argv[0])), 'Contents', 'Resources'),
                   os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources'),
+                  os.path.join(os.getcwd(), '..'),
                   os.path.join(sys.prefix, 'namebench'),
                   '/usr/local/share/namebench'
                   '/usr/local/etc/namebench',
