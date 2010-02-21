@@ -47,8 +47,8 @@ class BaseUI(object):
     self.bmark = None
     self.html_path = None
     self.csv_path = None
-    self.hparser = history_parser.HistoryParser(status_callback=self.UpdateStatus)
     self.sources = {}
+    self.test_records = []
 
   def UpdateStatus(self, msg, **kwargs):
     """Update the little status message on the bottom of the window."""
@@ -95,20 +95,10 @@ class BaseUI(object):
                                      test_count=self.options.test_count,
                                      run_count=self.options.run_count,
                                      status_callback=self.UpdateStatus)
-    self.UpdateStatus('Creating test records using %s' % self.options.select_mode)
-    if self.options.import_source:
-      hosts = self.hparser.GetParsedSource(self.options.import_source)
-      test_data = self.hparser.GenerateTestData(hosts)
-      self.UpdateStatus('%s sanitized records available in test pool' % len(test_data))
-      self.bmark.CreateTests(test_data, select_mode=self.options.select_mode)
-    else:
-      # The Alexa data (by default)
-      self.bmark.CreateTestsFromFile(self.options.data_file,
-                                     select_mode=self.options.select_mode)
 
   def RunBenchmark(self):
     """Run the benchmark."""
-    results = self.bmark.Run()
+    results = self.bmark.Run(self.test_records)
     self.reporter = reporter.ReportGenerator(self.nameservers, results)
 
   def RunAndOpenReports(self):

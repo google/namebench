@@ -41,21 +41,13 @@ class Benchmark(object):
     self.run_count = run_count
     self.nameservers = nameservers
     self.results = {}
-    self.test_data = []
     self.status_callback = status_callback
 
   def msg(self, msg, **kwargs):
     if self.status_callback:
       self.status_callback(msg, **kwargs)
 
-  def CreateTestsFromFile(self, filename, select_mode='weighted'):
-    """Open an input file, and pass the data to CreateTests."""
-    filename = util.FindDataFile(filename)
-    self.msg('Reading test data from %s' % filename)
-    input_data = open(filename).readlines()
-    return self.CreateTests(input_data, select_mode=select_mode)
-
-  def CreateTests(self, input_data, select_mode='weighted'):
+  def SelectTestRecords(self, input_data, select_mode='weighted'):
     """Load test input data input, and create tests from it.
 
     Args:
@@ -73,40 +65,15 @@ class Benchmark(object):
       print '* input contains duplicates, switching select_mode to random'
       select_mode = 'random'
     if select_mode == 'weighted':
-      selected = selectors.WeightedDistribution(input_data, self.test_count)
+      return selectors.WeightedDistribution(input_data, self.test_count)
     elif select_mode == 'chunk':
-      selected = selectors.ChunkSelect(input_data, self.test_count)
+      return selectors.ChunkSelect(input_data, self.test_count)
     elif select_mode == 'random':
-      selected = selectors.RandomSelect(input_data, self.test_count)
+      return selectors.RandomSelect(input_data, self.test_count)
     else:
       raise ValueError('Invalid select_mode: %s' % select_mode)
 
-    self.test_data = []
-    for line in selected:
-      selection = line.rstrip()
-      if len(selection) < 2:
-        continue
-
-      if ' ' in selection:
-        self.test_data.append(selection.split(' ')[0:2])
-      else:
-        self.test_data.append(('A', self.GenerateFqdn(selection)))
-
-    assert self.test_data
-    return self.test_data
-
-  def GenerateFqdn(self, domain):
-    oracle = random.randint(0, 100)
-    if oracle < 60:
-      return 'www.%s.' % domain
-    elif oracle < 95:
-      return '%s.' % domain
-    elif oracle < 98:
-      return 'static.%s.' % domain
-    else:
-      return 'cache-%s.%s.' % (random.randint(0, 10), domain)
-
-  def Run(self):
+  def Run(self, test_records=None):
     """Manage and execute all tests on all nameservers.
 
     We used to run all tests for a nameserver, but the results proved to be
@@ -116,22 +83,22 @@ class Benchmark(object):
     Returns:
       results: A dictionary of results
     """
-    assert self.test_data
+    test_data = self.SelectTestRecords(test_records)
     for test_run in range(self.run_count):
       state = ('Benchmarking %s server(s), run %s of %s' %
                (len(self.nameservers.enabled), test_run+1, self.run_count))
       count = 0
-      for (req_type, record) in self.test_data:
+      for (request_type, hostname) in test_data:
         count += 1
-        self.msg(state, count=count, total=len(self.test_data))
+        self.msg(state, count=count, total=len(test_data))
         for ns in self.nameservers.enabled:
           if ns not in self.results:
             self.results[ns] = []
             for x in range(self.run_count):
               self.results[ns].append([])
-          (response, duration, error_msg) = ns.TimedRequest(req_type, record)
+          (response, duration, error_msg) = ns.TimedRequest(request_type, hostname)
           if error_msg:
             duration = ns.timeout
-          self.results[ns][test_run].append((record, req_type, duration,
+          self.results[ns][test_run].append((hostname, request_type, duration,
                                              response, error_msg))
     return self.results

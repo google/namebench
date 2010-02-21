@@ -21,6 +21,7 @@ import os
 import os.path
 import re
 import sys
+import time
 import ConfigParser
 
 # See if a third_party library exists -- use it if so.
@@ -33,15 +34,19 @@ except ImportError:
 # relative
 import util
 
-INTERNAL_RE = re.compile('\.prod|\.corp|\.bor|internal|dmz|intranet')
+GLOBAL_DATA_CACHE = {}
+INTERNAL_RE = re.compile('^0|\.pro[md]|\.corp|\.bor|internal|dmz|intra')
+IP_RE = re.compile('^[0-9.]$')
 DEFAULT_CONFIG_PATH = "config/data_sources.cfg"
 MAX_NON_UNIQUE_RECORD_COUNT = 500000
+MAX_FILE_MTIME_AGE_DAYS = 60
 MIN_FILE_SIZE = 10000
 MIN_RECOMMENDED_RECORD_COUNT = 200
 
 class DataSources(object):
   def __init__(self, config_path=DEFAULT_CONFIG_PATH, status_callback=None):
-    self.source_cache = {}
+    global GLOBAL_DATA_CACHE
+    self.source_cache = GLOBAL_DATA_CACHE
     self.source_config = {}
     self.status_callback = status_callback
     self._LoadConfigFromPath(config_path)
@@ -58,7 +63,12 @@ class DataSources(object):
     config.read(conf_file)
     for section in config.sections():
       if section not in self.source_config:
-        self.source_config[section] = {'name': 'Unknown', 'search_paths': set()}
+        self.source_config[section] = {
+          'name': None,
+          'search_paths': set(),
+          # Store whether or not this data source contains personal data
+          'full_hostnames': True
+        }
 
       for (key, value) in config.items(section):
         if key == 'name':
@@ -70,20 +80,90 @@ class DataSources(object):
     """Get a list of all data sources we know about."""
     return self.source_config.keys()
 
-  def _GetSourceName(self, source):
-    return self.source_config[source]['name']
-
   def ListSourcesWithDetails(self):
-    """Get a list of all data sources found with total counts."""
+    """Get a list of all data sources found with total counts.
+
+    Returns:
+      List of tuples in form of (short_name, full_name, full_hosts, # of entries)
+    """
     for source in self.ListSourceTypes():
-      self._GetRecordsForSource(source)
+      self._GetHostsFromSource(source)
 
     details = []
     for source in self.source_cache:
-      details.append((source, self.GetSourceName(source), len(self.source_cache[source])))
-    return details
+      details.append((source,
+                      self.source_config[source]['name'],
+                      self.source_config[source]['full_hostnames'],
+                      len(self.source_cache[source])))
+    return sorted(details, key=lambda x:(x[2], x[3]), reverse=True)
 
-  def _GetRecordsForSource(self, source):
+  def GetBestSourceDetails(self):
+    return self.ListSourcesWithDetails()[0]
+
+  def GetNameForSource(self, source):
+    if source in self.source_config:
+      return self.source_config[source]['name']
+    else:
+      # Most likely a custom file path
+      return source
+
+  def GetRecordsFromSource(self, source):
+    """Parse records from source, and returnrequest tuples to use for testing.
+
+    This is tricky because we support 3 types of input data:
+
+    - List of domains
+    - List of hosts
+    - List of record_type + hosts
+    """
+    records = []
+    real_tld_re = re.compile('[a-z]{2,4}$')
+    internal_re = re.compile('')
+    last_hostname = None
+
+    entries = self._GetHostsFromSource(source)
+
+    # First a quick check to see if our input source is strictly domains or hosts.
+    full_hostnames = False
+    for entry in entries:
+      if entry.startswith('www.') or entry.startswith('smtp.'):
+        full_hostnames = True
+        break
+    
+    for entry in entries:
+      record_type = 'A'
+      if ' ' in entry:
+        (record_type, hostname) = entry.split(' ')
+      elif not full_hostnames:
+        hostname = self.GenerateRandomHostnameForDomain(host)
+      else:
+        if entry == last_hostname:
+          continue
+        hostname = entry
+        last_hostname = entry
+
+        # Throw out the things we shouldn't be testing.
+        if IP_RE.match(hostname) or INTERNAL_RE.search(hostname) or hostname.endswith('.local'):
+          continue
+
+      # Make sure to add the trailing dot.
+      if not hostname.endswith('.'):
+        hostname = '%s.' % hostname
+      records.append((record_type, '%s.' % hostname))
+    return records
+
+  def _GenerateRandomHostnameForDomain(self, domain):
+    oracle = random.randint(0, 100)
+    if oracle < 60:
+      return 'www.%s.' % domain
+    elif oracle < 95:
+      return '%s.' % domain
+    elif oracle < 98:
+      return 'static.%s.' % domain
+    else:
+      return 'cache-%s.%s.' % (random.randint(0, 10), domain)
+
+  def _GetHostsFromSource(self, source):
     """Get data for a particular source. This is a bit tricky.
 
     We support 3 styles of files:
@@ -101,25 +181,38 @@ class DataSources(object):
 
     size_mb = os.path.getsize(filename) / 1024.0 / 1024.0
     self.msg('Reading %s (%0.1fMB)' % (filename, size_mb))
-    records = self._GetRecordsFromHistoryFile(filename)
-    if records:
-      print len(records)
+    hosts = self._ExtractHostsFromHistoryFile(filename)
+    if not hosts:
+      hosts = self._ReadDataFile(filename)
+  
+    self.source_cache[source] = hosts
+    return hosts
 
-  def _GetRecordsFromHistoryFile(self, path):
+  def _ExtractHostsFromHistoryFile(self, path):
     """Get a list of sanitized records from a history file containing URLs."""
+    # This regexp is fairly general (no ip filtering), since we need speed more
+    # than precision at this stage.
+    parse_re = re.compile('https*://([\-\w]+\.[\-\w\.]+)')
+    return parse_re.findall(open(path, 'rb').read())
 
-    # Only pull out URL's with at leats two dots, including an letter.
-    parse_re = re.compile('https*://([\-\w]+\.[\-\w\.]+[a-zA-Z]+)')
+  def _ReadDataFile(self, path):
+    """Read a line-based datafile."""
     records = []
-    for hostname in parse_re.findall(open(path, 'rb').read()):
-      if not INTERNAL_RE.search(hostname):
-        records.append(('A', hostname))
+    for line in open(path).readlines():
+      if not line.startswith('#'):
+        records.append(line.rstrip)
     return records
 
   def _GetSourceSearchPaths(self, source):
     """Get a list of possible search paths (globs) for a given source."""
+    
+    # This is likely a custom file path
+    if source not in self.source_config:
+      return [source]
+
     search_paths = []
     environment_re = re.compile('%(\w+)%')
+
 
     # First get through resolving environment variables
     for path in self.source_config[source]['search_paths']:
@@ -137,9 +230,21 @@ class DataSources(object):
         path = path.replace('/', os.sep)
         search_paths.append(path)
 
+        # This moment of weirdness brought to you by Windows XP(tm). If we find
+        # a Local or Roaming keyword in path, add the other forms to the search
+        # path.
+        if sys.platform[:3] == 'win':
+          keywords = ('Local', 'Roaming')
+          for keyword in keywords:
+            if keyword in path:
+              replacement = keywords[keywords.index(keyword)-1]
+              search_paths.append(path.replace('\\%s' % keyword, '\\%s' % replacement))
+              search_paths.append(path.replace('\\%s' % keyword, ''))
+
     return search_paths
 
-  def _FindBestFileForSource(self, source, min_file_size=MIN_FILE_SIZE):
+  def _FindBestFileForSource(self, source, min_file_size=MIN_FILE_SIZE,
+                             max_mtime_age_days=MAX_FILE_MTIME_AGE_DAYS):
     """Find the best file (newest over X size) to use for a given source type.
 
     Args:
@@ -154,35 +259,24 @@ class DataSources(object):
         path = util.FindDataFile(path)
 
       for filename in glob.glob(path):
-        if os.path.getsize(filename) > min_file_size:
-          found.append(filename)
-        else:
+        if os.path.getsize(filename) < min_file_size:
           self.msg('Ignoring %s (only %s bytes)' % (filename, os.path.getsize(filename)))
+        else:
+          found.append(filename)
 
     if found:
-      return sorted(found, key=os.path.getmtime)[-1]
+      newest = sorted(found, key=os.path.getmtime)[-1]
+      age_days = (time.time() - os.path.getmtime(newest)) / 86400
+      if age_days > max_mtime_age_days:
+        self.msg('Ignoring %s from %s (%2.0f days old)' % (newest, source, age_days))
+      else:
+        return newest
     else:
       return None
-
-  def _AddRoamLocalWindowsPaths(self, paths):
-    """Windows path munging: Add neutered and swapped paths for Local/roaming dirs."""
-    keywords = ('Local', 'Roaming')
-    new_paths = list(paths)
-    for path in paths:
-      for keyword in keywords:
-        if path[0] and keyword in path[0]:
-          swapped_path = list(path)
-          neutered_path = list(path)
-
-          replacement = keywords[keywords.index(keyword)-1]
-
-          swapped_path[0] = swapped_path[0].replace('\\%s' % keyword, '\\%s' % replacement)
-          neutered_path[0] = neutered_path[0].replace('\\%s' % keyword, '')
-          new_paths.extend([swapped_path, neutered_path])
-    return new_paths
 
 if __name__ == '__main__':
   parser = DataSources()
   print parser.ListSourceTypes()
   print parser.ListSourcesWithDetails()
-
+  best = parser.ListSourcesWithDetails()[0][0]
+  print len(parser.GetRecordsFromSource(best))

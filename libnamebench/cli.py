@@ -26,7 +26,7 @@ import math
 import sys
 
 from . import base_ui
-from . import history_parser
+from . import data_sources
 from . import nameserver_list
 from . import conn_quality
 
@@ -101,7 +101,7 @@ class NameBenchCli(base_ui.BaseUI):
   def Execute(self):
     """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.import_source or self.options.data_file or 'best history source',
+          (self.version, self.options.import_source or 'best history source',
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.thread_count, self.options.test_count,
@@ -109,23 +109,15 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    if self.options.data_file:
-      source_name = self.options.data_file
-      self.options.import_source = None
-    elif self.options.import_source:
-      self.hparser.Parse(self.options.import_source, store=True)
-      source_name = self.hparser.GetTypeName(self.options.import_source)
+    data_src = data_sources.DataSources()
+    if self.options.import_source:
+      src_name = data_src.GetNameForSource(self.options.import_source)
+      self.test_records = data_src.GetRecordsFromSource(self.options.import_source)
     else:
-      print '- No input source provided, searching for the best available...'
-      self.DiscoverSources()
-      if self.available_sources:
-        (source_type, source_name, source_records) = self.available_sources[0]
-        if source_type == 'alexa':
-          self.options.data_file = self.options.alexa_path
-        else:
-          self.options.import_source = source_type
+      (src_type, src_name) = data_src.GetBestSourceDetails()[:2]
+      self.test_records = data_src.GetRecordsFromSource(src_type)
 
-    print '> Using History Source: %s' % source_name
+    print '> Using History Source: %s (%s usable records)' % (src_name, len(self.test_records))
     print ''
           
     if self.options.only:
