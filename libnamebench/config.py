@@ -25,21 +25,25 @@ import tempfile
 # from third_party
 import httplib2
 
-import history_parser
-import util
-import version
+from . import history_parser
+from . import util
+from . import version
 
-SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/data/hostname_reference.cfg'
+SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/config/hostname_reference.cfg'
 
 
-def GetConfiguration(filename='namebench.cfg'):
+def GetConfiguration(filename='config/namebench.cfg'):
+  """Get all of our configuration setup, args and config file."""
   (options, args) = DefineAndParseOptions(filename=filename)
   (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
   supplied_ns = util.ExtractIPTuplesFromString(' '.join(args))
   return (configured_options, supplied_ns, global_ns, regional_ns)
 
-def DefineAndParseOptions(filename='namebench.cfg'):
+def DefineAndParseOptions(filename):
   """Get our option configuration setup.
+
+  Args:
+    filename: path to configuration (may be relative)
 
   Returns: tuple of (OptionParser object, args)
   """
@@ -112,7 +116,7 @@ def GetLatestSanityChecks():
     except:
       pass
 
-  ref_file = util.FindDataFile('data/hostname_reference.cfg')
+  ref_file = util.FindDataFile('config/hostname_reference.cfg')
   local_config = ConfigParser.ConfigParser()
   local_config.read(ref_file)
   

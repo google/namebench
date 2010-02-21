@@ -113,15 +113,18 @@ setup(name='namebench',
       license='Apache 2.0',
       scripts=['namebench.py'],
       data_files=[
-          ('namebench', ['namebench.cfg']),
+          ('namebench/config',
+           ['config/namebench.cfg',
+            'config/hostname_reference.cfg',
+            'config/data_sources.cfg']
+          ),
           ('namebench/templates',
            ['templates/ascii.tmpl',
                 'templates/html.tmpl',
                 'templates/style.css'
            ]
           ),
-          ('namebench/data', ['data/alexa-top-10000-global.txt',
-                              'data/hostname_reference.cfg'])
+          ('namebench/data', ['data/alexa-top-10000-global.txt'])
       ],
 
       # py2exe specific garbarge below.
