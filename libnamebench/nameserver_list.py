@@ -332,8 +332,8 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=int(len(self) * FIRST_CUT_MULTIPLIER),
                                   delete_unwanted=True)
 
-    for ns in self.SortByFastest():
-      print "%s: %s" % (ns, ns.check_average)
+#    for ns in self.SortByFastest():
+#      print "%s: %s" % (ns, ns.check_average)
     self.RunHealthCheckThreads(primary_checks)
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),

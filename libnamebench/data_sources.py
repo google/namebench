@@ -161,10 +161,11 @@ class DataSources(object):
 
     # Now that we've read everything, are we dealing with domains or full hostnames?
     full_host_percent = full_host_count / float(len(records)) * 100
+    self.msg('%0.1f%% of records are using fully qualified domain names.' % full_host_percent)
     if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
-      full_host_names = False
-    else:
       full_host_names = True
+    else:
+      full_host_names = False
 
     return (records, full_host_names)
 
