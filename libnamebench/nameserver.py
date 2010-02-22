@@ -77,7 +77,11 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   @property
   def check_average(self):
-    return util.CalculateListAverage([x[3] for x in self.checks])
+    # If we only have a ping result, sort by it. Otherwise, use all non-ping results.
+    if len(self.checks) == 1:
+      return self.checks[0][3]
+    else:
+      return util.CalculateListAverage([x[3] for x in self.checks[1:]])
     
   @property
   def fastest_check_duration(self):
