@@ -41,6 +41,7 @@ SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 3
 
 # If we can't ping more than this, go into slowmode.
 MIN_PINGABLE_PERCENT = 20
+MIN_HEALTHY_PERCENT = 10
 SLOW_MODE_THREAD_COUNT = 8
 
 # Windows behaves in unfortunate ways if too many threads are specified
@@ -536,6 +537,16 @@ class NameServers(list):
       thread_count = self.thread_count
     results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
                                        list(self), checks=checks, thread_count=thread_count)
+
+    success_rate = (float(len(self.enabled)) / float(len(self))) * 100
+    if success_rate < MIN_HEALTHY_PERCENT:
+      self.msg('How odd! Only %0.1f%% of my nameservers were healthy. Trying again with %s threads (slow)'
+               % (success_rate, SLOW_MODE_THREAD_COUNT))
+      self.ResetTestResults()
+      self.thread_count = SLOW_MODE_THREAD_COUNT
+      results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
+                                         list(self), checks=checks, thread_count=thread_count)
+
 
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
