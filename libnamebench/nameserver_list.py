@@ -35,7 +35,9 @@ import util
 
 NS_CACHE_SLACK = 2
 CACHE_VER = 4
-FIRST_CUT_MULTIPLIER = 0.2
+
+# How many nameservers get through the first ping to the health tests.
+FIRST_CUT_MULTIPLIER = 0.1
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 3
 
@@ -171,6 +173,10 @@ class NameServers(list):
   @property
   def enabled(self):
     return [x for x in self if not x.disabled]
+
+  @property
+  def check_average(self):
+    return util.CalculateListAverage([x.check_average for x in self if not x.disabled])
 
   def msg(self, msg, count=None, total=None, **kwargs):
     if self.status_callback:
@@ -326,6 +332,8 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=int(len(self) * FIRST_CUT_MULTIPLIER),
                                   delete_unwanted=True)
 
+    for ns in self.SortByFastest():
+      print "%s: %s" % (ns, ns.check_average)
     self.RunHealthCheckThreads(primary_checks)
     self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
@@ -527,7 +535,8 @@ class NameServers(list):
       results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
     if self.enabled:
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-      self.msg('%s of %s name servers are available (%0.1f%%)' % (len(self.enabled), len(self), success_rate))
+      self.msg('%s of %s name servers are available (%0.1f%%). Latency: %0.1f' %
+               (len(self.enabled), len(self), success_rate, self.check_average))
 
   def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
@@ -548,8 +557,11 @@ class NameServers(list):
       self.thread_count = SLOW_MODE_THREAD_COUNT
       results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
                                          list(self), checks=checks, thread_count=thread_count)
-
-
+    if self.enabled:
+      success_rate = (float(len(self.enabled)) / float(len(self))) * 100
+      self.msg('%s of %s name servers are healthy (%0.1f%%). Latency: %0.1f' %
+               (len(self.enabled), len(self), success_rate, self.check_average))
+               
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
     results = self._LaunchQueryThreads('final', 'Running final health checks on %s servers' % len(self.enabled), list(self), checks=checks)

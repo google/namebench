@@ -103,6 +103,14 @@ class NameServerHealthChecks(object):
 
     return (is_broken, error_msg, duration)
 
+  def TestBindVersion(self):
+    """Test for BIND version."""
+    # We use self.timeout on purpose here - everything SHOULD return in this time.
+    (response, duration, error_msg) = self.TimedRequest('TXT', 'version.bind.',
+                                                  timeout=self.timeout,
+                                                  rdataclass='CHAOS')
+    return (error_msg, False, duration)
+
   def TestNegativeResponse(self, prefix=None):
     """Test for NXDOMAIN hijaaking."""
     is_broken = False
@@ -210,7 +218,7 @@ class NameServerHealthChecks(object):
     """Qualify a nameserver to see if it is any good."""
 
     if fast_check:
-      tests = [(self.TestRootServerResponse, [])]
+      tests = [(self.TestBindVersion, [])]
       sanity_checks = []
     elif final_check:
       tests = [(self.TestWwwNegativeResponse, [])]

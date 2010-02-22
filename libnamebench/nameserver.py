@@ -179,7 +179,7 @@ class NameServer(health_checks.NameServerHealthChecks):
   def Query(self, request, timeout):
     return dns.query.udp(request, self.ip, timeout, 53)
 
-  def TimedRequest(self, type_string, record_string, timeout=None):
+  def TimedRequest(self, type_string, record_string, timeout=None, rdataclass=None):
     """Make a DNS request, returning the reply and duration it took.
 
     Args:
@@ -192,6 +192,11 @@ class NameServer(health_checks.NameServerHealthChecks):
 
     In the case of a DNS response timeout, the response object will be None.
     """
+    if not rdataclass:
+      rdataclass = dns.rdataclass.IN
+    else:
+      rdataclass = dns.rdataclass.from_text(rdataclass)
+
     request_type = dns.rdatatype.from_text(type_string)
     record = dns.name.from_text(record_string, None)
     request = None
@@ -199,7 +204,7 @@ class NameServer(health_checks.NameServerHealthChecks):
 
     # Sometimes it takes great effort just to craft a UDP packet.
     try:
-      request = self.CreateRequest(record, request_type, dns.rdataclass.IN)
+      request = self.CreateRequest(record, request_type, rdataclass)
     except ValueError, exc:
       if not request:
         return (None, 0, util.GetLastExceptionString())
