@@ -16,9 +16,9 @@
 """Provides data sources to use for benchmarking."""
 
 import glob
-import operator
 import os
 import os.path
+import random
 import re
 import sys
 import time
@@ -32,16 +32,21 @@ except ImportError:
 
 
 # relative
-import util
+from . import util
+from . import selectors
 
 GLOBAL_DATA_CACHE = {}
 INTERNAL_RE = re.compile('^0|\.pro[md]|\.corp|\.bor|internal|dmz|intra')
+# ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
+FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
+
 IP_RE = re.compile('^[0-9.]$')
 DEFAULT_CONFIG_PATH = "config/data_sources.cfg"
 MAX_NON_UNIQUE_RECORD_COUNT = 500000
 MAX_FILE_MTIME_AGE_DAYS = 60
 MIN_FILE_SIZE = 10000
 MIN_RECOMMENDED_RECORD_COUNT = 200
+MAX_FQDN_SYNTHESIZE_PERCENT = 4
 
 class DataSources(object):
   def __init__(self, config_path=DEFAULT_CONFIG_PATH, status_callback=None):
@@ -78,7 +83,7 @@ class DataSources(object):
 
   def ListSourceTypes(self):
     """Get a list of all data sources we know about."""
-    return self.source_config.keys()
+    return sorted(self.source_config.keys())
 
   def ListSourcesWithDetails(self):
     """Get a list of all data sources found with total counts.
@@ -87,7 +92,8 @@ class DataSources(object):
       List of tuples in form of (short_name, full_name, full_hosts, # of entries)
     """
     for source in self.ListSourceTypes():
-      self._GetHostsFromSource(source)
+      self._GetHostsFromSource(source, min_file_size=MIN_FILE_SIZE,
+                               max_mtime_age_days=MAX_FILE_MTIME_AGE_DAYS)
 
     details = []
     for source in self.source_cache:
@@ -107,7 +113,32 @@ class DataSources(object):
       # Most likely a custom file path
       return source
 
-  def GetRecordsFromSource(self, source):
+  def GetCachedRecordCountForSource(self, source):
+    return len(self.source_cache[source])
+
+  def _FilterUnwantedRecords(self, records):
+    """Remove back-to-back duplicate entries and IP based lookups.
+
+    Args:
+      A list of test-data entries.
+
+    Returns:
+      A list of filtered test-data entries.
+    """
+    real_tld_re = re.compile('[a-z]{2,4}$')
+    internal_re = re.compile('^[\d:\.]+$')
+    last_record = None
+
+    filtered = []
+    for record in records:
+      (req_type, host) = record
+      if (record != last_record and not IP_RE.match(host)
+          and not INTERNAL_RE.search(host) and not host.endswith('.local')):
+        filtered.append(record)
+        last_entry = record
+    return filtered
+
+  def GetTestsFromSource(self, source, count=50, select_mode=None):
     """Parse records from source, and returnrequest tuples to use for testing.
 
     This is tricky because we support 3 types of input data:
@@ -117,70 +148,97 @@ class DataSources(object):
     - List of record_type + hosts
     """
     records = []
-    real_tld_re = re.compile('[a-z]{2,4}$')
-    internal_re = re.compile('')
-    last_hostname = None
 
-    entries = self._GetHostsFromSource(source)
-
-    # First a quick check to see if our input source is strictly domains or hosts.
-    full_hostnames = False
-    for entry in entries:
-      if entry.startswith('www.') or entry.startswith('smtp.'):
-        full_hostnames = True
-        break
-    
-    for entry in entries:
-      record_type = 'A'
+    # Convert entries into tuples, determine if we are using full hostnames
+    full_host_count = 0
+    www_host_count = 0
+    for entry in self._GetHostsFromSource(source):
       if ' ' in entry:
         (record_type, hostname) = entry.split(' ')
-      elif not full_hostnames:
-        hostname = self.GenerateRandomHostnameForDomain(host)
       else:
-        if entry == last_hostname:
-          continue
+        record_type = 'A'
         hostname = entry
-        last_hostname = entry
-
-        # Throw out the things we shouldn't be testing.
-        if IP_RE.match(hostname) or INTERNAL_RE.search(hostname) or hostname.endswith('.local'):
-          continue
 
       # Make sure to add the trailing dot.
       if not hostname.endswith('.'):
         hostname = '%s.' % hostname
-      records.append((record_type, '%s.' % hostname))
-    return records
 
-  def _GenerateRandomHostnameForDomain(self, domain):
-    oracle = random.randint(0, 100)
-    if oracle < 60:
-      return 'www.%s.' % domain
-    elif oracle < 95:
-      return '%s.' % domain
-    elif oracle < 98:
-      return 'static.%s.' % domain
+      if FQDN_RE.match(hostname):
+        full_host_count += 1
+
+      if hostname.startswith('www.'):
+        www_host_count += 1
+
+      records.append((record_type, hostname))
+
+#    self.msg('%s of %s records are full hostnames, %s start with www.'
+#             % (full_host_count, len(records), www_host_count))
+
+    # Now that we have created the records, we can filter them, then select.
+    full_host_percent = full_host_count / float(len(records)) * 100
+    records = self._FilterUnwantedRecords(records)
+
+    # First try to resolve whether to use weighted or random.
+    if select_mode in ('weighted', 'automatic', None):
+      if len(records) != len(set(records)):
+        if select_mode == 'weighted':
+          self.msg('%s data contains duplicates, switching select_mode to random' % source)
+        select_mode = 'random'
+      else:
+        select_mode = 'weighted'
+
+    # Now make the real selection.
+    if select_mode == 'weighted':
+      records = selectors.WeightedDistribution(records, count)
+    elif select_mode == 'chunk':
+      records = selectors.ChunkSelect(records, count)
+    elif select_mode == 'random':
+      records = selectors.RandomSelect(records, count)
+
+    if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
+      self.msg('Only %0.1f%% of %s hosts were fully qualified, synthesizing the rest.'
+               % (full_host_percent, source))
+      synthesized = []
+      for (req_type, hostname) in records:
+        if not FQDN_RE.match(hostname):
+          hostname = self._GenerateRandomHostname(hostname)
+        synthesized.append((req_type, hostname))
+      return synthesized
     else:
-      return 'cache-%s.%s.' % (random.randint(0, 10), domain)
+      return records
 
-  def _GetHostsFromSource(self, source):
-    """Get data for a particular source. This is a bit tricky.
+  def _GenerateRandomHostname(self, domain):
+    """Generate a random hostname f or a given domain."""
+    oracle = random.randint(0, 100)
+    if oracle < 70:
+      return 'www.%s' % domain
+    elif oracle < 95:
+      return domain
+    elif oracle < 98:
+      return 'static.%s' % domain
+    else:
+      return 'cache-%s.%s' % (random.randint(0, 10), domain)
+
+  def _GetHostsFromSource(self, source, min_file_size=None, max_mtime_age_days=None):
+    """Get data for a particular source. This needs to be fast.
 
     We support 3 styles of files:
 
     * One-per line list in form of record-type: host
     * One-per line list of unique domains
     * Any form with URL's.
+
+    The results of this function get cached.
     """
-    filename = self._FindBestFileForSource(source)
+    if source in self.source_cache:
+      return self.source_cache[source]
+    filename = self._FindBestFileForSource(source, min_file_size=min_file_size,
+                                           max_mtime_age_days=max_mtime_age_days)
     if not filename:
       return None
 
-    if source in self.source_cache:
-      return self.source_cache[source]
-
     size_mb = os.path.getsize(filename) / 1024.0 / 1024.0
-    self.msg('Reading %s (%0.1fMB)' % (filename, size_mb))
+    self.msg('Reading %s: %s (%0.1fMB)' % (self.GetNameForSource(source), filename, size_mb))
     hosts = self._ExtractHostsFromHistoryFile(filename)
     if not hosts:
       hosts = self._ReadDataFile(filename)
@@ -200,7 +258,7 @@ class DataSources(object):
     records = []
     for line in open(path).readlines():
       if not line.startswith('#'):
-        records.append(line.rstrip)
+        records.append(line.rstrip())
     return records
 
   def _GetSourceSearchPaths(self, source):
@@ -243,8 +301,8 @@ class DataSources(object):
 
     return search_paths
 
-  def _FindBestFileForSource(self, source, min_file_size=MIN_FILE_SIZE,
-                             max_mtime_age_days=MAX_FILE_MTIME_AGE_DAYS):
+  def _FindBestFileForSource(self, source, min_file_size=None,
+                             max_mtime_age_days=None):
     """Find the best file (newest over X size) to use for a given source type.
 
     Args:
@@ -259,7 +317,7 @@ class DataSources(object):
         path = util.FindDataFile(path)
 
       for filename in glob.glob(path):
-        if os.path.getsize(filename) < min_file_size:
+        if min_file_size and os.path.getsize(filename) < min_file_size:
           self.msg('Ignoring %s (only %s bytes)' % (filename, os.path.getsize(filename)))
         else:
           found.append(filename)
@@ -267,7 +325,7 @@ class DataSources(object):
     if found:
       newest = sorted(found, key=os.path.getmtime)[-1]
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
-      if age_days > max_mtime_age_days:
+      if max_mtime_age_days and age_days > max_mtime_age_days:
         self.msg('Ignoring %s from %s (%2.0f days old)' % (newest, source, age_days))
       else:
         return newest

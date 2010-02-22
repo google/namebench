@@ -21,7 +21,7 @@ import better_webbrowser
 
 from . import benchmark
 from . import config
-from . import history_parser
+from . import data_sources
 from . import nameserver_list
 from . import reporter
 
@@ -56,6 +56,22 @@ class BaseUI(object):
       self.status_callback(msg, **kwargs)
     else:
       print msg
+
+  def PrepareTestRecords(self):
+    data_src = data_sources.DataSources(status_callback=self.UpdateStatus)
+    if self.options.import_source:
+      src_type = self.options.import_source
+      src_name = data_src.GetNameForSource(self.options.import_source)
+    else:
+      (src_type, src_name) = data_src.GetBestSourceDetails()[:2]
+
+    self.test_records = data_src.GetTestsFromSource(src_type,
+                                                    self.options.test_count,
+                                                    select_mode=self.options.select_mode)
+#    print self.test_records
+    print ('> Using History Source: %s (%s records)' %
+           (src_name, data_src.GetCachedRecordCountForSource(src_type)))
+    print ''
 
   def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""

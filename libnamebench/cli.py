@@ -109,17 +109,6 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    data_src = data_sources.DataSources()
-    if self.options.import_source:
-      src_name = data_src.GetNameForSource(self.options.import_source)
-      self.test_records = data_src.GetRecordsFromSource(self.options.import_source)
-    else:
-      (src_type, src_name) = data_src.GetBestSourceDetails()[:2]
-      self.test_records = data_src.GetRecordsFromSource(src_type)
-
-    print '> Using History Source: %s (%s usable records)' % (src_name, len(self.test_records))
-    print ''
-          
     if self.options.only:
       if not self.supplied_ns:
         print 'If you use --only, you must provide nameservers to use.'
@@ -132,6 +121,7 @@ class NameBenchCli(base_ui.BaseUI):
       self.secondary = self.regional_ns
       
     try:
+      self.PrepareTestRecords()
       self.PrepareNameServers()
       self.PrepareBenchmark()
       self.RunAndOpenReports()

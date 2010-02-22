@@ -25,7 +25,7 @@ import tempfile
 # from third_party
 import httplib2
 
-from . import history_parser
+from . import data_sources
 from . import util
 from . import version
 
@@ -47,8 +47,8 @@ def DefineAndParseOptions(filename):
 
   Returns: tuple of (OptionParser object, args)
   """
-  h = history_parser.HistoryParser()
-  import_types = sorted(h.GetTypes().keys())
+  ds = data_sources.DataSources()
+  import_types = ds.ListSourceTypes()
   parser = optparse.OptionParser()
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int',
                     help='Number of test runs to perform on each nameserver.')
@@ -73,7 +73,7 @@ def DefineAndParseOptions(filename):
   parser.add_option('-t', '--tests', dest='test_count', type='int',
                     help='Number of queries per run.')
   parser.add_option('-m', '--select_mode', dest='select_mode',
-                    default='weighted',
+                    default='automatic',
                     help='Selection algorithm to use (weighted, random, chunk)')
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')

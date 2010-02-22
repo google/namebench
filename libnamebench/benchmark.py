@@ -47,32 +47,6 @@ class Benchmark(object):
     if self.status_callback:
       self.status_callback(msg, **kwargs)
 
-  def SelectTestRecords(self, input_data, select_mode='weighted'):
-    """Load test input data input, and create tests from it.
-
-    Args:
-      input_data: a list of hostnames to benchmark against.
-      select_mode: how to randomly select which hostnames to use. Valid modes:
-                   weighted, random, chunk
-
-    Returns:
-      A list of tuples containing record_type (str) and hostname (str)
-
-    Raises:
-      ValueError: If select_mode is incorrect.
-    """
-    if select_mode == 'weighted' and len(input_data) != len(set(input_data)):
-      print '* input contains duplicates, switching select_mode to random'
-      select_mode = 'random'
-    if select_mode == 'weighted':
-      return selectors.WeightedDistribution(input_data, self.test_count)
-    elif select_mode == 'chunk':
-      return selectors.ChunkSelect(input_data, self.test_count)
-    elif select_mode == 'random':
-      return selectors.RandomSelect(input_data, self.test_count)
-    else:
-      raise ValueError('Invalid select_mode: %s' % select_mode)
-
   def Run(self, test_records=None):
     """Manage and execute all tests on all nameservers.
 
@@ -83,14 +57,13 @@ class Benchmark(object):
     Returns:
       results: A dictionary of results
     """
-    test_data = self.SelectTestRecords(test_records)
     for test_run in range(self.run_count):
       state = ('Benchmarking %s server(s), run %s of %s' %
                (len(self.nameservers.enabled), test_run+1, self.run_count))
       count = 0
-      for (request_type, hostname) in test_data:
+      for (request_type, hostname) in test_records:
         count += 1
-        self.msg(state, count=count, total=len(test_data))
+        self.msg(state, count=count, total=len(test_records))
         for ns in self.nameservers.enabled:
           if ns not in self.results:
             self.results[ns] = []
