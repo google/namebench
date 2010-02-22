@@ -445,6 +445,8 @@ class NameServers(list):
       if shared_ns:
         ns.shared_with.add(shared_ns)
         shared_ns.shared_with.add(ns)
+        if ns.disabled or shared_ns.disabled:
+          continue
 
         if ns.check_average > shared_ns.check_average:
           slower = ns
