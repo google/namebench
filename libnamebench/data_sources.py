@@ -42,7 +42,7 @@ else:
   DEFAULT_TIMER = time.time
 
 GLOBAL_DATA_CACHE = {}
-INTERNAL_RE = re.compile('^0|\.pro[md]|\.corp|\.bor|internal|dmz|intra')
+INTERNAL_RE = re.compile('^0|\.pro[md]|\.corp|\.bor|internal|dmz|intra|\.local$')
 # ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
 FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
 
@@ -122,27 +122,51 @@ class DataSources(object):
   def GetCachedRecordCountForSource(self, source):
     return len(self.source_cache[source])
 
-  def _FilterUnwantedRecords(self, records):
-    """Remove back-to-back duplicate entries and IP based lookups.
+  def _CreateRecordsFromHostEntries(self, entries):
+    """Create records from hosts, removing duplicate entries and IP's
 
     Args:
       A list of test-data entries.
 
     Returns:
-      A list of filtered test-data entries.
+      A tuple of (filtered records, full_host_names (Boolean)
     """
+    self.msg('Generating test records for %s entries' % len(entries))
     real_tld_re = re.compile('[a-z]{2,4}$')
     internal_re = re.compile('^[\d:\.]+$')
-    last_record = None
+    last_entry = None
 
-    filtered = []
-    for record in records:
-      (req_type, host) = record
-      if (record != last_record and not IP_RE.match(host)
-          and not INTERNAL_RE.search(host) and not host.endswith('.local')):
-        filtered.append(record)
-        last_entry = record
-    return filtered
+    records = []
+    full_host_count = 0
+    for entry in entries:
+      if entry == last_entry:
+        continue
+      else:
+        last_entry = entry
+
+      if ' ' in entry:
+        (record_type, host) = entry.split(' ')
+      else:
+        record_type = 'A'
+        host = entry
+
+      if not IP_RE.match(host) and not INTERNAL_RE.search(host):
+        if not host.endswith('.'):
+          # For a short string like this, simple addition is 54% faster than formatting
+          host = host + '.'
+        records.append((record_type, host))
+
+        if FQDN_RE.match(host):
+          full_host_count += 1
+
+    # Now that we've read everything, are we dealing with domains or full hostnames?
+    full_host_percent = full_host_count / float(len(records)) * 100
+    if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
+      full_host_names = False
+    else:
+      full_host_names = True
+
+    return (records, full_host_names)
 
   def GetTestsFromSource(self, source, count=50, select_mode=None):
     """Parse records from source, and returnrequest tuples to use for testing.
@@ -158,31 +182,7 @@ class DataSources(object):
     # Convert entries into tuples, determine if we are using full hostnames
     full_host_count = 0
     www_host_count = 0
-    for entry in self._GetHostsFromSource(source):
-      if ' ' in entry:
-        (record_type, hostname) = entry.split(' ')
-      else:
-        record_type = 'A'
-        hostname = entry
-
-      # Make sure to add the trailing dot.
-      if not hostname.endswith('.'):
-        hostname = '%s.' % hostname
-
-      if FQDN_RE.match(hostname):
-        full_host_count += 1
-
-      if hostname.startswith('www.'):
-        www_host_count += 1
-
-      records.append((record_type, hostname))
-
-#    self.msg('%s of %s records are full hostnames, %s start with www.'
-#             % (full_host_count, len(records), www_host_count))
-
-    # Now that we have created the records, we can filter them, then select.
-    full_host_percent = full_host_count / float(len(records)) * 100
-    records = self._FilterUnwantedRecords(records)
+    (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(self._GetHostsFromSource(source))
 
     # First try to resolve whether to use weighted or random.
     if select_mode in ('weighted', 'automatic', None):
@@ -193,6 +193,7 @@ class DataSources(object):
       else:
         select_mode = 'weighted'
 
+    self.msg('Picking %s records from %s in %s mode' % (count, source, select_mode))
     # Now make the real selection.
     if select_mode == 'weighted':
       records = selectors.WeightedDistribution(records, count)
@@ -201,9 +202,8 @@ class DataSources(object):
     elif select_mode == 'random':
       records = selectors.RandomSelect(records, count)
 
-    if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
-      self.msg('Only %0.1f%% of %s hosts were fully qualified, synthesizing the rest.'
-               % (full_host_percent, source))
+    if are_records_fqdn:
+      self.msg('%s input appears to be predominantly domain names. Synthesizing FQDNs' % source)
       synthesized = []
       for (req_type, hostname) in records:
         if not FQDN_RE.match(hostname):
