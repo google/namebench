@@ -35,6 +35,12 @@ except ImportError:
 from . import util
 from . import selectors
 
+# Pick the most accurate timer for a platform. Stolen from timeit.py:
+if sys.platform[:3] == 'win':
+  DEFAULT_TIMER = time.clock
+else:
+  DEFAULT_TIMER = time.time
+
 GLOBAL_DATA_CACHE = {}
 INTERNAL_RE = re.compile('^0|\.pro[md]|\.corp|\.bor|internal|dmz|intra')
 # ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
@@ -239,10 +245,13 @@ class DataSources(object):
 
     size_mb = os.path.getsize(filename) / 1024.0 / 1024.0
     self.msg('Reading %s: %s (%0.1fMB)' % (self.GetNameForSource(source), filename, size_mb))
+    start_clock = DEFAULT_TIMER()
     hosts = self._ExtractHostsFromHistoryFile(filename)
     if not hosts:
       hosts = self._ReadDataFile(filename)
-  
+    duration = DEFAULT_TIMER() - start_clock
+    if duration > 5:
+      self.msg('%s data took %1.1fs to read!' % (self.GetNameForSource(source), duration))
     self.source_cache[source] = hosts
     return hosts
 
