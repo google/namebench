@@ -42,11 +42,11 @@ else:
   DEFAULT_TIMER = time.time
 
 GLOBAL_DATA_CACHE = {}
-INTERNAL_RE = re.compile('^0|\.pro[md]|\.corp|\.bor|internal|dmz|intra|\.local$')
+INTERNAL_RE = re.compile('^0|\.pro[md]\.|\.corp|\.bor|\.hot$|internal|dmz|intra|\.\w$|\.\w{5,}$')
 # ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
 FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
 
-IP_RE = re.compile('^[0-9.]$')
+IP_RE = re.compile('^[0-9.]+$')
 DEFAULT_CONFIG_PATH = "config/data_sources.cfg"
 MAX_NON_UNIQUE_RECORD_COUNT = 500000
 MAX_FILE_MTIME_AGE_DAYS = 60
