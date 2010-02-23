@@ -278,8 +278,8 @@ class ReportGenerator(object):
     self.msg("Opening %s for write" % filename, debug=True)
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
-    output.writerow(['IP', 'Name', 'Check Duration', 'Test #', 'Record',
-                     'Record Type', 'Duration', 'TTL', 'Answer Count',
+    output.writerow(['IP', 'Name', 'Test_Num', 'Record',
+                     'Record_Type', 'Duration', 'TTL', 'Answer_Count',
                      'Response'])
     for ns in self.results:
       self.msg("Saving detailed data for %s" % ns, debug=True)
@@ -293,8 +293,8 @@ class ReportGenerator(object):
               answer_count = len(response.answer)
               ttl = response.answer[0].ttl
             answer_text = ns.ResponseToAscii(response)
-          output.writerow([ns.ip, ns.name, ns.check_duration, test_run, record,
-                           req_type, duration, ttl, answer_count, answer_text, error_msg])
+          output.writerow([ns.ip, ns.name, test_run, record, req_type, duration,
+                           ttl, answer_count, answer_text, error_msg])
     csv_file.close()
     self.msg("%s saved." % filename, debug=True)
 
