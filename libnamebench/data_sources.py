@@ -84,6 +84,8 @@ class DataSources(object):
       for (key, value) in config.items(section):
         if key == 'name':
           self.source_config[section]['name'] = value
+        elif key == 'full_hostnames' and int(value) == 0:
+          self.source_config[section]['full_hostnames'] = False
         else:
           self.source_config[section]['search_paths'].add(value)
 
@@ -204,6 +206,7 @@ class DataSources(object):
       records = selectors.RandomSelect(records, count)
 
     if are_records_fqdn:
+      self.source_config[source]['full_hostnames'] = False
       self.msg('%s input appears to be predominantly domain names. Synthesizing FQDNs' % source)
       synthesized = []
       for (req_type, hostname) in records:
