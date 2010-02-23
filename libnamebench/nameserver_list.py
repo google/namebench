@@ -294,14 +294,14 @@ class NameServers(list):
         if not secondaries_to_keep and secondaries_needed < 15:
           self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
         secondaries_to_keep.append(ns)
-        print '| %s is near: %s (avg: %s)' % (ns, ns.fastest_check_duration, ns.check_average)
+#        print '| %s is near: %s (avg: %s)' % (ns, ns.fastest_check_duration, ns.check_average)
         if len(secondaries_to_keep) >= nearest_needed:
           break
 
     # Phase three is removing all of the slower secondary servers
     for ns in self.SortByFastest():
       if not ns.is_preferred and not ns.disabled and ns not in secondaries_to_keep:
-        print '| %s is fast: %s (lowest: %s)' % (ns, ns.check_average, ns.fastest_check_duration)
+#        print '| %s is fast: %s (lowest: %s)' % (ns, ns.check_average, ns.fastest_check_duration)
         secondaries_to_keep.append(ns)
         if len(secondaries_to_keep) == secondaries_needed:
           break
