@@ -92,7 +92,7 @@ class BaseUI(object):
 
     # Don't waste time checking the health of the only nameserver in the list.
     if len(self.nameservers) > 1:
-      self.nameservers.thread_count = int(self.options.thread_count)
+      self.nameservers.health_thread_count = int(self.options.health_thread_count)
       self.nameservers.cache_dir = tempfile.gettempdir()
 
     self.UpdateStatus('Checking latest sanity reference')
@@ -110,6 +110,7 @@ class BaseUI(object):
     self.bmark = benchmark.Benchmark(self.nameservers,
                                      test_count=self.options.test_count,
                                      run_count=self.options.run_count,
+                                     thread_count=self.options.benchmark_thread_count,
                                      status_callback=self.UpdateStatus)
 
   def RunBenchmark(self):

@@ -103,8 +103,9 @@ class NameBenchCli(base_ui.BaseUI):
     print('namebench %s - %s (%s) on %s' %
           (self.version, self.options.import_source or 'best history source',
            self.options.select_mode, datetime.datetime.now()))
-    print ('threads=%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
-           (self.options.thread_count, self.options.test_count,
+    print ('threads=%s/%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
+           (self.options.health_thread_count, self.options.benchmark_thread_count,
+            self.options.test_count,
             self.options.run_count, self.options.timeout,
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78

@@ -58,8 +58,10 @@ def DefineAndParseOptions(filename):
                     help='Filename to write HTML output to')
   parser.add_option('-c', '--csv_output', dest='csv_file', default=None,
                     help='Filename to write CSV output to')
-  parser.add_option('-j', '--threads', dest='thread_count', type='int',
-                    help='# of threads to use')
+  parser.add_option('-j', '--health_threads', dest='health_thread_count', type='int',
+                    help='# of health check threads to use')
+  parser.add_option('-J', '--benchmark_threads', dest='benchmark_thread_count', type='int',
+                    help='# of benchmark threads to use')
   parser.add_option('-y', '--timeout', dest='timeout', type='float',
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
