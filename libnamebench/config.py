@@ -66,8 +66,8 @@ def DefineAndParseOptions(filename):
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='health check timeout (in seconds)')
-  parser.add_option('-i', '--import', dest='import_source',
-                    help=('Import history from an external file or app (%s)' %
+  parser.add_option('-i', '--input', dest='input',
+                    help=('Import hostnames from an filename or application (%s)' %
                           ', '.join(import_types)))
   parser.add_option('-I', '--invalidate_cache', dest='invalidate_cache',
                     action='store_true',

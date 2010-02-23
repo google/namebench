@@ -27,7 +27,7 @@ import tkMessageBox
 
 from . import base_ui
 from . import conn_quality
-from . import history_parser
+from . import data_sources
 from . import nameserver_list
 from . import util
 
@@ -208,8 +208,8 @@ class MainWindow(Frame, base_ui.BaseUI):
     numtests_label.grid(row=10, column=1, sticky=W)
     numtests_label['font'] = bold_font
 
-    self.DiscoverSources()
-    source_titles = [history_parser.sourceToTitle(x) for x in self.sources]
+    self.LoadDataSources()
+    source_titles = self.data_src.ListSourcesWithDetails()
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
     data_source.configure(width=35)
     data_source.grid(row=11, column=0, sticky=W)
@@ -301,7 +301,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     self.ProcessForm()
     thread = WorkerThread(self.preferred, self.secondary, self.options,
-                          history_parser=self.hparser,
+                          data_source=self.data_src,
                           master=self.master, backup_notifier=self.MessageHandler)
     thread.start()
 
@@ -317,6 +317,6 @@ class MainWindow(Frame, base_ui.BaseUI):
       self.secondary = []
     self.options.run_count = self.num_runs.get()
     self.options.test_count = self.num_tests.get()
-    self.options.data_source = self.ParseSourceSelection(self.data_source.get())
+    self.options.input = self.ParseSourceSelection(self.data_source.get())
     self.options.select_mode = self.selection_mode.get().lower()
     self.options.enable_censorship_checks = self.use_censor_checks.get()

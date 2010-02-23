@@ -111,6 +111,18 @@ class DataSources(object):
                       len(self.source_cache[source])))
     return sorted(details, key=lambda x:(x[2], x[3]), reverse=True)
 
+  def ListSourcesTitles(self):
+    titles = []
+    for (source_type, name, full_hostnames, count) in self.ListSourcesWithDetails():
+      titles.append("%s (%s)" % (name, count))
+    return titles
+
+  def ConvertSourceTitleToSourceType(self, detail):
+    """Convert a detail name to a source type."""
+    for source_type in self.source_config:
+      if detail.startswith(self.source_config[source_type]['name']):
+        return source_type
+
   def GetBestSourceDetails(self):
     return self.ListSourcesWithDetails()[0]
 

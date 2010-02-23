@@ -101,7 +101,7 @@ class NameBenchCli(base_ui.BaseUI):
   def Execute(self):
     """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.import_source or 'best history source',
+          (self.version, self.options.input or 'best history source',
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s/%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.health_thread_count, self.options.benchmark_thread_count,
@@ -122,6 +122,7 @@ class NameBenchCli(base_ui.BaseUI):
       self.secondary = self.regional_ns
       
     try:
+      self.LoadDataSources()
       self.PrepareTestRecords()
       self.PrepareNameServers()
       self.PrepareBenchmark()
