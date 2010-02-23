@@ -40,7 +40,6 @@ class BenchmarkThreads(threading.Thread):
     while not self.input.empty():
       try:
         (ns, request_type, hostname) = self.input.get_nowait()
-        print "%s: %s" % (ns, hostname)
         (response, duration, error_msg) = ns.TimedRequest(request_type, hostname)
         self.results.put((ns, request_type, hostname, response, duration, error_msg))
       except Queue.Empty:
@@ -96,7 +95,6 @@ class Benchmark(object):
 
       for i in range(len(test_records)):
         for ns in self.nameservers.enabled:
-          print "%s: %s" % (ns, i)
           (request_type, hostname) = shuffled_records[ns][i]
           input_queue.put((ns, request_type, hostname))
 
@@ -119,8 +117,9 @@ class Benchmark(object):
       thread.start()
       threads.append(thread)
 
-    status_message = ('Sending queries to %s servers [%s threads]' %
-                      (len(self.nameservers.enabled), self.thread_count))
+    query_count = expected_total / len(self.nameservers.enabled)
+    status_message = ('Sending %s queries to %s servers [%s threads]' %
+                      (query_count, len(self.nameservers.enabled), self.thread_count))
     while results_queue.qsize() != expected_total:
       self.msg(status_message, count=results_queue.qsize(), total=expected_total)
       time.sleep(0.5)
