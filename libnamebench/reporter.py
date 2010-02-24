@@ -229,6 +229,7 @@ class ReportGenerator(object):
         timestamp = datetime.datetime.now(),
         lowest_latency=lowest_latency,
         best=best,
+        version=config.version,
         comparison=comparison,
         config=filtered_config,
         mean_duration=mean_duration,

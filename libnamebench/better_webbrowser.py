@@ -96,12 +96,13 @@ if sys.platform[:3] == 'win':
 
 def open(url):
   try:
-    webbrowser.open(url)
+    webbrowser.open(url, new=1, autoraise=True)
   # If the user is missing the osascript binary - see http://code.google.com/p/namebench/issues/detail?id=88
   except:
     print 'Failed to open: [%s] - trying alternate methods.' % url
     failed = True
     try:
+      print "trying open: %s" % url
       p = subprocess.Popen(('open', url))
       p.wait()
       failed = False
@@ -110,6 +111,7 @@ def open(url):
 
     if failed:
       try:
+        print "trying start: %s" % url
         p2 = subprocess.Popen(('start.exe', url))
         p2.wait()
       except:

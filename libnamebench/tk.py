@@ -268,7 +268,7 @@ class MainWindow(Frame, base_ui.BaseUI):
       state = message
 
     print "> %s" % state
-    self.status.set(state[0:60])
+    self.status.set(state[0:70])
 
   def ErrorPopup(self, title, message):
     print "Showing popup: %s" % title
