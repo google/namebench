@@ -147,7 +147,7 @@ class BaseUI(object):
                                csv_path=self.csv_path)
     f.close()
 
-    self.UpdateStatus('Saving query details (CSV) to %s' % self.csv_path)
+    self.UpdateStatus('Saving detailed results to %s' % self.csv_path)
     self.reporter.SaveResultsToCsv(self.csv_path)
 
   def DisplayHtmlReport(self):
