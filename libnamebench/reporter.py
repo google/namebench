@@ -145,7 +145,10 @@ class ReportGenerator(object):
     min_duration_url = charts.MinimumDurationBarGraph(self.FastestNameServerResult())
     distribution_url_200 = charts.DistributionLineGraph(self.DigestedResults(),
                                                         scale=200)
-    distribution_url = charts.DistributionLineGraph(self.DigestedResults())
+
+    # timeout in ms
+    max_timeout = self.nameservers[0].timeout * 1000
+    distribution_url = charts.DistributionLineGraph(self.DigestedResults(), scale=max_timeout)
     best = self.BestOverallNameServer()
     nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
     recommended = [best] + nearest
