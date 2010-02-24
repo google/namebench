@@ -87,7 +87,7 @@ class Benchmark(object):
       for ns in self.nameservers.enabled:
         random.shuffle(test_records)
         shuffled_records[ns] = list(test_records)
-        
+
         if ns not in self.results:
           self.results[ns] = []
           for x in range(self.run_count):
@@ -102,7 +102,11 @@ class Benchmark(object):
       while results_queue.qsize():
         (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
         if error_msg:
-          duration = ns.timeout
+          # convert to ms
+          duration = (ns.timeout * 1000)
+          print "fake duration: %s" % duration
+        else:
+          print "duration: %s" % duration
         self.results[ns][test_run].append((hostname, request_type, duration,
                                            response, error_msg))
     return self.results
