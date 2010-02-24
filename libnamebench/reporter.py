@@ -146,8 +146,8 @@ class ReportGenerator(object):
     distribution_url_200 = charts.DistributionLineGraph(self.DigestedResults(),
                                                         scale=200)
 
-    # timeout in ms
-    max_timeout = self.nameservers[0].timeout * 1000
+    # timeout in ms, scaled to the non-adjusted timeout
+    max_timeout = config.timeout * 1000
     distribution_url = charts.DistributionLineGraph(self.DigestedResults(), scale=max_timeout)
     best = self.BestOverallNameServer()
     nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
