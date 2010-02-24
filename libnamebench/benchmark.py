@@ -99,16 +99,16 @@ class Benchmark(object):
           input_queue.put((ns, request_type, hostname))
 
       results_queue = self._LaunchBenchmarkThreads(input_queue)
+      errors = []
       while results_queue.qsize():
         (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
         if error_msg:
-          # convert to ms
-          duration = (ns.timeout * 1000)
-          print "fake duration: %s" % duration
-        else:
-          print "duration: %s" % duration
+          duration = ns.timeout * 1000
+          errors.append((ns, hostname, request_type, error_msg))
         self.results[ns][test_run].append((hostname, request_type, duration,
                                            response, error_msg))
+      for (ns, hostname, request_type, error_msg) in errors:
+	    self.msg("Error querying %s for %s:%s: %s" % (ns, request_type, hostname, error_msg))
     return self.results
 
   def _LaunchBenchmarkThreads(self, input_queue):
