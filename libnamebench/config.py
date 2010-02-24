@@ -66,13 +66,13 @@ def DefineAndParseOptions(filename):
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',
                     type='float', help='health check timeout (in seconds)')
-  parser.add_option('-i', '--input', dest='input',
+  parser.add_option('-i', '--input', dest='input_source',
                     help=('Import hostnames from an filename or application (%s)' %
                           ', '.join(import_types)))
   parser.add_option('-I', '--invalidate_cache', dest='invalidate_cache',
                     action='store_true',
                     help='Force health cache to be invalidated')
-  parser.add_option('-t', '--tests', dest='test_count', type='int',
+  parser.add_option('-q', '--query_count', dest='query_count', type='int',
                     help='Number of queries per run.')
   parser.add_option('-m', '--select_mode', dest='select_mode',
                     default='automatic',
@@ -119,10 +119,10 @@ def GetLatestSanityChecks():
   ref_file = util.FindDataFile('config/hostname_reference.cfg')
   local_config = ConfigParser.ConfigParser()
   local_config.read(ref_file)
-  
+
   if http_version_usable:
     if int(http_config.get('base', 'version')) > int(local_config.get('base', 'version')):
-      print "- Using %s" % SANITY_REFERENCE_URL      
+      print "- Using %s" % SANITY_REFERENCE_URL
       use_config = http_config
 
   if not use_config:

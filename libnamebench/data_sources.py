@@ -111,13 +111,14 @@ class DataSources(object):
                       len(self.source_cache[source])))
     return sorted(details, key=lambda x:(x[2], x[3]), reverse=True)
 
-  def ListSourcesTitles(self):
+  def ListSourceTitles(self):
+    """Return a list of sources in title + count format."""
     titles = []
     for (source_type, name, full_hostnames, count) in self.ListSourcesWithDetails():
       titles.append("%s (%s)" % (name, count))
     return titles
 
-  def ConvertSourceTitleToSourceType(self, detail):
+  def ConvertSourceTitleToType(self, detail):
     """Convert a detail name to a source type."""
     for source_type in self.source_config:
       if detail.startswith(self.source_config[source_type]['name']):
@@ -145,7 +146,6 @@ class DataSources(object):
     Returns:
       A tuple of (filtered records, full_host_names (Boolean)
     """
-    self.msg('Generating test records for %s entries' % len(entries))
     real_tld_re = re.compile('[a-z]{2,4}$')
     internal_re = re.compile('^[\d:\.]+$')
     last_entry = None
@@ -197,7 +197,9 @@ class DataSources(object):
     # Convert entries into tuples, determine if we are using full hostnames
     full_host_count = 0
     www_host_count = 0
-    (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(self._GetHostsFromSource(source))
+    records = self._GetHostsFromSource(source)
+    self.msg('Generating tests from %s (%s records, selecting %s %s)' % (self.GetNameForSource(source), len(records), count, select_mode))
+    (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records)
 
     # First try to resolve whether to use weighted or random.
     if select_mode in ('weighted', 'automatic', None):
@@ -208,7 +210,7 @@ class DataSources(object):
       else:
         select_mode = 'weighted'
 
-    self.msg('Picking %s records from %s in %s mode' % (count, source, select_mode))
+#    self.msg('Picking %s records from %s in %s mode' % (count, source, select_mode))
     # Now make the real selection.
     if select_mode == 'weighted':
       records = selectors.WeightedDistribution(records, count)
@@ -288,7 +290,7 @@ class DataSources(object):
 
   def _GetSourceSearchPaths(self, source):
     """Get a list of possible search paths (globs) for a given source."""
-    
+
     # This is likely a custom file path
     if source not in self.source_config:
       return [source]

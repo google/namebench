@@ -48,16 +48,16 @@ class BenchmarkThreads(threading.Thread):
 class Benchmark(object):
   """The main benchmarking class."""
 
-  def __init__(self, nameservers, run_count=2, test_count=30, thread_count=1,
+  def __init__(self, nameservers, run_count=2, query_count=30, thread_count=1,
                status_callback=None):
     """Constructor.
 
     Args:
       nameservers: a list of NameServerData objects
       run_count: How many test-runs to perform on each nameserver (int)
-      test_count: How many DNS lookups to test in each test-run (int)
+      query_count: How many DNS lookups to test in each test-run (int)
     """
-    self.test_count = test_count
+    self.query_count = query_count
     self.run_count = run_count
     self.thread_count = thread_count
     self.nameservers = nameservers

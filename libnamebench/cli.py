@@ -101,11 +101,11 @@ class NameBenchCli(base_ui.BaseUI):
   def Execute(self):
     """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.input or 'best history source',
+          (self.version, self.options.input_source or 'best history source',
            self.options.select_mode, datetime.datetime.now()))
-    print ('threads=%s/%s tests=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
+    print ('threads=%s/%s queries=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.health_thread_count, self.options.benchmark_thread_count,
-            self.options.test_count,
+            self.options.query_count,
             self.options.run_count, self.options.timeout,
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
@@ -120,10 +120,11 @@ class NameBenchCli(base_ui.BaseUI):
     else:
       self.preferred = self.supplied_ns + self.global_ns
       self.secondary = self.regional_ns
-      
+
     try:
       self.LoadDataSources()
       self.PrepareTestRecords()
+      print ''
       self.PrepareNameServers()
       self.PrepareBenchmark()
       self.RunAndOpenReports()
@@ -131,6 +132,6 @@ class NameBenchCli(base_ui.BaseUI):
            conn_quality.OfflineConnection):
       (exc_type, exception, tb) = sys.exc_info()
       self.UpdateStatus("%s - %s" % (exc_type, exception), error=True)
-      
+
 
 

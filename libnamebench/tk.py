@@ -80,11 +80,11 @@ class Message(object):
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
 
-  def __init__(self, preferred, secondary, options, history_parser=None, master=None,
+  def __init__(self, preferred, secondary, options, data_source=None, master=None,
                backup_notifier=None):
     threading.Thread.__init__(self)
     self.status_callback = self.msg
-    self.hparser = history_parser
+    self.data_src = data_source
     self.backup_notifier = backup_notifier
     self.include_internal = False
     self.preferred = preferred
@@ -100,6 +100,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
   def run(self):
     self.msg('Started thread', enable_button=False)
     try:
+      self.PrepareTestRecords()
       self.PrepareNameServers()
       self.PrepareBenchmark()
       self.RunAndOpenReports()
@@ -155,8 +156,8 @@ class MainWindow(Frame, base_ui.BaseUI):
     """Draws the user interface."""
     self.nameserver_form = StringVar()
     self.status = StringVar()
-    self.num_tests = IntVar()
-    self.num_runs = IntVar()
+    self.query_count = IntVar()
+    self.run_count = IntVar()
     self.data_source = StringVar()
     self.selection_mode = StringVar()
     self.use_global = IntVar()
@@ -204,37 +205,37 @@ class MainWindow(Frame, base_ui.BaseUI):
     ds_label.grid(row=10, column=0, sticky=W)
     ds_label['font'] = bold_font
 
-    numtests_label = Label(inner_frame, text="Number of tests")
-    numtests_label.grid(row=10, column=1, sticky=W)
-    numtests_label['font'] = bold_font
+    numqueries_label = Label(inner_frame, text="Number of queries")
+    numqueries_label.grid(row=10, column=1, sticky=W)
+    numqueries_label['font'] = bold_font
 
     self.LoadDataSources()
-    source_titles = self.data_src.ListSourcesWithDetails()
+    source_titles = self.data_src.ListSourceTitles()
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
     data_source.configure(width=35)
     data_source.grid(row=11, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
-    num_tests = Entry(inner_frame, bg="white", textvariable=self.num_tests)
-    num_tests.grid(row=11, column=1, sticky=W, padx=4)
-    self.num_tests.set(self.options.test_count)
+    query_count = Entry(inner_frame, bg="white", textvariable=self.query_count)
+    query_count.grid(row=11, column=1, sticky=W, padx=4)
+    self.query_count.set(self.options.query_count)
 
     bds_label = Label(inner_frame, text="Benchmark Data Selection")
     bds_label.grid(row=12, column=0, sticky=W)
     bds_label['font'] = bold_font
 
-    num_runs_label = Label(inner_frame, text="Number of runs")
-    num_runs_label.grid(row=12, column=1, sticky=W)
-    num_runs_label['font'] = bold_font
+    run_count_label = Label(inner_frame, text="Number of runs")
+    run_count_label.grid(row=12, column=1, sticky=W)
+    run_count_label['font'] = bold_font
 
     selection_mode = OptionMenu(inner_frame, self.selection_mode, "Weighted", "Random", "Chunk")
     selection_mode.configure(width=35)
     selection_mode.grid(row=13, column=0, sticky=W)
     self.selection_mode.set('Weighted')
 
-    num_runs = Entry(inner_frame, bg="white", textvariable=self.num_runs)
-    num_runs.grid(row=13, column=1, sticky=W, padx=4)
-    self.num_runs.set(self.options.run_count)
+    run_count = Entry(inner_frame, bg="white", textvariable=self.run_count)
+    run_count.grid(row=13, column=1, sticky=W, padx=4)
+    self.run_count.set(self.options.run_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
     self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
@@ -315,8 +316,8 @@ class MainWindow(Frame, base_ui.BaseUI):
       self.secondary = self.regional_ns
     else:
       self.secondary = []
-    self.options.run_count = self.num_runs.get()
-    self.options.test_count = self.num_tests.get()
-    self.options.input = self.ParseSourceSelection(self.data_source.get())
+    self.options.run_count = self.run_count.get()
+    self.options.query_count = self.query_count.get()
+    self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.get())
     self.options.select_mode = self.selection_mode.get().lower()
     self.options.enable_censorship_checks = self.use_censor_checks.get()

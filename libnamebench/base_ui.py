@@ -61,19 +61,15 @@ class BaseUI(object):
     self.data_src = data_sources.DataSources(status_callback=self.UpdateStatus)
 
   def PrepareTestRecords(self):
-    if self.options.import_source:
-      src_type = self.options.import_source
-      src_name = self.data_src.GetNameForSource(self.options.import_source)
+    if self.options.input_source:
+      src_type = self.options.input_source
+      src_name = self.data_src.GetNameForSource(src_type)
     else:
       (src_type, src_name) = self.data_src.GetBestSourceDetails()[:2]
 
     self.test_records = self.data_src.GetTestsFromSource(src_type,
-                                                         self.options.test_count,
+                                                         self.options.query_count,
                                                          select_mode=self.options.select_mode)
-#    print self.test_records
-    print ('> Using History Source: %s (%s records)' %
-           (src_name, self.data_src.GetCachedRecordCountForSource(src_type)))
-    print ''
 
   def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""
@@ -109,10 +105,15 @@ class BaseUI(object):
 
   def PrepareBenchmark(self):
     """Setup the benchmark object with the appropriate dataset."""
+    if len(self.nameservers) == 1:
+      thread_count = 1
+    else:
+      thread_count = self.options.benchmark_thread_count
+
     self.bmark = benchmark.Benchmark(self.nameservers,
-                                     test_count=self.options.test_count,
+                                     query_count=self.options.query_count,
                                      run_count=self.options.run_count,
-                                     thread_count=self.options.benchmark_thread_count,
+                                     thread_count=thread_count,
                                      status_callback=self.UpdateStatus)
 
   def RunBenchmark(self):
@@ -152,20 +153,4 @@ class BaseUI(object):
   def DisplayHtmlReport(self):
     self.UpdateStatus('Opening %s' % self.html_path)
     better_webbrowser.open(self.html_path)
-
-  def DiscoverSources(self):
-    """Seek out and create a list of valid data sources."""
-    self.UpdateStatus('Searching for usable sources of hostnames for testing...')
-    self.available_sources = self.hparser.GetAvailableHistorySources()
-
-  def ParseSourceSelection(self, selection):
-    self.UpdateStatus('Matching "%s" to %s' % (selection, self.available_sources))
-    for source in self.available_sources:
-      parsed_name = history_parser.sourceToTitle(source)
-      if parsed_name.lower() == selection.lower():
-        src_type = source[0]
-        self.UpdateStatus('Parsed source type to %s' % src_type)
-        return src_type
-    self.UpdateStatus('Unable to match "%s" to a source type' % selection)
-    return None
 

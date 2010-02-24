@@ -68,6 +68,7 @@ if __name__ == '__main__':
       use_tk = False
 
   if use_tk:
+    print "Starting Tk interface for namebench..."
     from libnamebench import tk
     interface = tk.NameBenchGui
   else:
