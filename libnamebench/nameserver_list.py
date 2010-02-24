@@ -325,7 +325,7 @@ class NameServers(list):
       self.msg('Failed to use secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString()))
       cached = False
     if not cached:
-      self.msg('Building initial DNS cache for %s nameservers [%s threads]' %
+      self.msg('Building initial DNS cache for %s nameservers (%s threads)' %
                (len(self), self.thread_count))
 
     # If we have a lot of nameservers, make a first cut.
@@ -499,7 +499,7 @@ class NameServers(list):
     if thread_count > len(items):
       thread_count = len(items)
 
-    status_message = status_message + ' [%s threads]' % thread_count
+    status_message = status_message + ' (%s threads)' % thread_count
 
     self.msg(status_message, count=0, total=len(items))
     for thread_num in range(0, thread_count):

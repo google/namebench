@@ -104,11 +104,11 @@ class Benchmark(object):
         (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
         if error_msg:
           duration = ns.timeout * 1000
-          errors.append((ns, hostname, request_type, error_msg))
+          errors.append((ns, error_msg))
         self.results[ns][test_run].append((hostname, request_type, duration,
                                            response, error_msg))
-      for (ns, hostname, request_type, error_msg) in errors:
-	    self.msg("Error querying %s for %s:%s: %s" % (ns, request_type, hostname, error_msg))
+      for (ns, error_msg) in errors:
+	    self.msg("Error querying %s: %s" % (ns, error_msg))
     return self.results
 
   def _LaunchBenchmarkThreads(self, input_queue):
@@ -122,8 +122,8 @@ class Benchmark(object):
       threads.append(thread)
 
     query_count = expected_total / len(self.nameservers.enabled)
-    status_message = ('Sending %s queries to %s servers [%s threads]' %
-                      (query_count, len(self.nameservers.enabled), self.thread_count))
+    status_message = ('Sending %s queries to %s servers' %
+                      (query_count, len(self.nameservers.enabled)))
     while results_queue.qsize() != expected_total:
       self.msg(status_message, count=results_queue.qsize(), total=expected_total)
       time.sleep(0.5)
