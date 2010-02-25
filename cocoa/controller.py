@@ -37,7 +37,7 @@ from libnamebench import base_ui
 from libnamebench import benchmark
 from libnamebench import config
 from libnamebench import conn_quality
-from libnamebench import history_parser
+from libnamebench import data_sources
 from libnamebench import nameserver_list
 from libnamebench import util
 from libnamebench import version
@@ -50,8 +50,8 @@ class controller(NSWindowController, base_ui.BaseUI):
   include_censorship_checks = IBOutlet()
   data_source = IBOutlet()
   selection_mode = IBOutlet()
-  num_tests = IBOutlet()
-  num_runs = IBOutlet()
+  query_count = IBOutlet()
+  run_count = IBOutlet()
   status = IBOutlet()
   spinner = IBOutlet()
   button = IBOutlet()
@@ -62,12 +62,12 @@ class controller(NSWindowController, base_ui.BaseUI):
     NSLog('argv[0]: %s' % sys.argv[0])
     self.resource_dir = os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources')
     
-    conf_file = util.FindDataFile('namebench.cfg')
+    conf_file = util.FindDataFile('config/namebench.cfg')
     NSLog("Using configuration: %s" % conf_file)
     (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
     self.UpdateStatus('Discovering sources')
-    self.DiscoverSources()
+    self.LoadDataSources()
     self.UpdateStatus('Populating Form...')
     self.setFormDefaults()
     self.UpdateStatus('namebench %s is ready!' % version.VERSION)
@@ -113,12 +113,12 @@ class controller(NSWindowController, base_ui.BaseUI):
     if int(self.include_censorship_checks.stringValue()):
       self.options.enable_censorship_checks = True
     self.options.select_mode = self.selection_mode.titleOfSelectedItem().lower()
-    self.options.data_source = self.ParseSourceSelection(self.data_source.titleOfSelectedItem())
+    self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.preferred.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
-    self.options.test_count = int(self.num_tests.stringValue())
-    self.options.run_count = int(self.num_runs.stringValue())
-    self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.data_source, self.options.select_mode, self.options.test_count, self.options.run_count))
+    self.options.query_count = int(self.query_count.stringValue())
+    self.options.run_count = int(self.run_count.stringValue())
+    self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.input_source, self.options.select_mode, self.options.query_count, self.options.run_count))
 
   def benchmarkThread(self):
     """Run the benchmarks, designed to be run in a thread."""
@@ -127,6 +127,7 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.button.setEnabled_(False)
     self.UpdateStatus('Preparing benchmark')
     try:
+      self.PrepareTestRecords()
       self.PrepareNameServers()
       self.PrepareBenchmark()
       self.RunAndOpenReports()
@@ -162,11 +163,11 @@ class controller(NSWindowController, base_ui.BaseUI):
     """Set up the form with sane initial values."""
     nameservers_string = ', '.join(util.InternalNameServers())
     self.nameserver_form.setStringValue_(nameservers_string)
-    self.num_tests.setStringValue_(self.options.test_count)
-    self.num_runs.setStringValue_(self.options.run_count)
+    self.query_count.setStringValue_(self.options.query_count)
+    self.run_count.setStringValue_(self.options.run_count)
     self.selection_mode.removeAllItems()
     self.selection_mode.addItemsWithTitles_(['Weighted', 'Random', 'Chunk'])
     self.data_source.removeAllItems()
-    for source in self.sources:
-      self.data_source.addItemWithTitle_(history_parser.sourceToTitle(source))
+    for source in self.data_src.ListSourceTitles():
+      self.data_source.addItemWithTitle_(source)
 

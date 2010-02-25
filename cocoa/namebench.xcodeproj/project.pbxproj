@@ -11,8 +11,7 @@
 		697CE1EE10DA048D00D5C46F /* third_party in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1EA10DA048D00D5C46F /* third_party */; };
 		697CE1EF10DA048D00D5C46F /* templates in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1EB10DA048D00D5C46F /* templates */; };
 		697CE1F010DA048D00D5C46F /* libnamebench in Resources */ = {isa = PBXBuildFile; fileRef = 697CE1EC10DA048D00D5C46F /* libnamebench */; };
-		697CE2B110DA04D600D5C46F /* data in Resources */ = {isa = PBXBuildFile; fileRef = 697CE2AB10DA04D600D5C46F /* data */; };
-		697CE2C110DA05F300D5C46F /* namebench.cfg in Resources */ = {isa = PBXBuildFile; fileRef = 697CE2C010DA05F300D5C46F /* namebench.cfg */; };
+		697CE2B110DA04D600D5C46F /* config in Resources */ = {isa = PBXBuildFile; fileRef = 697CE2AB10DA04D600D5C46F /* config */; };
 		77631A270C06C501005415CB /* Python.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77631A260C06C501005415CB /* Python.framework */; };
 		77631A3F0C0748CF005415CB /* main.py in Resources */ = {isa = PBXBuildFile; fileRef = 77631A3E0C0748CF005415CB /* main.py */; };
 		7790198F0C07548A00326F66 /* namebenchAppDelegate.py in Resources */ = {isa = PBXBuildFile; fileRef = 7790198E0C07548A00326F66 /* namebenchAppDelegate.py */; };
@@ -20,6 +19,7 @@
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
+		DCABD7DC11365CF10067F26A /* data in Resources */ = {isa = PBXBuildFile; fileRef = DCABD7D711365CF10067F26A /* data */; };
 		DCC47243107F4BB1009BBD14 /* controller.py in Resources */ = {isa = PBXBuildFile; fileRef = DCC47242107F4BB1009BBD14 /* controller.py */; };
 		DCDB6B58108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns in Resources */ = {isa = PBXBuildFile; fileRef = DCDB6B57108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns */; };
 /* End PBXBuildFile section */
@@ -36,14 +36,14 @@
 		697CE1EA10DA048D00D5C46F /* third_party */ = {isa = PBXFileReference; lastKnownFileType = folder; name = third_party; path = ../third_party; sourceTree = SOURCE_ROOT; };
 		697CE1EB10DA048D00D5C46F /* templates */ = {isa = PBXFileReference; lastKnownFileType = folder; name = templates; path = ../templates; sourceTree = SOURCE_ROOT; };
 		697CE1EC10DA048D00D5C46F /* libnamebench */ = {isa = PBXFileReference; lastKnownFileType = folder; name = libnamebench; path = ../libnamebench; sourceTree = SOURCE_ROOT; };
-		697CE2AB10DA04D600D5C46F /* data */ = {isa = PBXFileReference; lastKnownFileType = folder; name = data; path = ../data; sourceTree = SOURCE_ROOT; };
-		697CE2C010DA05F300D5C46F /* namebench.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = namebench.cfg; path = ../namebench.cfg; sourceTree = SOURCE_ROOT; };
+		697CE2AB10DA04D600D5C46F /* config */ = {isa = PBXFileReference; lastKnownFileType = folder; name = config; path = ../config; sourceTree = SOURCE_ROOT; };
 		77631A260C06C501005415CB /* Python.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Python.framework; path = /System/Library/Frameworks/Python.framework; sourceTree = "<absolute>"; };
 		77631A3E0C0748CF005415CB /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
 		7790198E0C07548A00326F66 /* namebenchAppDelegate.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = namebenchAppDelegate.py; sourceTree = "<group>"; };
 		77C8C1F80C07829500965286 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* namebench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = namebench.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DCABD7D711365CF10067F26A /* data */ = {isa = PBXFileReference; lastKnownFileType = folder; name = data; path = ../data; sourceTree = SOURCE_ROOT; };
 		DCC47242107F4BB1009BBD14 /* controller.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = controller.py; sourceTree = "<group>"; };
 		DCDB6B57108752450032DB33 /* Crystal_Clear_app_linneighborhood.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Crystal_Clear_app_linneighborhood.icns; path = ../third_party/Crystal_Clear/Crystal_Clear_app_linneighborhood.icns; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -121,9 +121,9 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				DCABD7D711365CF10067F26A /* data */,
 				DCC47242107F4BB1009BBD14 /* controller.py */,
-				697CE2C010DA05F300D5C46F /* namebench.cfg */,
-				697CE2AB10DA04D600D5C46F /* data */,
+				697CE2AB10DA04D600D5C46F /* config */,
 				697CE1E910DA048D00D5C46F /* tools */,
 				697CE1EA10DA048D00D5C46F /* third_party */,
 				697CE1EB10DA048D00D5C46F /* templates */,
@@ -198,8 +198,8 @@
 				697CE1EE10DA048D00D5C46F /* third_party in Resources */,
 				697CE1EF10DA048D00D5C46F /* templates in Resources */,
 				697CE1F010DA048D00D5C46F /* libnamebench in Resources */,
-				697CE2B110DA04D600D5C46F /* data in Resources */,
-				697CE2C110DA05F300D5C46F /* namebench.cfg in Resources */,
+				697CE2B110DA04D600D5C46F /* config in Resources */,
+				DCABD7DC11365CF10067F26A /* data in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

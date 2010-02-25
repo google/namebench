@@ -2,14 +2,14 @@
 <archive type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="7.03">
 	<data>
 		<int key="IBDocument.SystemTarget">1050</int>
-		<string key="IBDocument.SystemVersion">9L30</string>
+		<string key="IBDocument.SystemVersion">9L31a</string>
 		<string key="IBDocument.InterfaceBuilderVersion">677</string>
 		<string key="IBDocument.AppKitVersion">949.54</string>
 		<string key="IBDocument.HIToolboxVersion">353.00</string>
 		<object class="NSMutableArray" key="IBDocument.EditedObjectIDs">
 			<bool key="EncodedWithXMLCoder">YES</bool>
 			<integer value="29"/>
-			<integer value="391"/>
+			<integer value="394"/>
 		</object>
 		<object class="NSArray" key="IBDocument.PluginDependencies">
 			<bool key="EncodedWithXMLCoder">YES</bool>
@@ -1067,7 +1067,7 @@
 													<object class="NSTextFieldCell" key="NSCell" id="456960008">
 														<int key="NSCellFlags">68288064</int>
 														<int key="NSCellFlags2">272630784</int>
-														<string key="NSContents">Number of tests</string>
+														<string key="NSContents">Number of queries</string>
 														<reference key="NSSupport" ref="1008501207"/>
 														<reference key="NSControlView" ref="260262644"/>
 														<reference key="NSBackgroundColor" ref="562893132"/>
@@ -1676,6 +1676,22 @@
 						<reference key="destination" ref="416318990"/>
 					</object>
 					<int key="connectionID">448</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">query_count</string>
+						<reference key="source" ref="479154853"/>
+						<reference key="destination" ref="431785649"/>
+					</object>
+					<int key="connectionID">449</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBOutletConnection" key="connection">
+						<string key="label">run_count</string>
+						<reference key="source" ref="479154853"/>
+						<reference key="destination" ref="351353070"/>
+					</object>
+					<int key="connectionID">450</int>
 				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -3096,7 +3112,7 @@
 				</object>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">448</int>
+			<int key="maxID">450</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -3118,8 +3134,8 @@
 							<string>include_global</string>
 							<string>include_regional</string>
 							<string>nameserver_form</string>
-							<string>num_runs</string>
-							<string>num_tests</string>
+							<string>query_count</string>
+							<string>run_count</string>
 							<string>selection_mode</string>
 							<string>spinner</string>
 							<string>status</string>
