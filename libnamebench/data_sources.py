@@ -175,12 +175,11 @@ class DataSources(object):
 
     # Now that we've read everything, are we dealing with domains or full hostnames?
     full_host_percent = full_host_count / float(len(records)) * 100
-    self.msg('%0.1f%% of input records are using fully qualified hostnames.' % full_host_percent)
+#    self.msg('%0.1f%% of input records are using fully qualified hostnames.' % full_host_percent)
     if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
       full_host_names = True
     else:
       full_host_names = False
-
     return (records, full_host_names)
 
   def GetTestsFromSource(self, source, count=50, select_mode=None):
@@ -200,7 +199,6 @@ class DataSources(object):
     records = self._GetHostsFromSource(source)
     self.msg('Generating tests from %s (%s records, selecting %s %s)' % (self.GetNameForSource(source), len(records), count, select_mode))
     (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records)
-
     # First try to resolve whether to use weighted or random.
     if select_mode in ('weighted', 'automatic', None):
       if len(records) != len(set(records)):
@@ -210,7 +208,7 @@ class DataSources(object):
       else:
         select_mode = 'weighted'
 
-#    self.msg('Picking %s records from %s in %s mode' % (count, source, select_mode))
+    self.msg('Selecting %s out of %s %s records.' % (count, len(records), select_mode))
     # Now make the real selection.
     if select_mode == 'weighted':
       records = selectors.WeightedDistribution(records, count)
@@ -218,7 +216,7 @@ class DataSources(object):
       records = selectors.ChunkSelect(records, count)
     elif select_mode == 'random':
       records = selectors.RandomSelect(records, count)
-
+    
     if are_records_fqdn:
       self.source_config[source]['full_hostnames'] = False
       self.msg('%s input appears to be predominantly domain names. Synthesizing FQDNs' % source)

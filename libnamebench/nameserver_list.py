@@ -530,15 +530,15 @@ class NameServers(list):
     
     success_rate = (float(len(self.enabled)) / float(len(self))) * 100
     if success_rate < MIN_PINGABLE_PERCENT:
-      self.msg('How odd! Only %0.1f%% of my nameservers were pingable. Trying again with %s threads (slow)'
+      self.msg('How odd! Only %0.1f percent of name servers were pingable. Trying again with %s threads (slow)'
                % (success_rate, SLOW_MODE_THREAD_COUNT))
       self.ResetTestResults()
       self.thread_count = SLOW_MODE_THREAD_COUNT
       results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
     if self.enabled:
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-      self.msg('%s of %s name servers are available (%0.1f%%). Latency: %0.1f' %
-               (len(self.enabled), len(self), success_rate, self.check_average))
+      self.msg('%s of %s tested name servers are available' %
+               (len(self.enabled), len(self)))
 
   def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
@@ -553,7 +553,7 @@ class NameServers(list):
 
     success_rate = (float(len(self.enabled)) / float(len(self))) * 100
     if success_rate < MIN_HEALTHY_PERCENT:
-      self.msg('How odd! Only %0.1f%% of my nameservers were healthy. Trying again with %s threads (slow)'
+      self.msg('How odd! Only %0.1f percent of name servers are healthy. Trying again with %s threads (slow)'
                % (success_rate, SLOW_MODE_THREAD_COUNT))
       self.ResetTestResults()
       self.thread_count = SLOW_MODE_THREAD_COUNT
@@ -561,8 +561,8 @@ class NameServers(list):
                                          list(self), checks=checks, thread_count=thread_count)
     if self.enabled:
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-      self.msg('%s of %s name servers are healthy (%0.1f%%). Latency: %0.1f' %
-               (len(self.enabled), len(self), success_rate, self.check_average))
+      self.msg('%s of %s tested name servers are healthy' %
+               (len(self.enabled), len(self)))
                
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
