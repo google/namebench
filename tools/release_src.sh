@@ -21,7 +21,7 @@ svn checkout http://namebench.googlecode.com/svn/trunk/ namebench-$$
 version=`grep '^VERSION' namebench-$$/libnamebench/version.py | cut -d\' -f2`
 mv namebench-$$ namebench-$version
 cd namebench-$version
-./namebench.py -t2 -r1 -j40 -o /tmp/$$.csv -O 208.67.220.220
+./namebench.py -q5 -j50 -x -o /tmp/$$.csv -O 8.8.8.8
 svn log > ChangeLog.txt
 find . -name "*.pyc" -delete
 find . -name ".svn" -exec rm -Rf {} \; 2>/dev/null
