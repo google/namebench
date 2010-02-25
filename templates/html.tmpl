@@ -11,7 +11,7 @@
 <div id="container">
 <div class="version">namebench {{ version }}</div>
 <div id="big_summary" class="greybox">
-	<h4>In this test, <strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is</h4>
+	<h4><strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is</h4>
 	<h1>{{ comparison.title }}</h1><h5 class="faster">{{ comparison.subtitle }}</h5>
 	<h4>{% if comparison.ns %}than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}{% endif %}</h4>
 </div>
