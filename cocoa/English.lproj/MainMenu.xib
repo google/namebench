@@ -1198,7 +1198,7 @@
 													<object class="NSTextFieldCell" key="NSCell" id="171005859">
 														<int key="NSCellFlags">68288064</int>
 														<int key="NSCellFlags2">272630784</int>
-														<string key="NSContents">Benchmark Data Selection Mode</string>
+														<string key="NSContents">Test Selection Mode</string>
 														<reference key="NSSupport" ref="1008501207"/>
 														<reference key="NSControlView" ref="768638533"/>
 														<reference key="NSBackgroundColor" ref="562893132"/>

@@ -39,6 +39,7 @@ from libnamebench import config
 from libnamebench import conn_quality
 from libnamebench import data_sources
 from libnamebench import nameserver_list
+from libnamebench import selectors
 from libnamebench import util
 from libnamebench import version
 
@@ -165,8 +166,9 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.nameserver_form.setStringValue_(nameservers_string)
     self.query_count.setStringValue_(self.options.query_count)
     self.run_count.setStringValue_(self.options.run_count)
+    modes = [x.title() for x in selectors.GetTypes()]
     self.selection_mode.removeAllItems()
-    self.selection_mode.addItemsWithTitles_(['Weighted', 'Random', 'Chunk'])
+    self.selection_mode.addItemsWithTitles_(modes)
     self.data_source.removeAllItems()
     for source in self.data_src.ListSourceTitles():
       self.data_source.addItemWithTitle_(source)

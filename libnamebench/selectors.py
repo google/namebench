@@ -20,6 +20,7 @@ import random
 MAX_REPEAT = 3
 
 TYPES = {
+  'automatic': 'Pick the most appropriate selector type for the data source',
   'weighted': 'Chooses based on a weighted distribution, preferring entries in the top of the list',
   'random': 'Random selection, including repeats.',
   'chunk': 'Chooses a random contiguous segment of entries'
@@ -33,9 +34,9 @@ def MaxRepeatCount(elements, count):
     return MAX_REPEAT
 
 
-def GetTypes(self):
+def GetTypes():
   """Return a tuple of type names with a description."""
-  return sorted(TYPES.items())
+  return sorted(TYPES.keys())
   
 def WeightedDistribution(elements, count):
   """Given a set of elements, return a weighted distribution back.

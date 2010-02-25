@@ -29,6 +29,7 @@ from . import base_ui
 from . import conn_quality
 from . import data_sources
 from . import nameserver_list
+from . import selectors
 from . import util
 
 THREAD_UNSAFE_TK = 0
@@ -220,7 +221,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     query_count.grid(row=11, column=1, sticky=W, padx=4)
     self.query_count.set(self.options.query_count)
 
-    bds_label = Label(inner_frame, text="Benchmark Data Selection")
+    bds_label = Label(inner_frame, text="Test Selection Mode")
     bds_label.grid(row=12, column=0, sticky=W)
     bds_label['font'] = bold_font
 
@@ -228,10 +229,11 @@ class MainWindow(Frame, base_ui.BaseUI):
     run_count_label.grid(row=12, column=1, sticky=W)
     run_count_label['font'] = bold_font
 
-    selection_mode = OptionMenu(inner_frame, self.selection_mode, "Weighted", "Random", "Chunk")
+    modes = [x.title() for x in selectors.GetTypes()]
+    selection_mode = OptionMenu(inner_frame, self.selection_mode, *modes)
     selection_mode.configure(width=35)
     selection_mode.grid(row=13, column=0, sticky=W)
-    self.selection_mode.set('Weighted')
+    self.selection_mode.set(modes[0])
 
     run_count = Entry(inner_frame, bg="white", textvariable=self.run_count)
     run_count.grid(row=13, column=1, sticky=W, padx=4)
