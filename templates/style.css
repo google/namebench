@@ -2,7 +2,7 @@
 body {
   font-family: Helvetica, Arial, sans-serif;
   background-color: #bbb;
-  background-image: -moz-linear-gradient(0% 100% 90deg, #bbb, #666, #e5e5e5 95%);
+  background-image: -moz-linear-gradient(0% 100% 90deg, #e5e5e5, #666, #e5e5e5 99%);
   background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#e5e5e5), to(#bbb), color-stop(.1,#666));
 }
 
@@ -13,7 +13,7 @@ body {
   width: 950px;
   background-color: #f5f5f5;
   padding: 0.8em;
-  padding-top: 0em; 
+  padding-top: 1px;
   border: 3px solid #666;
   border-radius: .6em;
   -moz-border-radius: .6em;
@@ -127,7 +127,7 @@ ul.warnings {
 }
 
 .greybox {
-  border:  1px solid #bbb;
+  border:  1px solid #999;
   border-radius: .5em;
   -moz-border-radius: .5em;
   -webkit-border-radius: .5em;
