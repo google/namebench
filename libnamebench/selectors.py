@@ -27,7 +27,7 @@ TYPES = {
 
 def MaxRepeatCount(elements, count):
   # Avoid stalling out looking for the one unique choice
-  if count >= len(elements):
+  if count >= len(elements) * 0.5:
     return 2**32
   else:
     return MAX_REPEAT
