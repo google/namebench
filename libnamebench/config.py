@@ -143,7 +143,10 @@ def ProcessConfigurationFile(options):
     regional_ns: A list of regional nameservers tuples.
   """
   config = ConfigParser.ConfigParser()
-  config.read(util.FindDataFile(options.config))
+  full_path = util.FindDataFile(options.config)
+  config.read(full_path)
+  if not config or not config.has_section('general'):
+    raise ValueError('Could not find usable configuration in %s (%s)' % (full_path, options.config))
   general = dict(config.items('general'))
 
   if options.only:
