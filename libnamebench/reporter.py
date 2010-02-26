@@ -38,7 +38,7 @@ FAQ_MAP = {
 }
 
 # Only bother showing a percentage if we have this many tests.
-MIN_RELEVANT_COUNT = 40
+MIN_RELEVANT_COUNT = 50
 
 class ReportGenerator(object):
   """Generate reports - ASCII, HTML, etc."""
@@ -195,7 +195,7 @@ class ReportGenerator(object):
         comparison_record = other_records
 
       percent = ((comparison_record[0][1] / nameserver_details[0][1])-1) * 100
-      if nameserver_details[0][-1] > MIN_RELEVANT_COUNT:
+      if nameserver_details[0][-1] >= MIN_RELEVANT_COUNT:
         comparison = {
           'title': "%0.0f%%" % percent,
           'subtitle': 'Faster',
