@@ -30,7 +30,7 @@ cp -Rp cocoa/build/Release/namebench.app $PKG_DIR/
 #svn checkout http://namebench.googlecode.com/svn/trunk/ $tmp
 #rsync -va --exclude ".svn/" --exclude "*~" --exclude "*.pyc" $tmp/ $PKG_DIR/namebench.app/Contents/Resources/
 version=`grep "^VERSION" libnamebench/version.py | cut -d\' -f2`
-dmg="$PKG_DIR/namebench-${version}.dmg"
+dmg="$PKG_DIR/namebench-${version}-Mac_OS_X.dmg"
 rm bundle.dmg
 if [ -f "$dmg" ]; then
   rm -f "$dmg"
