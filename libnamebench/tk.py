@@ -153,6 +153,21 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.version = version
     self.master.protocol('WM_DELETE_WINDOW', closedWindowHandler)
 
+  def UpdateStatus(self, message, count=None, total=None, error=None, debug=False):
+    """Update our little status window."""
+    if not message:
+      return None
+
+    if total:
+      state = '%s... [%s/%s]' % (message, count, total)
+    elif count:
+      state = '%s%s' % (message, '.' * count)
+    else:
+      state = message
+
+    print "> %s" % state
+    self.status.set(state[0:75])
+
   def DrawWindow(self):
     """Draws the user interface."""
     self.nameserver_form = StringVar()
@@ -180,7 +195,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     ns_label.grid(row=0, columnspan=2, sticky=W)
     ns_label['font'] = bold_font
 
-    nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=65)
+    nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=80)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
@@ -196,13 +211,13 @@ class MainWindow(Frame, base_ui.BaseUI):
     censorship_button.grid(row=4, columnspan=2, sticky=W)
 
     if sys.platform[:3] == 'win':
-      seperator_width = 400
+      seperator_width = 470
     else:
-      seperator_width = 515
+      seperator_width = 585
     separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
     separator.grid(row=5, padx=5, pady=5, columnspan=2)
 
-    ds_label = Label(inner_frame, text="Benchmark Data Source")
+    ds_label = Label(inner_frame, text="Test Data Source")
     ds_label.grid(row=10, column=0, sticky=W)
     ds_label['font'] = bold_font
 
@@ -213,7 +228,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.LoadDataSources()
     source_titles = self.data_src.ListSourceTitles()
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
-    data_source.configure(width=35)
+    data_source.configure(width=40)
     data_source.grid(row=11, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
@@ -231,7 +246,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     modes = [x.title() for x in selectors.GetTypes()]
     selection_mode = OptionMenu(inner_frame, self.selection_mode, *modes)
-    selection_mode.configure(width=35)
+    selection_mode.configure(width=40)
     selection_mode.grid(row=13, column=0, sticky=W)
     self.selection_mode.set(modes[0])
 
@@ -256,21 +271,6 @@ class MainWindow(Frame, base_ui.BaseUI):
       elif msg.enable_button == True:
         self.UpdateRunState(running=False)
       self.UpdateStatus(msg.message, count=msg.count, total=msg.total, error=msg.error)
-
-  def UpdateStatus(self, message, count=None, total=None, error=None, debug=False):
-    """Update our little status window."""
-    if not message:
-      return None
-
-    if total:
-      state = '%s... [%s/%s]' % (message, count, total)
-    elif count:
-      state = '%s%s' % (message, '.' * count)
-    else:
-      state = message
-
-    print "> %s" % state
-    self.status.set(state[0:70])
 
   def ErrorPopup(self, title, message):
     print "Showing popup: %s" % title
