@@ -90,7 +90,7 @@ class BaseUI(object):
 
     # Don't waste time checking the health of the only nameserver in the list.
     if len(self.nameservers) > 1:
-      self.nameservers.health_thread_count = int(self.options.health_thread_count)
+      self.nameservers.thread_count = int(self.options.health_thread_count)
       self.nameservers.cache_dir = tempfile.gettempdir()
 
     self.UpdateStatus('Checking latest sanity reference')

@@ -120,7 +120,7 @@ class QueryThreads(threading.Thread):
 class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
-               include_internal=False, threads=20, status_callback=None,
+               include_internal=False, threads=5, status_callback=None,
                timeout=5, health_timeout=5, skip_cache_collusion_checks=False,
                ipv6_only=False):
     self.seen_ips = set()
