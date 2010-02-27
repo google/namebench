@@ -282,7 +282,7 @@ class MainWindow(Frame, base_ui.BaseUI):
         self.UpdateRunState(running=True)
       elif msg.enable_button == True:
         self.UpdateRunState(running=False)
-      self.UpdateStatus(msg.message, count=msg.count, total=msg.total, error=msg.error)
+      self.UpdateStatus(msg.message, count=msg.count, total=msg.total, error=msg.error, debug=msg.debug)
 
   def ErrorPopup(self, title, message):
     print "Showing popup: %s" % title
