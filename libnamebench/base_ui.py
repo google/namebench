@@ -57,6 +57,9 @@ class BaseUI(object):
     else:
       print msg
 
+  def DebugMsg(self, message):
+    self.UpdateStatus(message, debug=True)
+
   def LoadDataSources(self):
     self.data_src = data_sources.DataSources(status_callback=self.UpdateStatus)
 
@@ -152,5 +155,6 @@ class BaseUI(object):
 
   def DisplayHtmlReport(self):
     self.UpdateStatus('Opening %s' % self.html_path)
+    better_webbrowser.output = self.DebugMsg
     better_webbrowser.open(self.html_path)
 

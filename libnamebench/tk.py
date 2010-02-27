@@ -177,7 +177,8 @@ class MainWindow(Frame, base_ui.BaseUI):
       self.log_file.flush()
     except:
       pass
-    self.status.set(state[0:75])
+    if not debug:
+      self.status.set(state[0:75])
 
   def DrawWindow(self):
     """Draws the user interface."""

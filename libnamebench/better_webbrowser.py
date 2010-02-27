@@ -25,6 +25,8 @@ import traceback
 import webbrowser
 import time
 
+def output(string):
+  print string
 
 def create_win32_http_cmd(url):
   """Create a command-line tuple to launch a web browser for a given URL.
@@ -53,10 +55,10 @@ def create_win32_http_cmd(url):
     executable = cmd.split(' ')[0]
 
   if not os.path.exists(executable):
-    print "$ Default HTTP browser does not exist: %s" % executable
+    output('$ Default HTTP browser does not exist: %s' % executable)
     return False
   else:
-    print "$ %s HTTP handler: %s" % (browser_type, executable)
+    output('$ %s HTTP handler: %s' % (browser_type, executable))
   return (executable, url)
 
 
@@ -70,24 +72,22 @@ if sys.platform[:3] == 'win':
     def open(self, url, new=0, autoraise=1):
       command_args = create_win32_http_cmd(url)
       if not command_args:
-        print "$ Could not find HTTP handler"
+        output('$ Could not find HTTP handler')
         return False
 
-      print "$ Arguments"
-      print command_args
-      print
+      output('$ Arguments: %s' % command_args)
       # Avoid some unicode path issues by moving our current directory
       old_pwd = os.getcwd()
       os.chdir('C:\\')
       try:
         p = subprocess.Popen(command_args)
-        print '$ Launched command'
+        output('$ Launched command: %s' % command_args)
         status = not p.wait()
         os.chdir(old_pwd)
         return True
       except:
         traceback.print_exc()
-        print "$ Failed to run HTTP handler, trying next browser."
+        output('$ Failed to run HTTP handler, trying next browser.')
         os.chdir(old_pwd)
         return False
       
@@ -99,20 +99,20 @@ def open(url):
     webbrowser.open(url, new=1, autoraise=True)
   # If the user is missing the osascript binary - see http://code.google.com/p/namebench/issues/detail?id=88
   except:
-    print 'Failed to open: [%s] - trying alternate methods.' % url
+    output('Failed to open: [%s] - trying alternate methods.' % url)
     failed = True
     try:
-      print "trying open: %s" % url
+      output('trying open: %s' % url)
       p = subprocess.Popen(('open', url))
       p.wait()
       failed = False
     except:
-      print 'open did not seem to work'
+      output('open did not seem to work')
 
     if failed:
       try:
-        print "trying start: %s" % url
+        output('trying start: %s' % url)
         p2 = subprocess.Popen(('start.exe', url))
         p2.wait()
       except:
-        print 'start.exe did not seem to work'
+        output('start.exe did not seem to work')
