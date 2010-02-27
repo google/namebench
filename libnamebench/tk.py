@@ -33,6 +33,7 @@ from . import selectors
 from . import util
 
 THREAD_UNSAFE_TK = 0
+LOG_FILE_PATH = base_ui.GenerateOutputFilename('log')
 
 def closedWindowHandler():
   print 'Au revoir, mes amis!'
@@ -151,6 +152,10 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.global_ns = global_ns
     self.regional_ns = regional_ns
     self.version = version
+    try:
+      self.log_file = open(LOG_FILE_PATH, 'w')
+    except:
+      print "Failed to open %s for write" % LOG_FILEPATH
     self.master.protocol('WM_DELETE_WINDOW', closedWindowHandler)
 
   def UpdateStatus(self, message, count=None, total=None, error=None, debug=False):
@@ -166,6 +171,10 @@ class MainWindow(Frame, base_ui.BaseUI):
       state = message
 
     print "> %s" % state
+    try:
+      self.log_file.write('%s\r\n' % state)
+    except:
+      pass
     self.status.set(state[0:75])
 
   def DrawWindow(self):
