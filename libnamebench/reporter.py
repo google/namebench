@@ -246,6 +246,7 @@ class ReportGenerator(object):
     )
     if output_fp:
       output_fp.write(rendered)
+      output_fp.close()
     else:
       return rendered
 
