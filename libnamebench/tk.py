@@ -171,7 +171,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     else:
       state = message
 
-    print "> %s" % state
+    print "> %s" % str(state)
     try:
       self.log_file.write('%s: %s\r\n' % (datetime.datetime.now(), state))
       self.log_file.flush()
