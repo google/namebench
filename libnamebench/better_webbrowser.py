@@ -25,6 +25,8 @@ import traceback
 import webbrowser
 import time
 
+from . import util
+
 def output(string):
   print string
 
@@ -99,7 +101,7 @@ def open(url):
     webbrowser.open(url, new=1, autoraise=True)
   # If the user is missing the osascript binary - see http://code.google.com/p/namebench/issues/detail?id=88
   except:
-    output('Failed to open: [%s] - trying alternate methods.' % url)
+    output('Failed to open: [%s]: %s' % (url, util.GetLastExceptionString()))
     failed = True
     try:
       output('trying open: %s' % url)
@@ -107,7 +109,7 @@ def open(url):
       p.wait()
       failed = False
     except:
-      output('open did not seem to work')
+      output('open did not seem to work: %s' % util.GetLastExceptionString())
 
     if failed:
       try:
@@ -115,4 +117,4 @@ def open(url):
         p2 = subprocess.Popen(('start.exe', url))
         p2.wait()
       except:
-        output('start.exe did not seem to work')
+        output('start.exe did not seem to work: %s' % util.GetLastExceptionString())
