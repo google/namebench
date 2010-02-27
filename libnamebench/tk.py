@@ -16,6 +16,7 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import datetime
 import os
 import sys
 import threading
@@ -172,7 +173,8 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     print "> %s" % state
     try:
-      self.log_file.write('%s\r\n' % state)
+      self.log_file.write('%s: %s\r\n' % (datetime.datetime.now(), state))
+      self.log_file.flush()
     except:
       pass
     self.status.set(state[0:75])
