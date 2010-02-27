@@ -84,7 +84,6 @@ if sys.platform[:3] == 'win':
       os.chdir('C:\\')
       try:
         p = subprocess.Popen(command_args)
-        output('$ Launched command: %s' % command_args)
         status = not p.wait()
         os.chdir(old_pwd)
         return True

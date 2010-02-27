@@ -27,4 +27,7 @@ find . -name "*.pyc" -delete
 find . -name ".svn" -exec rm -Rf {} \; 2>/dev/null
 cd ..
 GZIP="-9" tar -zcvf namebench-${version}-source.tgz namebench-${version}/
+if [ -d "$HOME/Desktop" ]; then
+  mv namebench-${version}-source.tgz $HOME/Desktop/
+fi
 rm -Rf namebench-${version}
