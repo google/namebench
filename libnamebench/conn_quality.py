@@ -118,6 +118,9 @@ class ConnectionQuality(object):
                               'namebench is not gettng a response for DNS queries to '
                               '%s, %s, or %s.' % (self.primary.ip, GOOGLE_NS, OPENDNS_NS))
 
+    if None in durations:
+      self.msg('Odd, empty duration found: %s' % durations)
+      durations = [ x for x in durations if x != None ]
     duration = util.CalculateListAverage(durations)
     congestion = duration / EXPECTED_CONGESTION_DURATION
     self.msg('Congestion level is %2.2fX (check duration: %2.2fms)' % (congestion, duration))
