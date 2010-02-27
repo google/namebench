@@ -77,13 +77,14 @@ if sys.platform[:3] == 'win':
         output('$ Could not find HTTP handler')
         return False
 
-      output('$ Arguments: %s' % command_args)
+      output("command_args:")
+      output(command_args)
       # Avoid some unicode path issues by moving our current directory
       old_pwd = os.getcwd()
       os.chdir('C:\\')
       try:
         p = subprocess.Popen(command_args)
-        output('$ Launched command: %s' % command_args)
+        output('$ Launched command: %s %s' % command_args)
         status = not p.wait()
         os.chdir(old_pwd)
         return True
@@ -102,19 +103,18 @@ def open(url):
   # If the user is missing the osascript binary - see http://code.google.com/p/namebench/issues/detail?id=88
   except:
     output('Failed to open: [%s]: %s' % (url, util.GetLastExceptionString()))
-    failed = True
-    try:
-      output('trying open: %s' % url)
-      p = subprocess.Popen(('open', url))
-      p.wait()
-      failed = False
-    except:
-      output('open did not seem to work: %s' % util.GetLastExceptionString())
-
-    if failed:
+    if os.path.exists('/usr/bin/open'):
       try:
-        output('trying start: %s' % url)
-        p2 = subprocess.Popen(('start.exe', url))
-        p2.wait()
+        output('trying open: %s' % url)
+        p = subprocess.Popen(('open', url))
+        p.wait()
+        failed = False
       except:
-        output('start.exe did not seem to work: %s' % util.GetLastExceptionString())
+        output('open did not seem to work: %s' % util.GetLastExceptionString())
+    elif sys.platform[:3] == 'win':
+      try:
+        output('trying default Windows controller: %s' % url)
+        controller = webbrowser.get('windows-default')
+        controller.open_new(url)
+      except:
+        output('WindowsController did not work: %s' % util.GetLastExceptionString())
