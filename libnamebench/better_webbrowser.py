@@ -82,7 +82,6 @@ if sys.platform[:3] == 'win':
       # Avoid some unicode path issues by moving our current directory
       old_pwd = os.getcwd()
       os.chdir('C:\\')
-      raise ValueError('test-error')
       try:
         p = subprocess.Popen(command_args)
         output('$ Launched command: %s' % command_args)
