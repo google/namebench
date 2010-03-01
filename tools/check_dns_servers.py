@@ -52,11 +52,12 @@ print '-' * 80
 
 nameservers = nameserver_list.NameServers(
     check_ns,
-    timeout=10,
-    health_timeout=10,
-    threads=250,
+    timeout=8,
+    health_timeout=8,
+    threads=30,
     skip_cache_collusion_checks=True,
 )
+nameservers.min_healthy_percent = 0
 (primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
 try:
   nameservers.CheckHealth(primary_checks, secondary_checks)
@@ -75,9 +76,10 @@ for ns in nameservers:
     details = {}
   city = details.get('city', '')
   country = details.get('country_name', '')
+  country_code = details.get('country_code', '')
   region = details.get('region_name', '')
   results = check_nameserver_popularity.CheckPopularity(ns.ip)
   urls = [ x['Url'] for x in results ]
   if urls:   
-    print "%s=%s %s:%s (%s, %s) %s # %s" % (ns.ip, ns.hostname, len(urls),
-                                            city, region, country, ns.warnings_comment, urls[:2])
+    print "%s=%s %s %s # %s: %s %s" % (ns.ip, ns.hostname, country_code, city, len(urls),
+                                       ns.warnings_comment, urls[:2])
