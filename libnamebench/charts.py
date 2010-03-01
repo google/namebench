@@ -33,9 +33,9 @@ from graphy import common
 from graphy.backends import google_chart_api
 
 CHART_URI = 'http://chart.apis.google.com/chart'
-BASE_COLORS = ('ff9900', '1a00ff', '80ff00', 'ff00e6', '00e6ff', 'fae30a',
-               '9900ff', '9f5734', '000000', '7b9f34', '3090c0', '477248f',
-               'ababab', 'ff0000', '00ff00', '0000ff', '9900ff', '405090',
+BASE_COLORS = ('ff9900', '1a00ff', 'ff00e6', '80ff00', '00e6ff', 'fae30a',
+               'BE81F7', '9f5734', '000000', 'ff0000', '3090c0', '477248f',
+               'ababab', '7b9f34', '00ff00', '0000ff', '9900ff', '405090',
                '051290', 'f3e000', '9030f0', 'f03060', 'e0a030', '4598cd')
 
 
