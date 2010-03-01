@@ -121,11 +121,13 @@ class NameServers(list):
 
   def __init__(self, nameservers, secondary=None, num_servers=1,
                include_internal=False, threads=5, status_callback=None,
-               timeout=5, health_timeout=5, skip_cache_collusion_checks=False,
+               timeout=5, health_timeout=5, ping_timeout=1,
+               skip_cache_collusion_checks=False,
                ipv6_only=False):
     self.seen_ips = set()
     self.seen_names = set()
     self.timeout = timeout
+    self.ping_timeout = ping_timeout
     self.num_servers = num_servers
     self.requested_health_timeout = health_timeout
     self.skip_cache_collusion_checks = skip_cache_collusion_checks
@@ -197,11 +199,14 @@ class NameServers(list):
       ns.system_position = self.system_nameservers.index(ip)
 
     ns.timeout = self.timeout
+    ns.ping_timeout = self.ping_timeout
     # Give them a little extra love for the road.
     if ns.is_system:
       ns.health_timeout = self.health_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
+      ns.ping_timeout = self.ping_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
     elif ns.is_preferred:
       ns.health_timeout = self.health_timeout * PREFERRED_HEALTH_TIMEOUT_MULTIPLIER
+      ns.ping_timeout = self.ping_timeout * PREFERRED_HEALTH_TIMEOUT_MULTIPLIER
     else:
       ns.health_timeout = self.health_timeout
     self.append(ns)
@@ -242,8 +247,9 @@ class NameServers(list):
     if multiplier > 1:
       self.timeout *= multiplier
       self.health_timeout *= multiplier
-      self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f standard, %2.1f health.'
-               % (multiplier, self.timeout, self.health_timeout))
+      self.ping_timeout *= multiplier
+      self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f ping, %2.1f standard, %2.1f health.'
+               % (multiplier, self.ping_timeout, self.timeout, self.health_timeout))
 
   def InvokeSecondaryCache(self):
     """Delete secondary ips that do not exist in the cache file."""

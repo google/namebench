@@ -104,10 +104,9 @@ class NameServerHealthChecks(object):
     return (is_broken, error_msg, duration)
 
   def TestBindVersion(self):
-    """Test for BIND version."""
-    # We use self.timeout on purpose here - everything SHOULD return in this time.
+    """Test for BIND version. This acts as a pretty decent ping."""
     (response, duration, error_msg) = self.TimedRequest('TXT', 'version.bind.',
-                                                  timeout=self.timeout,
+                                                  timeout=self.ping_timeout,
                                                   rdataclass='CHAOS')
     return (error_msg, False, duration)
 

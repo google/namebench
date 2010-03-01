@@ -67,6 +67,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.is_preferred = preferred
     self.timeout = 6
     self.health_timeout = 6
+    self.ping_timeout = 1
     self.ResetTestStatus()
     self.timer = DEFAULT_TIMER
 

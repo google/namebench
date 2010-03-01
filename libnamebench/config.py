@@ -62,6 +62,8 @@ def DefineAndParseOptions(filename):
                     help='# of health check threads to use')
   parser.add_option('-J', '--benchmark_threads', dest='benchmark_thread_count', type='int',
                     help='# of benchmark threads to use')
+  parser.add_option('-P', '--ping_timeout', dest='ping_timeout', type='float',
+                    help='# of seconds ping requests timeout in.')
   parser.add_option('-y', '--timeout', dest='timeout', type='float',
                     help='# of seconds general requests timeout in.')
   parser.add_option('-Y', '--health_timeout', dest='health_timeout',

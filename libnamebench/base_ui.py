@@ -82,6 +82,7 @@ class BaseUI(object):
         include_internal=self.include_internal,
         num_servers=self.options.num_servers,
         timeout=self.options.timeout,
+        ping_timeout=self.options.ping_timeout,
         health_timeout=self.options.health_timeout,
         ipv6_only=self.options.ipv6_only,
         status_callback=self.UpdateStatus
