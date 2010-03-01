@@ -194,6 +194,14 @@ def _MaximumRunDuration(run_data):
 
 def _SortDistribution(a, b):
   """Sort distribution graph by nameserver name."""
+  sys_pos_cmp = cmp(b[0].system_position, a[0].system_position)
+  if sys_pos_cmp:
+    return sys_pos_cmp
+    
+  preferred_cmp = cmp(b[0].is_preferred, a[0].is_preferred)
+  if preferred_cmp:
+    return preferred_cmp
+
   return cmp(a[0].name, b[0].name)
 
 
