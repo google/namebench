@@ -173,7 +173,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     print "> %s" % str(state)
     try:
-      self.log_file.write('%s: %s (%s/%s)\r\n' % (datetime.datetime.now(), state, debug, error))
+      self.log_file.write('%s: %s\r\n' % (datetime.datetime.now(), state))
       self.log_file.flush()
     except:
       pass
