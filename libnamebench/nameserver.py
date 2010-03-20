@@ -228,12 +228,16 @@ class NameServer(health_checks.NameServerHealthChecks):
       response = None
     except (dns.query.BadResponse, dns.message.TrailingJunk,
             dns.query.UnexpectedSource), exc:
+      error_msg = util.GetLastExceptionString()
       response = None
+    # This is pretty normal if someone runs namebench offline.
     except (socket.error):
       response = None
       if ':' in self.ip:
         error_msg = 'socket error: IPv6 may not be available.'
-    # Pass these up the food chain
+      else:
+        error_msg = util.GetLastExceptionString()
+    # Pass these exceptions up the food chain
     except (KeyboardInterrupt, SystemExit, SystemError), exc:
       raise exc
     except:
