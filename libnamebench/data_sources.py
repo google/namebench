@@ -281,8 +281,10 @@ class DataSources(object):
   def _ReadDataFile(self, path):
     """Read a line-based datafile."""
     records = []
+    domains_re = re.compile('^\w[\w\.]+[a-zA-Z]$')
+    requests_re = re.compile('^[A-Z]{1,4} \w[\w\.]+\.$')
     for line in open(path).readlines():
-      if not line.startswith('#'):
+      if domains_re.match(line) or requests_re.match(line):
         records.append(line.rstrip())
     return records
 
