@@ -85,6 +85,8 @@ def DefineAndParseOptions(filename):
                     action='store_true', help='Disable regional_ns servers')
   parser.add_option('-w', '--open_webbrowser', dest='open_webbrowser',
                     action='store_true', help='Opens the final report in your browser')
+  parser.add_option('-u', '--upload_results', dest='upload_results',
+                    action='store_true', help='Upload anonmyized results to The Namebench Project')
   parser.add_option('-x', '--no_gui', dest='no_gui',
                     action='store_true', help='Disable GUI')
   parser.add_option('-C', '--enable-censorship-checks', dest='enable_censorship_checks',

@@ -18,6 +18,7 @@ import csv
 import datetime
 import operator
 import os.path
+import platform
 
 # external dependencies (from third_party)
 try:
@@ -26,6 +27,7 @@ except ImportError:
   pass
 
 import jinja2
+import simplejson
 
 from . import charts
 from . import selectors
@@ -43,7 +45,7 @@ MIN_RELEVANT_COUNT = 50
 class ReportGenerator(object):
   """Generate reports - ASCII, HTML, etc."""
 
-  def __init__(self, nameservers, results, status_callback=None):
+  def __init__(self, config, nameservers, results, status_callback=None):
     """Constructor.
 
     Args:
@@ -52,6 +54,7 @@ class ReportGenerator(object):
     """
     self.nameservers = nameservers
     self.results = results
+    self.config = config
     self.status_callback = status_callback
 
   def msg(self, msg, **kwargs):
@@ -134,8 +137,7 @@ class ReportGenerator(object):
       chart.append((ns.name, textbar, overall_mean))
     return chart
 
-  def CreateReport(self, format='ascii', config=None, output_fp=None,
-                   csv_path=None):
+  def CreateReport(self, format='ascii', output_fp=None, csv_path=None):
     lowest_latency = self._LowestLatencyAsciiChart()
     mean_duration = self._MeanRequestAsciiChart()
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
@@ -147,7 +149,7 @@ class ReportGenerator(object):
                                                         scale=200)
 
     # timeout in ms, scaled to the non-adjusted timeout
-    max_timeout = config.timeout * 1000
+    max_timeout = self.config.timeout * 1000
     distribution_url = charts.DistributionLineGraph(self.DigestedResults(), scale=max_timeout)
     best = self.BestOverallNameServer()
     nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
@@ -222,7 +224,7 @@ class ReportGenerator(object):
 
     template_name = '%s.tmpl' % format
     template_path = util.FindDataFile(os.path.join('templates', template_name))
-    filtered_config = self.FilteredConfig(config)
+    filtered_config = self.FilteredConfig()
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
@@ -232,7 +234,7 @@ class ReportGenerator(object):
         timestamp = datetime.datetime.now(),
         lowest_latency=lowest_latency,
         best=best,
-        version=config.version,
+        version=self.config.version,
         comparison=comparison,
         config=filtered_config,
         mean_duration=mean_duration,
@@ -250,12 +252,12 @@ class ReportGenerator(object):
     else:
       return rendered
 
-  def FilteredConfig(self, config):
+  def FilteredConfig(self):
     """Generate a watered down config listing for our report."""
-    keys = [x for x in dir(config) if not x.startswith('_') and x != 'config' ]
+    keys = [x for x in dir(self.config) if not x.startswith('_') and x != 'config' ]
     config_items = []
     for key in keys:
-      value = getattr(config, key)
+      value = getattr(self.config, key)
       # > values are ConfigParser internals. None values are just noise.
       if isinstance(value, int) or isinstance(value, float) or isinstance(value, str):
         config_items.append((key, value))
@@ -270,6 +272,36 @@ class ReportGenerator(object):
         durations += [x[2] for x in test_run_results]
       duration_data.append((ns, durations))
     return duration_data
+
+  def CreateSharingData(self):
+    config = dict(self.FilteredConfig())
+    config['platform'] = (platform.system(), platform.release())
+    config['python'] = platform.python_version_tuple()
+
+    nsdata_list = []
+    for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in self.ComputeAverages():
+      durations = []
+      for test_run_results in self.results[ns]:
+        durations += [x[2] for x in test_run_results]
+      nsdata = {
+        'ip': ns.ip,
+        'avg': avg,
+        'min': fastest,
+        'max': slowest,
+        'failed': failure_count,
+        'nx': nx_count,
+        'results': durations,
+        'notes': ns.notes,
+        'index': []
+      }
+      nsdata_list.append(nsdata)
+      
+    return {'config': config, 'nameservers': nsdata_list}
+
+  def UploadJsonResults(self):
+    sharing_data = self.CreateSharingData()
+    json_data = simplejson.dumps(sharing_data)
+    print json_data
 
   def SaveResultsToCsv(self, filename):
     """Write out a CSV file with detailed results on each request.

@@ -123,7 +123,7 @@ class BaseUI(object):
   def RunBenchmark(self):
     """Run the benchmark."""
     results = self.bmark.Run(self.test_records)
-    self.reporter = reporter.ReportGenerator(self.nameservers, results)
+    self.reporter = reporter.ReportGenerator(self.options, self.nameservers, results)
 
   def RunAndOpenReports(self):
     """Run the benchmark and open up the HTML report on completion."""
@@ -145,9 +145,12 @@ class BaseUI(object):
     else:
       self.csv_path = GenerateOutputFilename('csv')
 
+    if self.options.upload_results:
+      self.reporter.UploadJsonResults()
+
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
-    self.reporter.CreateReport(format='html', output_fp=f, config=self.options,
+    self.reporter.CreateReport(format='html', output_fp=f,
                                csv_path=self.csv_path)
     f.close()
 

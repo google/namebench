@@ -93,8 +93,7 @@ class NameBenchCli(base_ui.BaseUI):
 
   def RunAndOpenReports(self):
     self.RunBenchmark()
-    print "\n%s\n" % self.reporter.CreateReport(format='ascii',
-                                                config=self.options)
+    print "\n%s\n" % self.reporter.CreateReport(format='ascii')
     self.CreateReports()
     if self.options.open_webbrowser:
       self.DisplayHtmlReport()
