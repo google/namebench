@@ -40,6 +40,7 @@ else:
       'third_party/graphy',
       'third_party/jinja2',
       'third_party/httplib2',
+      'third_party/simplejson',
       'third_party/graphy/backends',
       'third_party/graphy/backends/google_chart_api'
   ]
@@ -133,7 +134,7 @@ setup(name='namebench',
                 'bundle_files': 3, # 1 nor 2 does not work
                 'ascii': False,
                 'packages': ['third_party'],
-                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2', 'tcl'],
+                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2', 'tcl', 'simplejson'],
                 'dll_excludes': ["w9xpopen.exe","MSVCP90.dll", "MSVCR90.DLL"],
             }
         },
