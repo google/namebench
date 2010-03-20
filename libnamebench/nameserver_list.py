@@ -388,7 +388,7 @@ class NameServers(list):
         provider = ns.name.replace('-2', '')
         if provider in seen and not ns.is_system:
           faster_ns = seen[provider]
-          self.msg('Demoting %s to alternate anycast. %s is faster by %2.2fms' % (ns.name, faster_ns.name, ns.check_duration - faster_ns.check_duration))
+          self.msg('Demoting %s to alternate anycast. %s is faster by %2.2fms' % (ns.name, faster_ns.name, ns.check_average - faster_ns.check_average))
           ns.is_preferred = False
 #          ns.warnings.add('Alternate anycast address for %s' % provider)
         else:
@@ -563,6 +563,7 @@ class NameServers(list):
                % (success_rate, SLOW_MODE_THREAD_COUNT))
       self.ResetTestResults()
       self.thread_count = SLOW_MODE_THREAD_COUNT
+      time.sleep(5)
       results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
                                          list(self), checks=checks, thread_count=thread_count)
     if self.enabled:
