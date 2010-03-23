@@ -19,6 +19,9 @@ import datetime
 import operator
 import os.path
 import platform
+import sys
+import urllib
+import zlib
 
 # external dependencies (from third_party)
 try:
@@ -28,6 +31,7 @@ except ImportError:
 
 import jinja2
 import simplejson
+import httplib2
 
 from . import charts
 from . import selectors
@@ -88,8 +92,9 @@ class ReportGenerator(object):
 
     fastest_duration = 2**32
     slowest_duration = -1
+    
     for test_run_results in self.results[ns]:
-      for (host, type, duration, response, error_msg) in test_run_results:
+      for (host, req_type, duration, response, error_msg) in test_run_results:
         if response and response.answer:
           if duration < fastest_duration:
             fastest_duration = duration
@@ -273,7 +278,7 @@ class ReportGenerator(object):
       duration_data.append((ns, durations))
     return duration_data
 
-  def CreateSharingData(self):
+  def _CreateSharingData(self):
     config = dict(self.FilteredConfig())
     config['platform'] = (platform.system(), platform.release())
     config['python'] = platform.python_version_tuple()
@@ -281,27 +286,55 @@ class ReportGenerator(object):
     nsdata_list = []
     for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in self.ComputeAverages():
       durations = []
-      for test_run_results in self.results[ns]:
-        durations += [x[2] for x in test_run_results]
+      for test_run in self.results[ns]:
+        durations.append([x[2] for x in self.results[ns][0]])
       nsdata = {
         'ip': ns.ip,
-        'avg': avg,
+        'averages': run_averages,
         'min': fastest,
         'max': slowest,
         'failed': failure_count,
         'nx': nx_count,
-        'results': durations,
+        'durations': durations,
         'notes': ns.notes,
         'index': []
       }
       nsdata_list.append(nsdata)
       
     return {'config': config, 'nameservers': nsdata_list}
+    
+  def _CreateJsonData(self):
+    sharing_data = self._CreateSharingData()
+#    print sharing_data
+    json_data = simplejson.dumps(sharing_data)
+#    print simplejson.dumps(sharing_data, sort_keys=True, indent=2)
+    return json_data
 
   def UploadJsonResults(self):
-    sharing_data = self.CreateSharingData()
-    json_data = simplejson.dumps(sharing_data)
-    print json_data
+    url = self.config.upload_url
+    if not url or not url.startswith('http'):
+      return False
+    h = httplib2.Http()
+    post_data = dict(checksum=self._CalculateHostChecksum(), data=self._CreateJsonData())
+#    print urllib.urlencode(post_data)
+    try:
+      resp, content = h.request(url, 'POST', urllib.urlencode(post_data))
+      print "RESPONSE: %s" % resp
+    # See http://code.google.com/p/httplib2/issues/detail?id=62
+    except AttributeError:
+      print "%s refused connection" % url
+        
+  def _CalculateHostChecksum(self):
+    """This is so that we can detect duplicate submissions from a particular host.
+    
+    Returns:
+      checksum: integer
+    """
+    # From http://docs.python.org/release/2.5.2/lib/module-zlib.html
+    # Since the algorithm is designed for use as a checksum algorithm, 
+    # it is not suitable for use as a general hash algorithm.
+    return zlib.crc32(platform.platform() + sys.version + platform.node() +
+                      os.getenv('HOME', '') + os.getenv('USERPROFILE', ''))
 
   def SaveResultsToCsv(self, filename):
     """Write out a CSV file with detailed results on each request.
@@ -334,4 +367,4 @@ class ReportGenerator(object):
                            ttl, answer_count, answer_text, error_msg])
     csv_file.close()
     self.msg("%s saved." % filename, debug=True)
-
+    
