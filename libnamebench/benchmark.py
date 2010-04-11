@@ -70,26 +70,34 @@ class Benchmark(object):
       self.status_callback(msg, **kwargs)
 
   def _CheckForIndexHostsInResults(self, test_records):
-    use_records = []
-    for test, index in enumerate(test_records):
+    """Check if we have already tested index hosts.
+    
+    Args:
+      List of tuples of test records (type, record)
+      
+    Returns:
+      A list of records that still need to be tested.
+    """
+    needs_test = []
+    for test in test_records:
       matched = False
       for ns in self.results:
         for (hostname, request_type, duration, response, error_msg) in self.results[ns][0]:
           if (request_type, hostname) == test:
             matched = True
-            self.index_results[ns].append((index, duration, 1))
+            self.index_results.setdefault(ns, []).append((test, duration, 1))
       if not matched:
-        use_records.append(test)
-    return use_records
+        needs_test.append(test)
+    return needs_test
 
   def RunIndex(self, test_records):
     """Run index tests using the same mechanism as a standard benchmark."""    
-    pending_tests = self._CheckForIndexhostsInResults(test_records)
-    index_results = _SingleTestRun(pending_Tests)
+    pending_tests = self._CheckForIndexHostsInResults(test_records)    
+    index_results = self._SingleTestRun(pending_tests)
     for ns in index_results:
       for (hostname, request_type, duration, response, error_msg) in index_results[ns]:
         index = test_records.index((request_type, hostname))
-        self.index_results[ns].append((index, duration, 0))
+        self.index_results.setdefault(ns, []).append((index, duration, 0))
     return index_results
 
   def Run(self, test_records=None):
@@ -97,9 +105,7 @@ class Benchmark(object):
     for test_run in range(self.run_count):
       run_results = self._SingleTestRun(test_records)
       for ns in run_results:
-        if ns not in self.results:
-          self.results[ns] = []
-        self.results[ns].append(run_results[ns])
+        self.results.setdefault(ns, []).append(run_results[ns])
     return self.results
     
   def _SingleTestRun(self, test_records):

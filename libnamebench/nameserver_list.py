@@ -235,6 +235,10 @@ class NameServers(list):
     self.seen_names.add(ns.name)
 
   def ApplyCongestionFactor(self):
+    # If we are only benchmarking one server, don't bother w/ congestion checking.
+    
+    if len(self) == 1:
+      return    
     cq = conn_quality.ConnectionQuality(status_callback=self.status_callback)
     (intercepted, congestion, multiplier) = cq.CheckConnectionQuality()[0:3]
     if intercepted:

@@ -19,9 +19,6 @@ import datetime
 import operator
 import os.path
 import platform
-import sys
-import urllib
-import zlib
 
 # external dependencies (from third_party)
 try:
@@ -31,7 +28,6 @@ except ImportError:
 
 import jinja2
 import simplejson
-import httplib2
 
 from . import charts
 from . import selectors
@@ -303,38 +299,9 @@ class ReportGenerator(object):
       
     return {'config': config, 'nameservers': nsdata_list}
     
-  def _CreateJsonData(self):
+  def CreateJsonData(self):
     sharing_data = self._CreateSharingData()
-#    print sharing_data
-    json_data = simplejson.dumps(sharing_data)
-#    print simplejson.dumps(sharing_data, sort_keys=True, indent=2)
-    return json_data
-
-  def UploadJsonResults(self):
-    url = self.config.upload_url
-    if not url or not url.startswith('http'):
-      return False
-    h = httplib2.Http()
-    post_data = dict(checksum=self._CalculateHostChecksum(), data=self._CreateJsonData())
-#    print urllib.urlencode(post_data)
-    try:
-      resp, content = h.request(url, 'POST', urllib.urlencode(post_data))
-      print "RESPONSE: %s" % resp
-    # See http://code.google.com/p/httplib2/issues/detail?id=62
-    except AttributeError:
-      print "%s refused connection" % url
-        
-  def _CalculateHostChecksum(self):
-    """This is so that we can detect duplicate submissions from a particular host.
-    
-    Returns:
-      checksum: integer
-    """
-    # From http://docs.python.org/release/2.5.2/lib/module-zlib.html
-    # Since the algorithm is designed for use as a checksum algorithm, 
-    # it is not suitable for use as a general hash algorithm.
-    return zlib.crc32(platform.platform() + sys.version + platform.node() +
-                      os.getenv('HOME', '') + os.getenv('USERPROFILE', ''))
+    return simplejson.dumps(sharing_data)
 
   def SaveResultsToCsv(self, filename):
     """Write out a CSV file with detailed results on each request.

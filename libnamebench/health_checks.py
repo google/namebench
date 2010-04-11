@@ -19,7 +19,6 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import random
 import sys
-import zlib
 
 # See if a third_party library exists -- use it if so.
 try:

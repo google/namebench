@@ -24,14 +24,12 @@ from . import config
 from . import data_sources
 from . import nameserver_list
 from . import reporter
+from . import site_connector
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-# Hack to locate the Alexa data
-RSRC_DIR = None
 
 def GenerateOutputFilename(extension):
-#  output_dir = os.path.join(os.getenv('HOME'), 'Desktop')
   output_dir = tempfile.gettempdir()
   output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
                                                             '%Y-%m-%d %H%M')
@@ -123,6 +121,10 @@ class BaseUI(object):
   def RunBenchmark(self):
     """Run the benchmark."""
     results = self.bmark.Run(self.test_records)
+    if self.options.upload_results:
+      connector = site_connector.SiteConnector(self.options)
+      index_hosts = connector.GetIndexHosts()
+      self.index_results = self.bmark.RunIndex(index_hosts)
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers, results)
 
   def RunAndOpenReports(self):
@@ -146,7 +148,8 @@ class BaseUI(object):
       self.csv_path = GenerateOutputFilename('csv')
 
     if self.options.upload_results:
-      self.reporter.UploadJsonResults()
+      connector = site_connector.SiteConnector(self.options)
+      connector.UploadJsonResults(self.reporter.CreateJsonData())
 
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
