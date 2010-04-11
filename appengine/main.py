@@ -30,7 +30,7 @@ class IndexHost(db.Model):
 
 class NameServer(db.Model):
   ip = db.StringProperty()
-  ip_bytes = db.StringProperty()
+  ip_bytes = db.StringProperty(multiline=True)
   name = db.StringProperty()
   listed = db.BooleanProperty()
   city = db.StringProperty()
@@ -47,7 +47,7 @@ class Submission(db.Model):
   #  File "google/appengine/ext/admin/__init__.py", line 916, in get
   #    return _DATA_TYPES[value.__class__]
   # KeyError: <class 'google.appengine.api.datastore_types.ByteString'>
-  class_c_bytes = db.StringProperty()
+  class_c_bytes = db.StringProperty(multiline=True)
   timestamp = db.DateTimeProperty(auto_now_add=True)
   listed = db.BooleanProperty()
   query_count = db.IntegerProperty()
@@ -63,21 +63,22 @@ class Submission(db.Model):
 class SubmissionNameServer(db.Model):
   nameserver = db.ReferenceProperty(NameServer, collection_name='submissions')
   submission = db.ReferenceProperty(Submission, collection_name='nameservers')
-  averages = db.ListProperty(int)
-  duration_min = db.IntegerProperty()
-  duration_max = db.IntegerProperty()
+  averages = db.ListProperty(float)
+  duration_min = db.FloatProperty()
+  duration_max = db.FloatProperty()
   failed_count = db.IntegerProperty()
+  nx_count = db.IntegerProperty()
   notes = db.ListProperty(str)
   
 # Store one row per run for run_results, since we do not need to do much with them.
-class RunResults(db.Model):
+class RunResult(db.Model):
   submission_nameserver = db.ReferenceProperty(SubmissionNameServer, collection_name='results')
   run_number = db.IntegerProperty()
-  durations = db.ListProperty(int)
+  durations = db.ListProperty(float)
   answer_counts = db.ListProperty(int)
 
 # We may want to compare index results, so we will store one row per record
-class IndexResults(db.Model):
+class IndexResult(db.Model):
   submission_nameserver = db.ReferenceProperty(SubmissionNameServer, collection_name='index_results')
   index_host = db.ReferenceProperty(IndexHost, collection_name='results')
   duration = db.IntegerProperty()
@@ -121,8 +122,24 @@ class ResultsHandler(webapp.RequestHandler):
     for record in db.GqlQuery(query, class_c, dupe_check_id, check_ts):
       duplicate_count += 1
     return duplicate_count
+    
+  def _find_ns_by_ip(self, ip):
+    """Get an NS key for a particular IP, adding it if necessary."""
+    rows = db.GqlQuery('SELECT * FROM NameServer WHERE ip = :1', ip)
+    for row in rows:
+      return row
+    
+    # If it falls back.
+    ns = NameServer()
+    ns.ip = ip
+    ns.ip_bytes = ''.join([ chr(int(x)) for x in ip.split('.') ])
+    ns.listed = False
+#    self.response.out.write("Added ns ip=%s bytes=%s" % (ns.ip, ns.ip_bytes))
+    ns.put()
+    return ns
   
   def post(self):
+    """Store the results from a submission. Rather long."""
     dupe_check_id = self.request.get('duplicate_check')
     data = simplejson.loads(self.request.get('data'))
     class_c_tuple = self.request.remote_addr.split('.')[0:3]
@@ -144,9 +161,37 @@ class ResultsHandler(webapp.RequestHandler):
     submission.run_count = data['config']['run_count']
     submission.os_system = data['config']['platform'][0]
     submission.os_release = data['config']['platform'][1]
-    submission.python_version = '.'.join(data['config']['python'])
+    submission.python_version = '.'.join(map(str, data['config']['python']))
     key = submission.put()
     self.response.out.write("Saved %s for network %s (%s). Listing: %s" % (key, class_c, dupe_check_id, listed))
+    
+    for nsdata in data['nameservers']:
+      print nsdata
+
+      self.response.out.write(nsdata)
+      ns_record = self._find_ns_by_ip(nsdata['ip'])
+      self.response.out.write("ns %s is %s" % (ns_record, nsdata['ip']))
+      ns_sub = SubmissionNameServer()
+      ns_sub.submission = submission
+      ns_sub.nameserver = ns_record
+      ns_sub.averages = nsdata['averages']
+      ns_sub.duration_min = nsdata['min']
+      ns_sub.duration_max = nsdata['max']
+      ns_sub.failed_count = nsdata['failed']
+      ns_sub.nx_count = nsdata['nx']
+      print nsdata['notes']
+      # TODO(tstromberg): Investigate "None" value in notes.
+      #ns_sub.notes = nsdata['notes']
+      ns_sub.put()
+      
+      for idx, run in enumerate(nsdata['durations']):
+        run_results = RunResult()
+        run_results.submission_nameserver = ns_sub
+        run_results.run_number = idx
+        run_results.durations = list(run)
+        self.response.out.write("Wrote idx=%s results=%s" % (idx, run))
+        run_results.put()
+
 
 def main():
   url_mapping = [
