@@ -92,7 +92,11 @@ class Benchmark(object):
 
   def RunIndex(self, test_records):
     """Run index tests using the same mechanism as a standard benchmark."""    
-    pending_tests = self._CheckForIndexHostsInResults(test_records)    
+    if not test_records:
+      print "No records to test."
+      return None
+    
+    pending_tests = self._CheckForIndexHostsInResults(test_records)
     index_results = self._SingleTestRun(pending_tests)
     for ns in index_results:
       for (hostname, request_type, duration, response, error_msg) in index_results[ns]:
@@ -129,27 +133,23 @@ class Benchmark(object):
     # contention.
     for ns in self.nameservers.enabled:
       random.shuffle(test_records)
-      shuffled_records[ns] = list(test_records)
+      shuffled_records[ns.ip] = list(test_records)
 
-      if ns not in results:
-        results[ns] = []
+    for i in range(len(test_records)):
+      for ns in self.nameservers.enabled:
+        (request_type, hostname) = shuffled_records[ns.ip][i]
+        input_queue.put((ns, request_type, hostname))
 
-      for i in range(len(test_records)):
-        for ns in self.nameservers.enabled:
-          (request_type, hostname) = shuffled_records[ns][i]
-          input_queue.put((ns, request_type, hostname))
-
-      results_queue = self._LaunchBenchmarkThreads(input_queue)
-      errors = []
-      while results_queue.qsize():
-        (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
-        if error_msg:
-          duration = ns.timeout * 1000
-          errors.append((ns, error_msg))
-        results[ns].append((hostname, request_type, duration,
-                                      response, error_msg))
-      for (ns, error_msg) in errors:
-	      self.msg("Error querying %s: %s" % (ns, error_msg))
+        results_queue = self._LaunchBenchmarkThreads(input_queue)
+        errors = []
+        while results_queue.qsize():
+          (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
+          if error_msg:
+            duration = ns.timeout * 1000
+            errors.append((ns, error_msg))
+          results.setdefault(ns, []).append((hostname, request_type, duration, response, error_msg))
+        for (ns, error_msg) in errors:
+  	      self.msg("Error querying %s: %s" % (ns, error_msg))
     return results
 
   def _LaunchBenchmarkThreads(self, input_queue):
