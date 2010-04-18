@@ -128,34 +128,36 @@ class Benchmark(object):
     input_queue = Queue.Queue()
     shuffled_records = {}
     results = {}
-
+    print "single run: %s" % test_records
     # Pre-compute the shuffled test records per-nameserver to avoid thread
     # contention.
     for ns in self.nameservers.enabled:
       random.shuffle(test_records)
       shuffled_records[ns.ip] = list(test_records)
 
+    # Feed the pre-computed records into the input queue.
     for i in range(len(test_records)):
       for ns in self.nameservers.enabled:
         (request_type, hostname) = shuffled_records[ns.ip][i]
         input_queue.put((ns, request_type, hostname))
 
-        results_queue = self._LaunchBenchmarkThreads(input_queue)
-        errors = []
-        while results_queue.qsize():
-          (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
-          if error_msg:
-            duration = ns.timeout * 1000
-            errors.append((ns, error_msg))
-          results.setdefault(ns, []).append((hostname, request_type, duration, response, error_msg))
-        for (ns, error_msg) in errors:
-  	      self.msg("Error querying %s: %s" % (ns, error_msg))
+    results_queue = self._LaunchBenchmarkThreads(input_queue)
+    errors = []
+    while results_queue.qsize():
+      (ns, request_type, hostname, response, duration, error_msg) = results_queue.get()
+      if error_msg:
+        duration = ns.timeout * 1000
+        errors.append((ns, error_msg))
+      results.setdefault(ns, []).append((hostname, request_type, duration, response, error_msg))
+    for (ns, error_msg) in errors:
+      self.msg("Error querying %s: %s" % (ns, error_msg))
     return results
 
   def _LaunchBenchmarkThreads(self, input_queue):
     """Launch and manage the benchmark threads."""
     results_queue = Queue.Queue()
     expected_total = input_queue.qsize()
+    print expected_total
     threads = []
     for unused_thread_num in range(0, self.thread_count):
       thread = BenchmarkThreads(input_queue, results_queue)

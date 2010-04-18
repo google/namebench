@@ -18,6 +18,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import mocks
+import nameserver
 import unittest
 
 class TestNameserver(unittest.TestCase):
@@ -52,10 +53,10 @@ class TestNameserver(unittest.TestCase):
   def testResponseToAscii(self):
     ns = mocks.MockNameServer(mocks.GOOD_IP)
     (response, duration, exception) = ns.TimedRequest('A', 'www.paypal.com')
-    self.assertEquals(ns.ResponseToAscii(response),
+    self.assertEquals(nameserver.ResponseToAscii(response),
                       '66.211.169.65 + 66.211.169.2')
     response.answer = None
-    self.assertEquals(ns.ResponseToAscii(response), 'no answer')
+    self.assertEquals(nameserver.ResponseToAscii(response), 'no answer')
 
   def testGoogleComResponse(self):
     ns = mocks.MockNameServer(mocks.GOOD_IP)

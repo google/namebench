@@ -30,6 +30,7 @@ import jinja2
 import simplejson
 
 from . import charts
+from . import nameserver
 from . import selectors
 from . import util
 
@@ -45,15 +46,18 @@ MIN_RELEVANT_COUNT = 50
 class ReportGenerator(object):
   """Generate reports - ASCII, HTML, etc."""
 
-  def __init__(self, config, nameservers, results, status_callback=None):
+  def __init__(self, config, nameservers, results, index=None,
+               status_callback=None):
     """Constructor.
 
     Args:
       nameservers: A list of nameserver objects to include in the report.
       results: A dictionary of results from Benchmark.Run()
+      index: A dictionary of results for index hosts.
     """
     self.nameservers = nameservers
     self.results = results
+    self.index = index
     self.config = config
     self.status_callback = status_callback
 
@@ -284,6 +288,15 @@ class ReportGenerator(object):
       durations = []
       for test_run in self.results[ns]:
         durations.append([x[2] for x in self.results[ns][0]])
+
+      # Get the meat out of the index data.
+      index = []
+      for host, req_type, duration, response, unused_x in self.index[ns]:
+        answer_count = self._ResponseToCountTtlText(response)[0]
+        index.append((host, req_type, duration, answer_count))
+
+
+      print "NOTES: %s" % ns.notes
       nsdata = {
         'ip': ns.ip,
         'averages': run_averages,
@@ -292,8 +305,9 @@ class ReportGenerator(object):
         'failed': failure_count,
         'nx': nx_count,
         'durations': durations,
-        'notes': ns.notes,
-        'index': []
+        # No need to use the second part of the tuple (URL)
+        'notes': [ x[0] for x in ns.notes ],
+        'index': index
       }
       nsdata_list.append(nsdata)
       
@@ -302,6 +316,27 @@ class ReportGenerator(object):
   def CreateJsonData(self):
     sharing_data = self._CreateSharingData()
     return simplejson.dumps(sharing_data)
+
+  def _ResponseToCountTtlText(self, response):
+    """For a given DNS response, parse the most important details out.
+
+    Args:
+      response: DNS response
+
+    Returns:
+      tuple of (answer_count, ttl, answer_text)
+    """
+
+    answer_text = ''
+    answer_count = -1
+    ttl = -1
+    if response:
+      if response.answer:
+        answer_count = len(response.answer)
+        ttl = response.answer[0].ttl
+      answer_text = nameserver.ResponseToAscii(response)
+    return (answer_count, ttl, answer_text)
+
 
   def SaveResultsToCsv(self, filename):
     """Write out a CSV file with detailed results on each request.
@@ -322,14 +357,7 @@ class ReportGenerator(object):
       self.msg("Saving detailed data for %s" % ns, debug=True)
       for (test_run, test_results) in enumerate(self.results[ns]):
         for (record, req_type, duration, response, error_msg) in test_results:
-          answer_text = ''
-          answer_count = -1
-          ttl = -1
-          if response:
-            if response.answer:
-              answer_count = len(response.answer)
-              ttl = response.answer[0].ttl
-            answer_text = ns.ResponseToAscii(response)
+          (answer_count, ttl, answer_text) = self._ResponseToCountTtlText(response)
           output.writerow([ns.ip, ns.name, test_run, record, req_type, duration,
                            ttl, answer_count, answer_text, error_msg])
     csv_file.close()

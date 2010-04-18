@@ -55,6 +55,16 @@ MAX_PREFERRED_FAILURES = 3
 
 ERROR_PRONE_RATE = 10
 
+def ResponseToAscii(response):
+  if not response:
+    return None
+  if response.answer:
+    answers = [' + '.join(map(str, x.items)) for x in response.answer]
+    return ' -> '.join(answers)
+  else:
+    return dns.rcode.to_text(response.rcode())
+
+
 class NameServer(health_checks.NameServerHealthChecks):
   """Hold information about a particular nameserver."""
 
@@ -259,12 +269,4 @@ class NameServer(health_checks.NameServerHealthChecks):
 
     return (response, util.SecondsToMilliseconds(duration), error_msg)
 
-  def ResponseToAscii(self, response):
-    if not response:
-      return None
-    if response.answer:
-      answers = [' + '.join(map(str, x.items)) for x in response.answer]
-      return ' -> '.join(answers)
-    else:
-      return dns.rcode.to_text(response.rcode())
 

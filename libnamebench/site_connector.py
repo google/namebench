@@ -40,12 +40,13 @@ class SiteConnector(object):
     h = httplib2.Http(tempfile.gettempdir(), timeout=10)
     try:
       resp, content = h.request(url, 'GET')
+      print content
       hosts = []
       for record_type, host in simplejson.loads(content):
         hosts.append((str(record_type), str(host)))
       print "Index hosts: %s" % hosts
       return hosts
-    except:
+    except IndexError:
       print '* Unable to fetch %s' % url
       return []     
 
