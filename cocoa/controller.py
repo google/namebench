@@ -50,7 +50,9 @@ class controller(NSWindowController, base_ui.BaseUI):
   include_regional = IBOutlet()
   include_censorship_checks = IBOutlet()
   data_source = IBOutlet()
-  selection_mode = IBOutlet()
+  health_performance = IBOutlet()
+  enable_sharing = IBOutlet()
+  location = IBOutlet()
   query_count = IBOutlet()
   run_count = IBOutlet()
   status = IBOutlet()
@@ -111,14 +113,15 @@ class controller(NSWindowController, base_ui.BaseUI):
     else:
       self.secondary = self.regional_ns
 
+    if int(self.enable_sharing.stringValue()):
+      self.options.upload_results = True
+
     if int(self.include_censorship_checks.stringValue()):
       self.options.enable_censorship_checks = True
-    self.options.select_mode = self.selection_mode.titleOfSelectedItem().lower()
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.preferred.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     self.options.query_count = int(self.query_count.stringValue())
-    self.options.run_count = int(self.run_count.stringValue())
     self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.input_source, self.options.select_mode, self.options.query_count, self.options.run_count))
 
   def benchmarkThread(self):
@@ -165,10 +168,14 @@ class controller(NSWindowController, base_ui.BaseUI):
     nameservers_string = ', '.join(util.InternalNameServers())
     self.nameserver_form.setStringValue_(nameservers_string)
     self.query_count.setStringValue_(self.options.query_count)
-    self.run_count.setStringValue_(self.options.run_count)
-    modes = [x.title() for x in selectors.GetTypes()]
-    self.selection_mode.removeAllItems()
-    self.selection_mode.addItemsWithTitles_(modes)
+    self.query_count.setStringValue_(self.options.query_count)
+
+    self.location.removeAllItems()
+    self.location.addItemWithTitle_("(automatic)")
+
+    self.health_performance.removeAllItems()
+    self.health_performance.addItemWithTitle_("(automatic)")
+
     self.data_source.removeAllItems()
     for source in self.data_src.ListSourceTitles():
       self.data_source.addItemWithTitle_(source)
