@@ -16,8 +16,10 @@
 #
 import cgi
 import datetime
+import os
 from google.appengine.ext import db
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
 from django.utils import simplejson
 
@@ -44,7 +46,25 @@ class ClearDuplicateIdHandler(webapp.RequestHandler):
 class MainHandler(webapp.RequestHandler):
 
   def get(self):
-    self.response.out.write('Hello world!')
+    query = models.Submission.all()
+    query.filter('listed =', True)
+    query.order('-timestamp')
+    recent_submissions = query.fetch(10)
+    template_values = {
+      'recent_submissions': recent_submissions
+    }  
+    path = os.path.join(os.path.dirname(__file__), 'index.html')
+    self.response.out.write(template.render(path, template_values))
+    
+class LookupHandler(webapp.RequestHandler):
+
+  def get(self, id):
+    submission = models.Submission.get_by_id(int(id))
+    template_values = {
+      'submission': submission
+    }  
+    path = os.path.join(os.path.dirname(__file__), 'lookup.html')
+    self.response.out.write(template.render(path, template_values))    
     
 class IndexHostsHandler(webapp.RequestHandler):
     
@@ -79,7 +99,8 @@ class ResultsHandler(webapp.RequestHandler):
           results.duration = duration
           results.answer_count = answer_count
           results.put()
-          print "Found index match, result added."
+          print "Found index match for %s, result added." % host
+          break
 
       if not results:
         print "Odd, %s did not match." % host
@@ -164,6 +185,7 @@ class ResultsHandler(webapp.RequestHandler):
 def main():
   url_mapping = [
       ('/', MainHandler),
+      ('/id/(\d+)', LookupHandler),
       ('/index_hosts', IndexHostsHandler),
       ('/clear_dupes', ClearDuplicateIdHandler),
       ('/results', ResultsHandler)

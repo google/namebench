@@ -18,5 +18,11 @@ indexes:
 
 - kind: Submission
   properties:
+  - name: listed
+  - name: timestamp
+    direction: desc
+
+- kind: Submission
+  properties:
   - name: sys_id
   - name: timestamp
