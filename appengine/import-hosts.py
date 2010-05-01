@@ -12,7 +12,7 @@ hosts = [
     ('A', 'www.google.com.'),
     ('A', 'reddit.com.'),
     ('A', 'www.baidu.com.'),
-    ('A', 'www.google.com.'),
+    ('A', 'flickr.com.'),
     ('A', 'www.microsoft.com.'),
     ('A', 'www.facebook.com.'),
     ('A', 'www.youtube.com.')

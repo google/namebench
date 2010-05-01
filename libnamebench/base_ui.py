@@ -27,6 +27,7 @@ from . import reporter
 from . import site_connector
 from . import util
 
+
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 
@@ -126,11 +127,7 @@ class BaseUI(object):
 
     if self.options.upload_results:
       connector = site_connector.SiteConnector(self.options)
-      try:
-        index_hosts = connector.GetIndexHosts()
-      except:
-        index_hosts = []
-        self.UpdateStatus("Failed to download index hosts: %s" % util.GetLastExceptionString())
+      index_hosts = connector.GetIndexHosts()
       index = self.bmark.RunIndex(index_hosts)
       print index
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
@@ -157,12 +154,9 @@ class BaseUI(object):
       self.csv_path = GenerateOutputFilename('csv')
 
     if self.options.upload_results:
-      try:
-        json_data = self.reporter.CreateJsonData()
-        connector = site_connector.SiteConnector(self.options)
-        connector.UploadJsonResults(json_data)
-      except:
-        self.UpdateStatus("Failed to upload results: %s" % util.GetLastExceptionString())
+      json_data = self.reporter.CreateJsonData()
+      connector = site_connector.SiteConnector(self.options)
+      connector.UploadJsonResults(json_data)
 
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')

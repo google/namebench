@@ -38,8 +38,8 @@ CACHE_VER = 4
 
 # How many nameservers get through the first ping to the health tests.
 FIRST_CUT_MULTIPLIER = 0.10
-PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2.5
-SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 3
+PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2.25
+SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2.5
 
 # If we can't ping more than this, go into slowmode.
 MIN_PINGABLE_PERCENT = 20
@@ -48,9 +48,9 @@ SLOW_MODE_THREAD_COUNT = 8
 
 # Windows behaves in unfortunate ways if too many threads are specified
 if sys.platform == "win32":
-  MAX_SANE_THREAD_COUNT = 60
+  MAX_SANE_THREAD_COUNT = 32
 else:
-  MAX_SANE_THREAD_COUNT = 250
+  MAX_SANE_THREAD_COUNT = 100
 
 # Slow down for these, as they are used for timing.
 MAX_INITIAL_HEALTH_THREAD_COUNT = 35

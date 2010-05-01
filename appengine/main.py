@@ -24,10 +24,18 @@ from google.appengine.ext.webapp import util
 from django.utils import simplejson
 
 import models
+from third_party import pygeoip
 
 MIN_QUERY_COUNT = 50
+GEO_DATA_PATH = "./third_party/maxmind/GeoLiteCity.dat"
+# The minimum amount of time between submissions that we list
+MIN_LISTING_DELTA = datetime.timedelta(hours=8)
 
-  
+
+def _get_geoip_data(ip):
+  geo = pygeoip.GeoIP(GEO_DATA_PATH, flags=pygeoip.MEMORY_CACHE)
+  return geo.record_by_addr(ip)  
+
 class ClearDuplicateIdHandler(webapp.RequestHandler):
   """Provide an easy way to clear the duplicate check id from the submissions table.
   
@@ -35,7 +43,7 @@ class ClearDuplicateIdHandler(webapp.RequestHandler):
   """
 
   def get(self):
-    check_ts = datetime.datetime.now() - datetime.timedelta(days=1)
+    check_ts = datetime.datetime.now() - MIN_LISTING_DELTA
     cleared = 0
     for record in db.GqlQuery("SELECT * FROM Submission WHERE timestamp < :1 AND dupe_check_id = NULL", check_ts):
       record.dupe_check_id = None
@@ -44,7 +52,7 @@ class ClearDuplicateIdHandler(webapp.RequestHandler):
     self.response.out.write("%s submissions older than %s cleared." % (cleared, check_ts))
 
 class MainHandler(webapp.RequestHandler):
-
+  """Handler for / requests"""
   def get(self):
     query = models.Submission.all()
     query.filter('listed =', True)
@@ -57,9 +65,12 @@ class MainHandler(webapp.RequestHandler):
     self.response.out.write(template.render(path, template_values))
     
 class LookupHandler(webapp.RequestHandler):
+  """Handler for /id/### requests."""
 
   def get(self, id):
     submission = models.Submission.get_by_id(int(id))
+#    nameservers = mode
+    
     template_values = {
       'submission': submission
     }  
@@ -68,17 +79,20 @@ class LookupHandler(webapp.RequestHandler):
     
 class IndexHostsHandler(webapp.RequestHandler):
     
+  """Handler for /index_requests."""
   def get(self):
     hosts = []
     for record in db.GqlQuery("SELECT * FROM IndexHost WHERE listed=True"):
       hosts.append((str(record.record_type), str(record.record_name)))
     self.response.out.write(simplejson.dumps(hosts))
 
-class ResultsHandler(webapp.RequestHandler):
+class SubmitHandler(webapp.RequestHandler):
+  
+  """Handler for result submissions."""
   
   def _duplicate_run_count(self, class_c, dupe_check_id):
     """Check if the user has submitted anything in the last 24 hours."""
-    check_ts = datetime.datetime.now() - datetime.timedelta(days=1)
+    check_ts = datetime.datetime.now() - MIN_LISTING_DELTA
     query = 'SELECT * FROM Submission WHERE class_c=:1 AND dupe_check_id=:2 AND timestamp > :3'
     duplicate_count = 0
     for record in db.GqlQuery(query, class_c, dupe_check_id, check_ts):
@@ -93,13 +107,13 @@ class ResultsHandler(webapp.RequestHandler):
 
       for record in index_hosts:
         if host == record.record_name and req_type == record.record_type:
+          self.response.out.write("Adding %s: %s\n" % (host, record))
           results = models.IndexResult()
           results.submission_nameserver = ns_sub
           results.index_host = record
           results.duration = duration
           results.answer_count = answer_count
           results.put()
-          print "Found index match for %s, result added." % host
           break
 
       if not results:
@@ -182,13 +196,27 @@ class ResultsHandler(webapp.RequestHandler):
       self._process_index_submission(nsdata['index'], ns_sub, cached_index_hosts)
 
 
+
+class GeoLookupHandler(webapp.RequestHandler):
+
+  """Handler to return location information for a given IP."""
+  
+  def post(self):
+    """Given an IP, dump all location data."""
+    ip = self.request.get('ip', os.environ.get('REMOTE_ADDR'))
+    self.response.out.write(simplejson.dumps(_get_geoip_data(ip)))
+
+  # TODO(tstromberg): Find a better way.
+  get = post
+
 def main():
   url_mapping = [
       ('/', MainHandler),
       ('/id/(\d+)', LookupHandler),
+      ('/geo_lookup', GeoLookupHandler),
       ('/index_hosts', IndexHostsHandler),
-      ('/clear_dupes', ClearDuplicateIdHandler),
-      ('/results', ResultsHandler)
+      ('/tasks/clear_dupes', ClearDuplicateIdHandler),
+      ('/submit', SubmitHandler)
   ]
   application = webapp.WSGIApplication(url_mapping,
                                        debug=True)
