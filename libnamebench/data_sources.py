@@ -49,7 +49,7 @@ FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{
 IP_RE = re.compile('^[0-9.]+$')
 DEFAULT_CONFIG_PATH = "config/data_sources.cfg"
 MAX_NON_UNIQUE_RECORD_COUNT = 500000
-MAX_FILE_MTIME_AGE_DAYS = 60
+MAX_FILE_MTIME_AGE_DAYS = 45
 MIN_FILE_SIZE = 10000
 MIN_RECOMMENDED_RECORD_COUNT = 200
 MAX_FQDN_SYNTHESIZE_PERCENT = 4
@@ -78,7 +78,8 @@ class DataSources(object):
           'name': None,
           'search_paths': set(),
           # Store whether or not this data source contains personal data
-          'full_hostnames': True
+          'full_hostnames': True,
+          'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
         }
 
       for (key, value) in config.items(section):
@@ -86,6 +87,8 @@ class DataSources(object):
           self.source_config[section]['name'] = value
         elif key == 'full_hostnames' and int(value) == 0:
           self.source_config[section]['full_hostnames'] = False
+        elif key == 'max_mtime_days':
+          self.source_config[section]['max_mtime_days'] = int(value)
         else:
           self.source_config[section]['search_paths'].add(value)
 
@@ -100,8 +103,9 @@ class DataSources(object):
       List of tuples in form of (short_name, full_name, full_hosts, # of entries)
     """
     for source in self.ListSourceTypes():
+      max_mtime = self.source_config[source]['max_mtime_days']
       self._GetHostsFromSource(source, min_file_size=MIN_FILE_SIZE,
-                               max_mtime_age_days=MAX_FILE_MTIME_AGE_DAYS)
+                               max_mtime_age_days=max_mtime)
 
     details = []
     for source in self.source_cache:
