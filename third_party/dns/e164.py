@@ -54,7 +54,7 @@ def to_e164(name, origin=public_enum_domain, want_plus_prefix=True):
         name = name.relativize(origin)
     dlabels = [d for d in name.labels if (d.isdigit() and len(d) == 1)]
     if len(dlabels) != len(name.labels):
-        raise dns.exception.SyntaxError, 'non-digit labels in ENUM domain name'
+        raise dns.exception.SyntaxError('non-digit labels in ENUM domain name')
     dlabels.reverse()
     text = ''.join(dlabels)
     if want_plus_prefix:
@@ -73,7 +73,7 @@ def query(number, domains, resolver=None):
             domain = dns.name.from_text(domain)
         qname = dns.e164.from_e164(number, domain)
         try:
-            return dns.resolver.query(qname, 'NAPTR')
+            return resolver.query(qname, 'NAPTR')
         except dns.resolver.NXDOMAIN:
             pass
     raise dns.resolver.NXDOMAIN

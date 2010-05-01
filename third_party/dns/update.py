@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -24,9 +24,9 @@ import dns.rdataset
 
 class Update(dns.message.Message):
     def __init__(self, zone, rdclass=dns.rdataclass.IN, keyring=None,
-                 keyname=None):
+                 keyname=None, keyalgorithm=dns.tsig.default_algorithm):
         """Initialize a new DNS Update object.
-        
+
         @param zone: The zone which is being updated.
         @type zone: A dns.name.Name or string
         @param rdclass: The class of the zone; defaults to dns.rdataclass.IN.
@@ -41,6 +41,9 @@ class Update(dns.message.Message):
         so applications should supply a keyname when a keyring is used, unless
         they know the keyring contains only one key.
         @type keyname: dns.name.Name or string
+        @param keyalgorithm: The TSIG algorithm to use; defaults to
+        dns.tsig.default_algorithm
+        @type keyalgorithm: string
         """
         super(Update, self).__init__()
         self.flags |= dns.opcode.to_flags(dns.opcode.UPDATE)
@@ -53,7 +56,7 @@ class Update(dns.message.Message):
         self.find_rrset(self.question, self.origin, rdclass, dns.rdatatype.SOA,
                         create=True, force_unique=True)
         if not keyring is None:
-            self.use_tsig(keyring, keyname)
+            self.use_tsig(keyring, keyname, keyalgorithm)
 
     def _add_rr(self, name, ttl, rd, deleting=None, section=None):
         """Add a single RR to the update section."""
@@ -72,7 +75,7 @@ class Update(dns.message.Message):
         argument is the section to add to.  The third argument
         is always a name.  The other arguments can be:
 
-        	- rdataset...
+                - rdataset...
 
                 - ttl, rdata...
 
@@ -109,7 +112,7 @@ class Update(dns.message.Message):
         """Add records.  The first argument is always a name.  The other
         arguments can be:
 
-        	- rdataset...
+                - rdataset...
 
                 - ttl, rdata...
 
@@ -120,9 +123,9 @@ class Update(dns.message.Message):
         """Delete records.  The first argument is always a name.  The other
         arguments can be:
 
-        	- I{nothing}
-                
-        	- rdataset...
+                - I{nothing}
+
+                - rdataset...
 
                 - rdata...
 
@@ -162,8 +165,8 @@ class Update(dns.message.Message):
     def replace(self, name, *args):
         """Replace records.  The first argument is always a name.  The other
         arguments can be:
-                
-        	- rdataset...
+
+                - rdataset...
 
                 - ttl, rdata...
 
@@ -171,7 +174,7 @@ class Update(dns.message.Message):
 
         Note that if you want to replace the entire node, you should do
         a delete of the name followed by one or more calls to add."""
-        
+
         self._add(True, self.authority, name, *args)
 
     def present(self, name, *args):
@@ -179,13 +182,13 @@ class Update(dns.message.Message):
         or specific rdataset) exists as a prerequisite to the
         execution of the update.  The first argument is always a name.
         The other arguments can be:
-                
-        	- rdataset...
+
+                - rdataset...
 
                 - rdata...
 
                 - rdtype, string..."""
-        
+
         if isinstance(name, (str, unicode)):
             name = dns.name.from_text(name, None)
         if len(args) == 0:
@@ -196,7 +199,7 @@ class Update(dns.message.Message):
         elif isinstance(args[0], dns.rdataset.Rdataset) or \
              isinstance(args[0], dns.rdata.Rdata) or \
              len(args) > 1:
-            if len(args) > 1:
+            if not isinstance(args[0], dns.rdataset.Rdataset):
                 # Add a 0 TTL
                 args = list(args)
                 args.insert(0, 0)
@@ -218,7 +221,7 @@ class Update(dns.message.Message):
             name = dns.name.from_text(name, None)
         if rdtype is None:
             rrset = self.find_rrset(self.answer, name,
-                                    dns.rdataclass.NONE, dns.rdatatype.ANY, 
+                                    dns.rdataclass.NONE, dns.rdatatype.ANY,
                                     dns.rdatatype.NONE, None,
                                     True, True)
         else:

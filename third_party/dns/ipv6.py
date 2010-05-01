@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -32,7 +32,7 @@ def inet_ntoa(address):
     """
 
     if len(address) != 16:
-        raise ValueError, "IPv6 addresses are 16 bytes long"
+        raise ValueError("IPv6 addresses are 16 bytes long")
     hex = address.encode('hex_codec')
     chunks = []
     i = 0
@@ -95,13 +95,13 @@ _colon_colon_end = re.compile(r'.*::$')
 
 def inet_aton(text):
     """Convert a text format IPv6 address into network format.
-    
+
     @param text: the textual address
     @type text: string
     @rtype: string
     @raises dns.exception.SyntaxError: the text was not properly formatted
     """
-    
+
     #
     # Our aim here is not something fast; we just want something that works.
     #

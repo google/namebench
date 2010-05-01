@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -19,7 +19,7 @@ import dns.exception
 
 class BadTTL(dns.exception.SyntaxError):
     pass
-                 
+
 def from_text(text):
     """Convert the text form of a TTL to an integer.
 
@@ -30,7 +30,7 @@ def from_text(text):
     @raises dns.ttl.BadTTL: the TTL is not well-formed
     @rtype: int
     """
-    
+
     if text.isdigit():
         total = long(text)
     else:
@@ -55,10 +55,10 @@ def from_text(text):
                 elif c == 's':
                     total += current
                 else:
-                    raise BadTTL, "unknown unit '%s'" % c
+                    raise BadTTL("unknown unit '%s'" % c)
                 current = 0
         if not current == 0:
-            raise BadTTL, "trailing integer"
+            raise BadTTL("trailing integer")
     if total < 0L or total > 2147483647L:
-        raise BadTTL, "TTL should be between 0 and 2^31 - 1 (inclusive)"
+        raise BadTTL("TTL should be between 0 and 2^31 - 1 (inclusive)")
     return total

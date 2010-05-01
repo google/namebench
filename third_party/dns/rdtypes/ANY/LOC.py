@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -29,7 +29,7 @@ def _exponent_of(what, desc):
             exp = i - 1
             break
     if exp is None or exp < 0:
-        raise dns.exception.SyntaxError, "%s value out of bounds" % desc
+        raise dns.exception.SyntaxError("%s value out of bounds" % desc)
     return exp
 
 def _float_to_tuple(what):
@@ -69,10 +69,10 @@ def _encode_size(what, desc):
 def _decode_size(what, desc):
     exponent = what & 0x0F
     if exponent > 9:
-        raise dns.exception.SyntaxError, "bad %s exponent" % desc
+        raise dns.exception.SyntaxError("bad %s exponent" % desc)
     base = (what & 0xF0) >> 4
     if base > 9:
-        raise dns.exception.SyntaxError, "bad %s base" % desc
+        raise dns.exception.SyntaxError("bad %s base" % desc)
     return long(base) * pow(10, exponent)
 
 class LOC(dns.rdata.Rdata):
@@ -96,7 +96,7 @@ class LOC(dns.rdata.Rdata):
 
     __slots__ = ['latitude', 'longitude', 'altitude', 'size',
                  'horizontal_precision', 'vertical_precision']
-    
+
     def __init__(self, rdclass, rdtype, latitude, longitude, altitude,
                  size=1.0, hprec=10000.0, vprec=10.0):
         """Initialize a LOC record instance.
@@ -105,7 +105,7 @@ class LOC(dns.rdata.Rdata):
         of integers specifying (degrees, minutes, seconds, milliseconds),
         or they may be floating point values specifying the number of
         degrees.  The other parameters are floats."""
-        
+
         super(LOC, self).__init__(rdclass, rdtype)
         if isinstance(latitude, int) or isinstance(latitude, long):
             latitude = float(latitude)
@@ -148,14 +148,14 @@ class LOC(dns.rdata.Rdata):
                 self.vertical_precision / 100.0
             )
         return text
-        
+
     def from_text(cls, rdclass, rdtype, tok, origin = None, relativize = True):
         latitude = [0, 0, 0, 0]
         longitude = [0, 0, 0, 0]
         size = 1.0
         hprec = 10000.0
         vprec = 10.0
-        
+
         latitude[0] = tok.get_int()
         t = tok.get_string()
         if t.isdigit():
@@ -164,16 +164,13 @@ class LOC(dns.rdata.Rdata):
             if '.' in t:
                 (seconds, milliseconds) = t.split('.')
                 if not seconds.isdigit():
-                    raise dns.exception.SyntaxError, \
-                          'bad latitude seconds value'
+                    raise dns.exception.SyntaxError('bad latitude seconds value')
                 latitude[2] = int(seconds)
                 if latitude[2] >= 60:
-                    raise dns.exception.SyntaxError, \
-                          'latitude seconds >= 60'
+                    raise dns.exception.SyntaxError('latitude seconds >= 60')
                 l = len(milliseconds)
                 if l == 0 or l > 3 or not milliseconds.isdigit():
-                    raise dns.exception.SyntaxError, \
-                          'bad latitude milliseconds value'
+                    raise dns.exception.SyntaxError('bad latitude milliseconds value')
                 if l == 1:
                     m = 100
                 elif l == 2:
@@ -188,7 +185,7 @@ class LOC(dns.rdata.Rdata):
         if t == 'S':
             latitude[0] *= -1
         elif t != 'N':
-            raise dns.exception.SyntaxError, 'bad latitude hemisphere value'
+            raise dns.exception.SyntaxError('bad latitude hemisphere value')
 
         longitude[0] = tok.get_int()
         t = tok.get_string()
@@ -198,16 +195,13 @@ class LOC(dns.rdata.Rdata):
             if '.' in t:
                 (seconds, milliseconds) = t.split('.')
                 if not seconds.isdigit():
-                    raise dns.exception.SyntaxError, \
-                          'bad longitude seconds value'
+                    raise dns.exception.SyntaxError('bad longitude seconds value')
                 longitude[2] = int(seconds)
                 if longitude[2] >= 60:
-                    raise dns.exception.SyntaxError, \
-                          'longitude seconds >= 60'
+                    raise dns.exception.SyntaxError('longitude seconds >= 60')
                 l = len(milliseconds)
                 if l == 0 or l > 3 or not milliseconds.isdigit():
-                    raise dns.exception.SyntaxError, \
-                          'bad longitude milliseconds value'
+                    raise dns.exception.SyntaxError('bad longitude milliseconds value')
                 if l == 1:
                     m = 100
                 elif l == 2:
@@ -222,37 +216,36 @@ class LOC(dns.rdata.Rdata):
         if t == 'W':
             longitude[0] *= -1
         elif t != 'E':
-            raise dns.exception.SyntaxError, 'bad longitude hemisphere value'
+            raise dns.exception.SyntaxError('bad longitude hemisphere value')
 
         t = tok.get_string()
         if t[-1] == 'm':
             t = t[0 : -1]
         altitude = float(t) * 100.0	# m -> cm
 
-        (ttype, value) = tok.get()
-        if ttype != dns.tokenizer.EOL and ttype != dns.tokenizer.EOF:
+        token = tok.get().unescape()
+        if not token.is_eol_or_eof():
+            value = token.value
             if value[-1] == 'm':
                 value = value[0 : -1]
             size = float(value) * 100.0	# m -> cm
-            (ttype, value) = tok.get()
-            if ttype != dns.tokenizer.EOL and ttype != dns.tokenizer.EOF:
+            token = tok.get().unescape()
+            if not token.is_eol_or_eof():
+                value = token.value
                 if value[-1] == 'm':
                     value = value[0 : -1]
                 hprec = float(value) * 100.0	# m -> cm
-                (ttype, value) = tok.get()
-                if ttype != dns.tokenizer.EOL and ttype != dns.tokenizer.EOF:
+                token = tok.get().unescape()
+                if not token.is_eol_or_eof():
+                    value = token.value
                     if value[-1] == 'm':
                         value = value[0 : -1]
                         vprec = float(value) * 100.0	# m -> cm
-                        (ttype, value) = tok.get()
-                        if ttype != dns.tokenizer.EOL and \
-                               ttype != dns.tokenizer.EOF:
-                            raise dns.exception.SyntaxError, \
-                                  "expected EOL or EOF"
+                        tok.get_eol()
 
         return cls(rdclass, rdtype, latitude, longitude, altitude,
                    size, hprec, vprec)
-        
+
     from_text = classmethod(from_text)
 
     def to_wire(self, file, compress = None, origin = None):
@@ -262,7 +255,7 @@ class LOC(dns.rdata.Rdata):
         else:
             sign = 1
             degrees = long(self.latitude[0])
-        milliseconds = (degrees * 3600000 + 
+        milliseconds = (degrees * 3600000 +
                         self.latitude[1] * 60000 +
                         self.latitude[2] * 1000 +
                         self.latitude[3]) * sign
@@ -273,7 +266,7 @@ class LOC(dns.rdata.Rdata):
         else:
             sign = 1
             degrees = long(self.longitude[0])
-        milliseconds = (degrees * 3600000 + 
+        milliseconds = (degrees * 3600000 +
                         self.longitude[1] * 60000 +
                         self.longitude[2] * 1000 +
                         self.longitude[3]) * sign
@@ -285,7 +278,7 @@ class LOC(dns.rdata.Rdata):
         wire = struct.pack("!BBBBIII", 0, size, hprec, vprec, latitude,
                            longitude, altitude)
         file.write(wire)
-        
+
     def from_wire(cls, rdclass, rdtype, wire, current, rdlen, origin = None):
         (version, size, hprec, vprec, latitude, longitude, altitude) = \
                   struct.unpack("!BBBBIII", wire[current : current + rdlen])
@@ -294,13 +287,13 @@ class LOC(dns.rdata.Rdata):
         else:
             latitude = -1 * float(0x80000000L - latitude) / 3600000
         if latitude < -90.0 or latitude > 90.0:
-            raise dns.exception.FormError, "bad latitude"
+            raise dns.exception.FormError("bad latitude")
         if longitude > 0x80000000L:
             longitude = float(longitude - 0x80000000L) / 3600000
         else:
             longitude = -1 * float(0x80000000L - longitude) / 3600000
         if longitude < -180.0 or longitude > 180.0:
-            raise dns.exception.FormError, "bad longitude"
+            raise dns.exception.FormError("bad longitude")
         altitude = float(altitude) - 10000000.0
         size = _decode_size(size, "size")
         hprec = _decode_size(hprec, "horizontal precision")
@@ -319,7 +312,7 @@ class LOC(dns.rdata.Rdata):
         other.to_wire(f)
         wire2 = f.getvalue()
         f.close()
-        
+
         return cmp(wire1, wire2)
 
     def _get_float_latitude(self):

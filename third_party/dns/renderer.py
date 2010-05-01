@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2007, 2009 Nominum, Inc.
+# Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -250,14 +250,14 @@ class Renderer(object):
         self.counts[ADDITIONAL] += 1
 
     def add_tsig(self, keyname, secret, fudge, id, tsig_error, other_data,
-                 request_mac):
+                 request_mac, algorithm=dns.tsig.default_algorithm):
         """Add a TSIG signature to the message.
 
         @param keyname: the TSIG key name
         @type keyname: dns.name.Name object
         @param secret: the secret to use
         @type secret: string
-        @param fudge: TSIG time fudge; default is 300 seconds.
+        @param fudge: TSIG time fudge
         @type fudge: int
         @param id: the message id to encode in the tsig signature
         @type id: int
@@ -267,21 +267,23 @@ class Renderer(object):
         @type other_data: string
         @param request_mac: This message is a response to the request which
         had the specified MAC.
+        @param algorithm: the TSIG algorithm to use
         @type request_mac: string
         """
 
         self._set_section(ADDITIONAL)
         before = self.output.tell()
         s = self.output.getvalue()
-        (tsig_rdata, self.mac, ctx) = dns.tsig.hmac_md5(s,
-                                                        keyname,
-                                                        secret,
-                                                        int(time.time()),
-                                                        fudge,
-                                                        id,
-                                                        tsig_error,
-                                                        other_data,
-                                                        request_mac)
+        (tsig_rdata, self.mac, ctx) = dns.tsig.sign(s,
+                                                    keyname,
+                                                    secret,
+                                                    int(time.time()),
+                                                    fudge,
+                                                    id,
+                                                    tsig_error,
+                                                    other_data,
+                                                    request_mac,
+                                                    algorithm=algorithm)
         keyname.to_wire(self.output, self.compress, self.origin)
         self.output.write(struct.pack('!HHIH', dns.rdatatype.TSIG,
                                       dns.rdataclass.ANY, 0, 0))

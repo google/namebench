@@ -1,4 +1,4 @@
-# Copyright (C) 2004-2007, 2009 Nominum, Inc.
+# Copyright (C) 2004-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -61,7 +61,7 @@ _protocol_from_text = {
     'IPSEC' : 4,
     'ALL' : 255,
     }
-    
+
 class KEYBase(dns.rdata.Rdata):
     """KEY-like record base
 
@@ -75,7 +75,7 @@ class KEYBase(dns.rdata.Rdata):
     @type key: string"""
 
     __slots__ = ['flags', 'protocol', 'algorithm', 'key']
-    
+
     def __init__(self, rdclass, rdtype, flags, protocol, algorithm, key):
         super(KEYBase, self).__init__(rdclass, rdtype)
         self.flags = flags
@@ -97,7 +97,7 @@ class KEYBase(dns.rdata.Rdata):
             for flag in flag_names:
                 v = _flags_from_text.get(flag)
                 if v is None:
-                    raise dns.exception.SyntaxError, 'unknown flag %s' % flag
+                    raise dns.exception.SyntaxError('unknown flag %s' % flag)
                 flags &= ~v[1]
                 flags |= v[0]
         protocol = tok.get_string()
@@ -106,29 +106,28 @@ class KEYBase(dns.rdata.Rdata):
         else:
             protocol = _protocol_from_text.get(protocol)
             if protocol is None:
-                raise dns.exception.SyntaxError, \
-                      'unknown protocol %s' % protocol
-            
+                raise dns.exception.SyntaxError('unknown protocol %s' % protocol)
+
         algorithm = dns.dnssec.algorithm_from_text(tok.get_string())
         chunks = []
         while 1:
-            t = tok.get()
-            if t[0] == dns.tokenizer.EOL or t[0] == dns.tokenizer.EOF:
+            t = tok.get().unescape()
+            if t.is_eol_or_eof():
                 break
-            if t[0] != dns.tokenizer.IDENTIFIER:
+            if not t.is_identifier():
                 raise dns.exception.SyntaxError
-            chunks.append(t[1])
+            chunks.append(t.value)
         b64 = ''.join(chunks)
         key = b64.decode('base64_codec')
         return cls(rdclass, rdtype, flags, protocol, algorithm, key)
-    
+
     from_text = classmethod(from_text)
 
     def to_wire(self, file, compress = None, origin = None):
         header = struct.pack("!HBB", self.flags, self.protocol, self.algorithm)
         file.write(header)
         file.write(self.key)
-        
+
     def from_wire(cls, rdclass, rdtype, wire, current, rdlen, origin = None):
         if rdlen < 4:
             raise dns.exception.FormError

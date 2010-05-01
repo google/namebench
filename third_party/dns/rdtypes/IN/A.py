@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -25,7 +25,7 @@ class A(dns.rdata.Rdata):
     @type address: string (in the standard "dotted quad" format)"""
 
     __slots__ = ['address']
-        
+
     def __init__(self, rdclass, rdtype, address):
         super(A, self).__init__(rdclass, rdtype)
         # check that it's OK
@@ -34,19 +34,17 @@ class A(dns.rdata.Rdata):
 
     def to_text(self, origin=None, relativize=True, **kw):
         return self.address
-        
+
     def from_text(cls, rdclass, rdtype, tok, origin = None, relativize = True):
-        (ttype, address) = tok.get()
-        if ttype != dns.tokenizer.IDENTIFIER:
-            raise dns.exception.SyntaxError
-        t = tok.get_eol()
+        address = tok.get_identifier()
+        tok.get_eol()
         return cls(rdclass, rdtype, address)
-    
+
     from_text = classmethod(from_text)
 
     def to_wire(self, file, compress = None, origin = None):
         file.write(dns.ipv4.inet_aton(self.address))
-        
+
     def from_wire(cls, rdclass, rdtype, wire, current, rdlen, origin = None):
         address = dns.ipv4.inet_ntoa(wire[current : current + rdlen])
         return cls(rdclass, rdtype, address)

@@ -1,4 +1,4 @@
-# Copyright (C) 2009 Nominum, Inc.
+# Copyright (C) 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -58,14 +58,14 @@ class HIP(dns.rdata.Rdata):
         algorithm = tok.get_uint8()
         hit = tok.get_string().decode('hex-codec')
         if len(hit) > 255:
-            raise dns.exception.SyntaxError, "HIT too long"
+            raise dns.exception.SyntaxError("HIT too long")
         key = tok.get_string().decode('base64-codec')
         servers = []
         while 1:
-            (ttype, value) = tok.get()
-            if ttype == dns.tokenizer.EOL or ttype == dns.tokenizer.EOF:
+            token = tok.get()
+            if token.is_eol_or_eof():
                 break
-            server = dns.name.from_text(value, origin)
+            server = dns.name.from_text(token.value, origin)
             server.choose_relativity(origin, relativize)
             servers.append(server)
         return cls(rdclass, rdtype, hit, algorithm, key, servers)

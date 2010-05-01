@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -140,9 +140,9 @@ def udp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
                          from_address[1:] == destination[1:]):
                 break
             if not ignore_unexpected:
-                raise UnexpectedSource, \
-                      'got a response from %s instead of %s' % (from_address,
-                                                                destination)
+                raise UnexpectedSource('got a response from '
+                                       '%s instead of %s' % (from_address,
+                                                             destination))
     finally:
         s.close()
     r = dns.message.from_wire(wire, keyring=q.keyring, request_mac=q.mac,
@@ -186,7 +186,7 @@ def _connect(s, address):
         if v[0] != errno.EINPROGRESS and \
                v[0] != errno.EWOULDBLOCK and \
                v[0] != errno.EALREADY:
-            raise ty, v
+            raise v
 
 def tcp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
         one_rr_per_rrset=False):
@@ -258,7 +258,7 @@ def tcp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
 def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
         timeout=None, port=53, keyring=None, keyname=None, relativize=True,
         af=None, lifetime=None, source=None, source_port=0, serial=0,
-        use_udp=False):
+        use_udp=False, keyalgorithm=dns.tsig.default_algorithm):
     """Return a generator for the responses to a zone transfer.
 
     @param where: where to send the message
@@ -303,6 +303,9 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
     @type serial: int
     @param use_udp: Use UDP (only meaningful for IXFR)
     @type use_udp: bool
+    @param keyalgorithm: The TSIG algorithm to use; defaults to
+    dns.tsig.default_algorithm
+    @type keyalgorithm: string
     """
 
     if isinstance(zone, (str, unicode)):
@@ -315,7 +318,7 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
                                     '. . %u 0 0 0 0' % serial)
         q.authority.append(rrset)
     if not keyring is None:
-        q.use_tsig(keyring, keyname)
+        q.use_tsig(keyring, keyname, algorithm=keyalgorithm)
     wire = q.to_wire()
     if af is None:
         try:
@@ -332,10 +335,11 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
             source = (source, source_port, 0, 0)
     if use_udp:
         if rdtype != dns.rdatatype.IXFR:
-            raise ValueError, 'cannot do a UDP AXFR'
+            raise ValueError('cannot do a UDP AXFR')
         s = socket.socket(af, socket.SOCK_DGRAM, 0)
     else:
         s = socket.socket(af, socket.SOCK_STREAM, 0)
+    s.setblocking(0)
     if source is not None:
         s.bind(source)
     expiration = _compute_expiration(lifetime)
@@ -383,7 +387,7 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
                 raise dns.exception.FormError
             rrset = r.answer[0]
             if rrset.rdtype != dns.rdatatype.SOA:
-                raise dns.exception.FormError, "first RRset is not an SOA"
+                raise dns.exception.FormError("first RRset is not an SOA")
             answer_index = 1
             soa_rrset = rrset.copy()
             if rdtype == dns.rdatatype.IXFR:
@@ -400,12 +404,11 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
         #
         for rrset in r.answer[answer_index:]:
             if done:
-                raise dns.exception.FormError, "answers after final SOA"
+                raise dns.exception.FormError("answers after final SOA")
             if rrset.rdtype == dns.rdatatype.SOA and rrset.name == oname:
                 if expecting_SOA:
                     if rrset[0].serial != serial:
-                        raise dns.exception.FormError, \
-                              "IXFR base serial mismatch"
+                        raise dns.exception.FormError("IXFR base serial mismatch")
                     expecting_SOA = False
                 elif rdtype == dns.rdatatype.IXFR:
                     delete_mode = not delete_mode
@@ -420,6 +423,6 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
                 rdtype = dns.rdatatype.AXFR
                 expecting_SOA = False
         if done and q.keyring and not r.had_tsig:
-            raise dns.exception.FormError, "missing TSIG"
+            raise dns.exception.FormError("missing TSIG")
         yield r
     s.close()

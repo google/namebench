@@ -1,4 +1,4 @@
-# Copyright (C) 2004-2007, 2009 Nominum, Inc.
+# Copyright (C) 2004-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -29,7 +29,7 @@ class NSEC(dns.rdata.Rdata):
     @type windows: list of (window number, string) tuples"""
 
     __slots__ = ['next', 'windows']
-    
+
     def __init__(self, rdclass, rdtype, next, windows):
         super(NSEC, self).__init__(rdclass, rdtype)
         self.next = next
@@ -48,20 +48,20 @@ class NSEC(dns.rdata.Rdata):
                                                           i * 8 + j))
             text += (' ' + ' '.join(bits))
         return '%s%s' % (next, text)
-        
+
     def from_text(cls, rdclass, rdtype, tok, origin = None, relativize = True):
         next = tok.get_name()
         next = next.choose_relativity(origin, relativize)
         rdtypes = []
         while 1:
-            (ttype, value) = tok.get()
-            if ttype == dns.tokenizer.EOL or ttype == dns.tokenizer.EOF:
+            token = tok.get().unescape()
+            if token.is_eol_or_eof():
                 break
-            nrdtype = dns.rdatatype.from_text(value)
+            nrdtype = dns.rdatatype.from_text(token.value)
             if nrdtype == 0:
-                raise dns.exception.SyntaxError, "NSEC with bit 0"
+                raise dns.exception.SyntaxError("NSEC with bit 0")
             if nrdtype > 65535:
-                raise dns.exception.SyntaxError, "NSEC with bit > 65535"
+                raise dns.exception.SyntaxError("NSEC with bit > 65535")
             rdtypes.append(nrdtype)
         rdtypes.sort()
         window = 0
@@ -85,7 +85,7 @@ class NSEC(dns.rdata.Rdata):
             bitmap[byte] = chr(ord(bitmap[byte]) | (0x80 >> bit))
         windows.append((window, ''.join(bitmap[0:octets])))
         return cls(rdclass, rdtype, next, windows)
-    
+
     from_text = classmethod(from_text)
 
     def to_wire(self, file, compress = None, origin = None):
@@ -94,7 +94,7 @@ class NSEC(dns.rdata.Rdata):
             file.write(chr(window))
             file.write(chr(len(bitmap)))
             file.write(bitmap)
-        
+
     def from_wire(cls, rdclass, rdtype, wire, current, rdlen, origin = None):
         (next, cused) = dns.name.from_wire(wire[: current + rdlen], current)
         current += cused
@@ -102,15 +102,15 @@ class NSEC(dns.rdata.Rdata):
         windows = []
         while rdlen > 0:
             if rdlen < 3:
-                raise dns.exception.FormError, "NSEC too short"
+                raise dns.exception.FormError("NSEC too short")
             window = ord(wire[current])
             octets = ord(wire[current + 1])
             if octets == 0 or octets > 32:
-                raise dns.exception.FormError, "bad NSEC octets"
+                raise dns.exception.FormError("bad NSEC octets")
             current += 2
             rdlen -= 2
             if rdlen < octets:
-                raise dns.exception.FormError, "bad NSEC bitmap length"
+                raise dns.exception.FormError("bad NSEC bitmap length")
             bitmap = wire[current : current + octets]
             current += octets
             rdlen -= octets
@@ -123,7 +123,7 @@ class NSEC(dns.rdata.Rdata):
 
     def choose_relativity(self, origin = None, relativize = True):
         self.next = self.next.choose_relativity(origin, relativize)
-        
+
     def _cmp(self, other):
         v = cmp(self.next, other.next)
         if v == 0:

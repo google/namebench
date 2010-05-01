@@ -1,4 +1,4 @@
-# Copyright (C) 2006, 2007, 2009 Nominum, Inc.
+# Copyright (C) 2006, 2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -27,7 +27,7 @@ class TXTBase(dns.rdata.Rdata):
     @see: RFC 1035"""
 
     __slots__ = ['strings']
-    
+
     def __init__(self, rdclass, rdtype, strings):
         super(TXTBase, self).__init__(rdclass, rdtype)
         if isinstance(strings, str):
@@ -41,23 +41,22 @@ class TXTBase(dns.rdata.Rdata):
             txt += '%s"%s"' % (prefix, dns.rdata._escapify(s))
             prefix = ' '
         return txt
-        
+
     def from_text(cls, rdclass, rdtype, tok, origin = None, relativize = True):
         strings = []
         while 1:
-            (ttype, s) = tok.get()
-            if ttype == dns.tokenizer.EOL or ttype == dns.tokenizer.EOF:
+            token = tok.get().unescape()
+            if token.is_eol_or_eof():
                 break
-            if ttype != dns.tokenizer.QUOTED_STRING and \
-               ttype != dns.tokenizer.IDENTIFIER:
-                raise dns.exception.SyntaxError, "expected a string"
-            if len(s) > 255:
-                raise dns.exception.SyntaxError, "string too long"
-            strings.append(s)
+            if not (token.is_quoted_string() or token.is_identifier()):
+                raise dns.exception.SyntaxError("expected a string")
+            if len(token.value) > 255:
+                raise dns.exception.SyntaxError("string too long")
+            strings.append(token.value)
         if len(strings) == 0:
             raise dns.exception.UnexpectedEnd
         return cls(rdclass, rdtype, strings)
-    
+
     from_text = classmethod(from_text)
 
     def to_wire(self, file, compress = None, origin = None):
@@ -67,7 +66,7 @@ class TXTBase(dns.rdata.Rdata):
             byte = chr(l)
             file.write(byte)
             file.write(s)
-        
+
     def from_wire(cls, rdclass, rdtype, wire, current, rdlen, origin = None):
         strings = []
         while rdlen > 0:

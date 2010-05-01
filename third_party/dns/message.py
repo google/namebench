@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2007, 2009 Nominum, Inc.
+# Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -92,6 +92,9 @@ class Message(object):
     @type keyring: dict
     @ivar keyname: The TSIG keyname to use.  The default is None.
     @type keyname: dns.name.Name object
+    @ivar keyalgorithm: The TSIG key algorithm to use.  The default is
+    dns.tsig.default_algorithm.
+    @type keyalgorithm: string
     @ivar request_mac: The TSIG MAC of the request message associated with
     this message; used when validating TSIG signatures.   @see: RFC 2845 for
     more information on TSIG fields.
@@ -149,6 +152,7 @@ class Message(object):
         self.request_payload = 0
         self.keyring = None
         self.keyname = None
+        self.keyalgorithm = dns.tsig.default_algorithm
         self.request_mac = ''
         self.other_data = ''
         self.tsig_error = 0
@@ -286,7 +290,7 @@ class Message(object):
         elif section is self.additional:
             return 3
         else:
-            raise ValueError, 'unknown section'
+            raise ValueError('unknown section')
 
     def find_rrset(self, section, name, rdclass, rdtype,
                    covers=dns.rdatatype.NONE, deleting=None, create=False,
@@ -410,12 +414,14 @@ class Message(object):
         if not self.keyname is None:
             r.add_tsig(self.keyname, self.keyring[self.keyname],
                        self.fudge, self.original_id, self.tsig_error,
-                       self.other_data, self.request_mac)
+                       self.other_data, self.request_mac,
+                       self.keyalgorithm)
             self.mac = r.mac
         return r.get_wire()
 
-    def use_tsig(self, keyring, keyname=None, fudge=300, original_id=None,
-                 tsig_error=0, other_data=''):
+    def use_tsig(self, keyring, keyname=None, fudge=300,
+                 original_id=None, tsig_error=0, other_data='',
+                 algorithm=dns.tsig.default_algorithm):
         """When sending, a TSIG signature using the specified keyring
         and keyname should be added.
 
@@ -436,6 +442,8 @@ class Message(object):
         @type tsig_error: int
         @param other_data: TSIG other data.
         @type other_data: string
+        @param algorithm: The TSIG algorithm to use; defaults to
+        dns.tsig.default_algorithm
         """
 
         self.keyring = keyring
@@ -445,6 +453,7 @@ class Message(object):
             if isinstance(keyname, (str, unicode)):
                 keyname = dns.name.from_text(keyname)
             self.keyname = keyname
+        self.keyalgorithm = algorithm
         self.fudge = fudge
         if original_id is None:
             self.original_id = self.id
@@ -644,10 +653,10 @@ class _WireReader(object):
                         i == (count - 1)):
                     raise BadTSIG
                 if self.message.keyring is None:
-                    raise UnknownTSIGKey, 'got signed message without keyring'
+                    raise UnknownTSIGKey('got signed message without keyring')
                 secret = self.message.keyring.get(absolute_name)
                 if secret is None:
-                    raise UnknownTSIGKey, "key '%s' unknown" % name
+                    raise UnknownTSIGKey("key '%s' unknown" % name)
                 self.message.tsig_ctx = \
                                       dns.tsig.validate(self.wire,
                                           absolute_name,
@@ -794,17 +803,18 @@ class _TextReader(object):
     def _header_line(self, section):
         """Process one line from the text format header section."""
 
-        (ttype, what) = self.tok.get()
+        token = self.tok.get()
+        what = token.value
         if what == 'id':
             self.message.id = self.tok.get_int()
         elif what == 'flags':
             while True:
                 token = self.tok.get()
-                if token[0] != dns.tokenizer.IDENTIFIER:
+                if not token.is_identifier():
                     self.tok.unget(token)
                     break
                 self.message.flags = self.message.flags | \
-                                     dns.flags.from_text(token[1])
+                                     dns.flags.from_text(token.value)
             if dns.opcode.is_update(self.message.flags):
                 self.updating = True
         elif what == 'edns':
@@ -816,11 +826,11 @@ class _TextReader(object):
                 self.message.edns = 0
             while True:
                 token = self.tok.get()
-                if token[0] != dns.tokenizer.IDENTIFIER:
+                if not token.is_identifier():
                     self.tok.unget(token)
                     break
                 self.message.ednsflags = self.message.ednsflags | \
-                              dns.flags.edns_from_text(token[1])
+                              dns.flags.edns_from_text(token.value)
         elif what == 'payload':
             self.message.payload = self.tok.get_int()
             if self.message.edns < 0:
@@ -840,24 +850,24 @@ class _TextReader(object):
         """Process one line from the text format question section."""
 
         token = self.tok.get(want_leading = True)
-        if token[0] != dns.tokenizer.WHITESPACE:
-            self.last_name = dns.name.from_text(token[1], None)
+        if not token.is_whitespace():
+            self.last_name = dns.name.from_text(token.value, None)
         name = self.last_name
         token = self.tok.get()
-        if token[0] != dns.tokenizer.IDENTIFIER:
+        if not token.is_identifier():
             raise dns.exception.SyntaxError
         # Class
         try:
-            rdclass = dns.rdataclass.from_text(token[1])
+            rdclass = dns.rdataclass.from_text(token.value)
             token = self.tok.get()
-            if token[0] != dns.tokenizer.IDENTIFIER:
+            if not token.is_identifier():
                 raise dns.exception.SyntaxError
         except dns.exception.SyntaxError:
             raise dns.exception.SyntaxError
         except:
             rdclass = dns.rdataclass.IN
         # Type
-        rdtype = dns.rdatatype.from_text(token[1])
+        rdtype = dns.rdatatype.from_text(token.value)
         self.message.find_rrset(self.message.question, name,
                                 rdclass, rdtype, create=True,
                                 force_unique=True)
@@ -873,17 +883,17 @@ class _TextReader(object):
         deleting = None
         # Name
         token = self.tok.get(want_leading = True)
-        if token[0] != dns.tokenizer.WHITESPACE:
-            self.last_name = dns.name.from_text(token[1], None)
+        if not token.is_whitespace():
+            self.last_name = dns.name.from_text(token.value, None)
         name = self.last_name
         token = self.tok.get()
-        if token[0] != dns.tokenizer.IDENTIFIER:
+        if not token.is_identifier():
             raise dns.exception.SyntaxError
         # TTL
         try:
-            ttl = int(token[1], 0)
+            ttl = int(token.value, 0)
             token = self.tok.get()
-            if token[0] != dns.tokenizer.IDENTIFIER:
+            if not token.is_identifier():
                 raise dns.exception.SyntaxError
         except dns.exception.SyntaxError:
             raise dns.exception.SyntaxError
@@ -891,9 +901,9 @@ class _TextReader(object):
             ttl = 0
         # Class
         try:
-            rdclass = dns.rdataclass.from_text(token[1])
+            rdclass = dns.rdataclass.from_text(token.value)
             token = self.tok.get()
-            if token[0] != dns.tokenizer.IDENTIFIER:
+            if not token.is_identifier():
                 raise dns.exception.SyntaxError
             if rdclass == dns.rdataclass.ANY or rdclass == dns.rdataclass.NONE:
                 deleting = rdclass
@@ -903,9 +913,9 @@ class _TextReader(object):
         except:
             rdclass = dns.rdataclass.IN
         # Type
-        rdtype = dns.rdatatype.from_text(token[1])
+        rdtype = dns.rdatatype.from_text(token.value)
         token = self.tok.get()
-        if token[0] != dns.tokenizer.EOL and token[0] != dns.tokenizer.EOF:
+        if not token.is_eol_or_eof():
             self.tok.unget(token)
             rd = dns.rdata.from_text(rdclass, rdtype, self.tok, None)
             covers = rd.covers()
@@ -926,10 +936,10 @@ class _TextReader(object):
         section = None
         while 1:
             token = self.tok.get(True, True)
-            if token[0] == dns.tokenizer.EOL or token[0] == dns.tokenizer.EOF:
+            if token.is_eol_or_eof():
                 break
-            if token[0] == dns.tokenizer.COMMENT:
-                u = token[1].upper()
+            if token.is_comment():
+                u = token.value.upper()
                 if u == 'HEADER':
                     line_method = self._header_line
                 elif u == 'QUESTION' or u == 'ZONE':
@@ -1057,7 +1067,7 @@ def make_response(query, recursion_available=False, our_payload=8192):
     @rtype: dns.message.Message object"""
 
     if query.flags & dns.flags.QR:
-        raise dns.exception.FormError, 'specified query message is not a query'
+        raise dns.exception.FormError('specified query message is not a query')
     response = dns.message.Message(query.id)
     response.flags = dns.flags.QR | (query.flags & dns.flags.RD)
     if recursion_available:

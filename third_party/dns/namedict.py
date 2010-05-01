@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -31,7 +31,7 @@ class NameDict(dict):
 
     def __setitem__(self, key, value):
         if not isinstance(key, dns.name.Name):
-            raise ValueError, 'NameDict key must be a name'
+            raise ValueError('NameDict key must be a name')
         depth = len(key)
         if depth > self.max_depth:
             self.max_depth = depth
@@ -39,7 +39,7 @@ class NameDict(dict):
 
     def get_deepest_match(self, name):
         """Find the deepest match to I{name} in the dictionary.
-        
+
         The deepest match is the longest name in the dictionary which is
         a superdomain of I{name}.
 
@@ -47,7 +47,7 @@ class NameDict(dict):
         @type name: dns.name.Name object
         @rtype: (key, value) tuple
         """
-        
+
         depth = len(name)
         if depth > self.max_depth:
             depth = self.max_depth

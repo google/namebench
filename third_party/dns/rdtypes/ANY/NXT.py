@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -53,17 +53,17 @@ class NXT(dns.rdata.Rdata):
                   '\x00', '\x00', '\x00', '\x00',
                   '\x00', '\x00', '\x00', '\x00' ]
         while 1:
-            (ttype, value) = tok.get()
-            if ttype == dns.tokenizer.EOL or ttype == dns.tokenizer.EOF:
+            token = tok.get().unescape()
+            if token.is_eol_or_eof():
                 break
-            if value.isdigit():
-                nrdtype = int(value)
+            if token.value.isdigit():
+                nrdtype = int(token.value)
             else:
-                nrdtype = dns.rdatatype.from_text(value)
+                nrdtype = dns.rdatatype.from_text(token.value)
             if nrdtype == 0:
-                raise dns.exception.SyntaxError, "NXT with bit 0"
+                raise dns.exception.SyntaxError("NXT with bit 0")
             if nrdtype > 127:
-                raise dns.exception.SyntaxError, "NXT with bit > 127"
+                raise dns.exception.SyntaxError("NXT with bit > 127")
             i = nrdtype // 8
             bitmap[i] = chr(ord(bitmap[i]) | (0x80 >> (nrdtype % 8)))
         bitmap = dns.rdata._truncate_bitmap(bitmap)
