@@ -51,6 +51,24 @@ class ClearDuplicateIdHandler(webapp.RequestHandler):
       record.put()
     self.response.out.write("%s submissions older than %s cleared." % (cleared, check_ts))
 
+
+class ImportIndexHostsHandler(webapp.RequestHandler):
+  """Import a default list of index hosts."""
+
+  def get(self):
+    hosts = [
+      ('A', 'a.root-servers.net.'), ('A', 'www.amazon.com.'),
+      ('A', 'www.baidu.com.'), ('A', 'www.facebook.com.'),
+      ('A', 'www.google-analytics.com.'), ('A', 'www.google.com.'),
+      ('A', 'www.twitter.com.'), ('A', 'www.wikipedia.org.'),
+      ('A', 'www.youtube.com.'), ('A', 'yahoo.com.'),
+    ]
+
+    for h_type, h_name in hosts:
+      key = '/'.join([h_type, h_name])
+      entry = models.IndexHost.get_or_insert(key, record_type=h_type, record_name=h_name, listed=True)
+      self.response.out.write(entry.record_name)
+
 class MainHandler(webapp.RequestHandler):
   """Handler for / requests"""
   def get(self):
@@ -216,6 +234,7 @@ def main():
       ('/geo_lookup', GeoLookupHandler),
       ('/index_hosts', IndexHostsHandler),
       ('/tasks/clear_dupes', ClearDuplicateIdHandler),
+      ('/tasks/import_index_hosts', ImportIndexHostsHandler),
       ('/submit', SubmitHandler)
   ]
   application = webapp.WSGIApplication(url_mapping,
