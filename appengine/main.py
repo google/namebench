@@ -101,10 +101,8 @@ class SubmitHandler(webapp.RequestHandler):
 
   def _process_index_submission(self, index_results, ns_sub, index_hosts):
     """Process the index submission for a particular host."""
-    print "ns_sub: %s" % ns_sub
     
     for host, req_type, duration, answer_count, ttl in index_results:
-      print "index: %s %s" % (req_type, host)
       results = None
 
       for record in index_hosts:

@@ -128,7 +128,6 @@ class Benchmark(object):
     input_queue = Queue.Queue()
     shuffled_records = {}
     results = {}
-    print "single run: %s" % test_records
     # Pre-compute the shuffled test records per-nameserver to avoid thread
     # contention.
     for ns in self.nameservers.enabled:
@@ -157,7 +156,6 @@ class Benchmark(object):
     """Launch and manage the benchmark threads."""
     results_queue = Queue.Queue()
     expected_total = input_queue.qsize()
-    print expected_total
     threads = []
     for unused_thread_num in range(0, self.thread_count):
       thread = BenchmarkThreads(input_queue, results_queue)

@@ -46,11 +46,9 @@ class SiteConnector(object):
     h = httplib2.Http(tempfile.gettempdir(), timeout=10)
     try:
       resp, content = h.request(url, 'GET')
-      print content
       hosts = []
       for record_type, host in simplejson.loads(content):
         hosts.append((str(record_type), str(host)))
-      print "Index hosts: %s" % hosts
       return hosts
     except IndexError:
       print '* Unable to fetch %s' % url
@@ -67,7 +65,6 @@ class SiteConnector(object):
     try:
       resp, content = h.request(url, 'POST', urllib.urlencode(post_data))
       print "RESPONSE: [%s]: %s" % (resp, content)
-      print "POST: %s" % urllib.urlencode(post_data)
       return True
     # See http://code.google.com/p/httplib2/issues/detail?id=62
     except AttributeError:
