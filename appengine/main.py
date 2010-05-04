@@ -61,7 +61,7 @@ class MainHandler(webapp.RequestHandler):
     template_values = {
       'recent_submissions': recent_submissions
     }  
-    path = os.path.join(os.path.dirname(__file__), 'index.html')
+    path = os.path.join(os.path.dirname(__file__), 'templates', 'index.html')
     self.response.out.write(template.render(path, template_values))
     
 class LookupHandler(webapp.RequestHandler):
@@ -74,7 +74,7 @@ class LookupHandler(webapp.RequestHandler):
     template_values = {
       'submission': submission
     }  
-    path = os.path.join(os.path.dirname(__file__), 'lookup.html')
+    path = os.path.join(os.path.dirname(__file__), 'templates', 'lookup.html')
     self.response.out.write(template.render(path, template_values))    
     
 class IndexHostsHandler(webapp.RequestHandler):
