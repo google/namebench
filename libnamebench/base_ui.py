@@ -128,8 +128,10 @@ class BaseUI(object):
     if self.options.upload_results:
       connector = site_connector.SiteConnector(self.options)
       index_hosts = connector.GetIndexHosts()
-      index = self.bmark.RunIndex(index_hosts)
-      print index
+      if index_hosts:
+        index = self.bmark.RunIndex(index_hosts)
+      else:
+        index = []
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index)
 
