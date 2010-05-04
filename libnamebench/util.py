@@ -22,8 +22,14 @@ import util
 import os.path
 import sys
 import traceback
+import zlib
 
-# third party lib
+# See if a third_party library exists -- use it if so.
+try:
+  import third_party
+except ImportError:
+  pass
+
 import dns.resolver
 
 import nameserver
@@ -88,6 +94,39 @@ def ExtractIPTuplesFromString(ip_string):
       ip_tuples.append((ip,ip))
   return ip_tuples
 
+def IsPrivateIP(ip):
+  """Boolean check to see if an IP is private or not."""
+  if re.match('^10\.', ip):
+    return 1
+  elif re.match('^192\.168', ip):
+    return 2
+  elif re.match('^172\.(1[6-9]|2[0-9]|3[0-1])\.', ip):
+    return 1
+  else:
+    return None
+
+def MaskIPBits(ip, use_bits):
+  """Mask an IP, but still keep a meaningful checksum."""
+  ip_parts = ip.split('.')
+  checksum = zlib.crc32(''.join(ip_parts[use_bits:]))
+  masked_ip = '.'.join(ip_parts[0:use_bits])
+  for _ in range(use_bits, 4):
+    masked_ip = masked_ip + '.x'
+  return masked_ip + "-" + str(checksum)[-4:]
+
+def MaskPrivateIP(ip, name):
+  """Mask unnamed private IP's."""
+  
+  # Make sure we don't parse SYS-x.x.x.x type IP's.
+  if name and ip not in name:
+    return (ip, name)
+  
+  use_bits = IsPrivateIP(ip)
+  if use_bits:
+    ip = MaskIPBits(ip, use_bits)
+    name = "Private Internal Address (RFC 1918)"
+  return (ip, name)
+    
 def FindDataFile(filename):
   if os.path.exists(filename):
     return filename

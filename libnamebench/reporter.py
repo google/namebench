@@ -296,8 +296,10 @@ class ReportGenerator(object):
           answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
           index.append((host, req_type, duration, answer_count, ttl))
 
+      masked_ip, masked_name = util.MaskPrivateIP(ns.ip, ns.name)
       nsdata = {
-        'ip': ns.ip,
+        'ip': masked_ip,
+        'name': masked_name,
         'position': ns.system_position,
         'averages': run_averages,
         'min': fastest,
