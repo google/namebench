@@ -292,13 +292,12 @@ class ReportGenerator(object):
       # Get the meat out of the index data.
       index = []
       for host, req_type, duration, response, unused_x in self.index[ns]:
-        answer_count = self._ResponseToCountTtlText(response)[0]
-        index.append((host, req_type, duration, answer_count))
+        answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
+        index.append((host, req_type, duration, answer_count, ttl))
 
-
-      print "NOTES: %s" % ns.notes
       nsdata = {
         'ip': ns.ip,
+        'position': ns.system_position,
         'averages': run_averages,
         'min': fastest,
         'max': slowest,

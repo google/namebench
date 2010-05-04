@@ -101,7 +101,9 @@ class SubmitHandler(webapp.RequestHandler):
 
   def _process_index_submission(self, index_results, ns_sub, index_hosts):
     """Process the index submission for a particular host."""
-    for host, req_type, duration, answer_count in index_results:
+    print "ns_sub: %s" % ns_sub
+    
+    for host, req_type, duration, answer_count, ttl in index_results:
       print "index: %s %s" % (req_type, host)
       results = None
 
@@ -113,6 +115,7 @@ class SubmitHandler(webapp.RequestHandler):
           results.index_host = record
           results.duration = duration
           results.answer_count = answer_count
+          results.ttl = ttl
           results.put()
           break
 
@@ -147,6 +150,7 @@ class SubmitHandler(webapp.RequestHandler):
       listed = True
       
     if data['config']['query_count'] < MIN_QUERY_COUNT:
+      self.response.out.write("Not listing: %s < %s" % (data['config']['query_count'], MIN_QUERY_COUNT))
       listed = False
 
     cached_index_hosts = []
@@ -167,7 +171,6 @@ class SubmitHandler(webapp.RequestHandler):
     self.response.out.write("Saved %s for network %s (%s). Listing: %s" % (key, class_c, dupe_check_id, listed))
     
     for nsdata in data['nameservers']:
-      print nsdata
 
       self.response.out.write(nsdata)
       ns_record = self._find_ns_by_ip(nsdata['ip'])
@@ -180,10 +183,9 @@ class SubmitHandler(webapp.RequestHandler):
       ns_sub.duration_max = nsdata['max']
       ns_sub.failed_count = nsdata['failed']
       ns_sub.nx_count = nsdata['nx']
-      print nsdata['notes']
-      # TODO(tstromberg): Investigate "None" value in notes.
+      ns_sub.position = nsdata['position']
       ns_sub.notes = nsdata['notes']
-      ns_sub.put()
+      ns_sub_instance = ns_sub.put()
       
       for idx, run in enumerate(nsdata['durations']):
         run_results = models.RunResult()
@@ -193,7 +195,7 @@ class SubmitHandler(webapp.RequestHandler):
         self.response.out.write("Wrote idx=%s results=%s" % (idx, run))
         run_results.put()
 
-      self._process_index_submission(nsdata['index'], ns_sub, cached_index_hosts)
+      self._process_index_submission(nsdata['index'], ns_sub_instance, cached_index_hosts)
 
 
 

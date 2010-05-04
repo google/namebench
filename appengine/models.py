@@ -63,6 +63,7 @@ class SubmissionNameServer(db.Model):
   duration_max = db.FloatProperty()
   failed_count = db.IntegerProperty()
   nx_count = db.IntegerProperty()
+  position = db.IntegerProperty()
   notes = db.ListProperty(str)
 
 # Store one row per run for run_results, since we do not need to do much with them.
@@ -78,3 +79,4 @@ class IndexResult(db.Model):
   index_host = db.ReferenceProperty(IndexHost, collection_name='results')
   duration = db.FloatProperty()
   answer_count = db.IntegerProperty()
+  ttl = db.IntegerProperty()

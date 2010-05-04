@@ -9,13 +9,16 @@ class IndexHost(db.Model):
   listed = db.BooleanProperty()
 
 hosts = [
-    ('A', 'www.google.com.'),
-    ('A', 'reddit.com.'),
-    ('A', 'www.baidu.com.'),
-    ('A', 'flickr.com.'),
-    ('A', 'www.microsoft.com.'),
-    ('A', 'www.facebook.com.'),
-    ('A', 'www.youtube.com.')
+  ('A', 'a.root-servers.net.'),
+  ('A', 'www.amazon.com.'),
+  ('A', 'www.baidu.com.'),
+  ('A', 'www.facebook.com.'),
+  ('A', 'www.google-analytics.com.'),
+  ('A', 'www.google.com.'),
+  ('A', 'www.twitter.com.'),
+  ('A', 'www.wikipedia.org.'),
+  ('A', 'www.youtube.com.'),
+  ('A', 'yahoo.com.'),
 ]
 
 for h_type, h_name in hosts:
