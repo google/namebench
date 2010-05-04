@@ -125,7 +125,6 @@ class SubmitHandler(webapp.RequestHandler):
 
       for record in index_hosts:
         if host == record.record_name and req_type == record.record_type:
-          self.response.out.write("Adding %s: %s\n" % (host, record))
           results = models.IndexResult()
           results.submission_nameserver = ns_sub
           results.index_host = record
@@ -137,22 +136,6 @@ class SubmitHandler(webapp.RequestHandler):
 
       if not results:
         print "Odd, %s did not match." % host
-
-  def _find_ns_by_ip(self, ip):
-    """Get an NS key for a particular IP, adding it if necessary."""
-    rows = db.GqlQuery('SELECT * FROM NameServer WHERE ip = :1', ip)
-    for row in rows:
-      return row
-    
-    # If it falls back.
-    ns = models.NameServer()
-    ns.ip = ip
-# TODO(tstromberg): Fix this to avoid UnicodeDecodeErrors
-#    ns.ip_bytes = u''.join([ chr(int(x)) for x in ip.split('.') ])
-    ns.listed = False
-    self.response.out.write("Added ns ip=%s bytes=%s" % (ns.ip, ns.ip_bytes))
-    ns.put()
-    return ns
   
   def post(self):
     """Store the results from a submission. Rather long."""
@@ -176,7 +159,7 @@ class SubmitHandler(webapp.RequestHandler):
     submission = models.Submission()
     submission.dupe_check_id = int(dupe_check_id)
     submission.class_c = class_c
-    submission.class_c_bytes = ''.join([ chr(int(x)) for x in class_c_tuple ])
+#    submission.class_c_bytes = ''.join([ chr(int(x)) for x in class_c_tuple ])
     submission.listed = listed
     submission.query_count = data['config']['query_count']
     submission.run_count = data['config']['run_count']
@@ -184,13 +167,9 @@ class SubmitHandler(webapp.RequestHandler):
     submission.os_release = data['config']['platform'][1]
     submission.python_version = '.'.join(map(str, data['config']['python']))
     key = submission.put()
-    self.response.out.write("Saved %s for network %s (%s). Listing: %s" % (key, class_c, dupe_check_id, listed))
     
     for nsdata in data['nameservers']:
-
-      self.response.out.write(nsdata)
-      ns_record = self._find_ns_by_ip(nsdata['ip'])
-      self.response.out.write("ns %s is %s" % (ns_record, nsdata['ip']))
+      ns_record = models.NameServer.get_or_insert(nsdata['ip'], name=nsdata['name'], listed=False)
       ns_sub = models.SubmissionNameServer()
       ns_sub.submission = submission
       ns_sub.nameserver = ns_record
@@ -208,7 +187,6 @@ class SubmitHandler(webapp.RequestHandler):
         run_results.submission_nameserver = ns_sub
         run_results.run_number = idx
         run_results.durations = list(run)
-        self.response.out.write("Wrote idx=%s results=%s" % (idx, run))
         run_results.put()
 
       self._process_index_submission(nsdata['index'], ns_sub_instance, cached_index_hosts)
