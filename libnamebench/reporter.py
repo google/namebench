@@ -302,10 +302,11 @@ class ReportGenerator(object):
           answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
           index.append((host, req_type, duration, answer_count, ttl))
 
-      masked_ip, masked_name = util.MaskPrivateIP(ns.ip, ns.name)
+      masked_ip, masked_hostname, masked_name = util.MaskPrivateHost(ns.ip, ns.hostname, ns.name)
       nsdata = {
         'ip': masked_ip,
         'name': masked_name,
+        'hostname': masked_hostname,
         'sys_position': ns.system_position,
         'position': placed_at,
         'averages': run_averages,

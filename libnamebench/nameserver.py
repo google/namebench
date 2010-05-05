@@ -131,12 +131,16 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   @property
   def hostname(self):
+    if hasattr(self, '_cached_hostname'):
+      return self._cached_hostname
+    
     try:
       answer = dns.resolver.query(dns.reversename.from_address(self.ip), 'PTR')
       if answer:
-        return str(answer[0]).rstrip('.')
+        self._cached_hostname = str(answer[0]).rstrip('.')
     except:
-      return ''
+      self._cached_hostname = ''
+    return self._cached_hostname
 
   @property
   def is_error_prone(self):

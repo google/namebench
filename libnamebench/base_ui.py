@@ -162,6 +162,7 @@ class BaseUI(object):
       self.csv_path = GenerateOutputFilename('csv')
 
     if self.options.upload_results:
+      self.UpdateStatus('Uploading results to %s' % self.options.site_url)
       json_data = self.reporter.CreateJsonData()
       connector = site_connector.SiteConnector(self.options)
       connector.UploadJsonResults(json_data)

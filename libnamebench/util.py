@@ -94,6 +94,13 @@ def ExtractIPTuplesFromString(ip_string):
       ip_tuples.append((ip,ip))
   return ip_tuples
 
+def IsPrivateHostname(hostname):
+  """Basic matching to determine if the hostname is likely to be 'internal'."""
+  if re.search('^\w+dc\.|^\w+ds\.|^\w+sv\.|^\w+nt\.|\.corp|internal|intranet|\.local', hostname, re.I):
+    return True
+  else:
+    return False
+
 def IsPrivateIP(ip):
   """Boolean check to see if an IP is private or not."""
   if re.match('^10\.', ip):
@@ -114,18 +121,26 @@ def MaskIPBits(ip, use_bits):
     masked_ip = masked_ip + '.x'
   return masked_ip + "-" + str(checksum)[-4:]
 
-def MaskPrivateIP(ip, name):
+def MaskPrivateHost(ip, hostname, name):
   """Mask unnamed private IP's."""
   
-  # Make sure we don't parse SYS-x.x.x.x type IP's.
+  # If we have a name not listed as SYS-x.x.x.x, then we're clear.
   if name and ip not in name:
-    return (ip, name)
+    return (ip, hostname, name)
   
   use_bits = IsPrivateIP(ip)
   if use_bits:
     ip = MaskIPBits(ip, use_bits)
-    name = "Private Internal Address (RFC 1918)"
-  return (ip, name)
+    hostname = 'internal.ip'
+  elif IsPrivateHostname(hostname):
+    ip = MaskIPBits(ip, 2)
+    hostname = 'internal.name'
+
+  if 'SYS-' in name:
+    name = "SYS-%s" % ip
+  else:
+    name = ''
+  return (ip, hostname, name)
     
 def FindDataFile(filename):
   if os.path.exists(filename):
