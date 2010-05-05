@@ -233,7 +233,7 @@ def main():
       ('/id/(\d+)', LookupHandler),
       ('/index_hosts', IndexHostsHandler),
       ('/tasks/clear_dupes', ClearDuplicateIdHandler),
-      ('/tasks/import_index_hosts', ImportIndexHostsHandler),
+      ('/tasks/load_index_hosts', ImportIndexHostsHandler),
       ('/submit', SubmitHandler)
   ]
   application = webapp.WSGIApplication(url_mapping,
