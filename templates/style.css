@@ -126,6 +126,14 @@ ul.warnings {
   color: #fff;
 }
 
+.disabled A { 
+  color: #fff;
+}
+
+.disabled A:visited {
+  color: #e5e5e5;
+}
+
 .greybox {
   border:  1px solid #999;
   border-radius: .5em;
@@ -152,8 +160,6 @@ ul.warnings {
   margin-top: 1em;
 }
 
-
-
 .rec_name {
   margin-left:  8px;
   display:  inline;
@@ -167,14 +173,14 @@ ul.warnings {
   max-width: 910px;
 }
 
-#config {
+.config {
   background-color:  #fff;
 }
-#configtable {
+.configtable {
   font-size: 10px;
 }
 
-#configtable tr {
+.configtable tr {
   border:  9px solid #f00;
 }
 
