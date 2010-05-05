@@ -71,6 +71,7 @@ class BaseUI(object):
       src_name = self.data_src.GetNameForSource(src_type)
     else:
       (src_type, src_name) = self.data_src.GetBestSourceDetails()[:2]
+      self.options.input_source = src_type
 
     self.test_records = self.data_src.GetTestsFromSource(src_type,
                                                          self.options.query_count,
