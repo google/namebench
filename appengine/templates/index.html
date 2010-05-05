@@ -15,7 +15,9 @@
         <td>Location</td>
         <td>Network</td>
         <td>Best</td>
-        <td>Queries</td>
+        <td>Current</td>
+        <td>Improvement</td>
+        <td># of Queries</td>
         <td>Timestamp</td>
       </tr>
     </thead>
@@ -25,7 +27,9 @@
   <td><a href="/id/{{ submission.key.id }}">{{ submission.key.id }}</td>
   <td>{% if submission.region %}{{ submission.region }}, {{ submission.country }} {% else %} {% if submission.country %} {{ submission.country }} {% else %} Unknown {% endif %} {% endif %}</td>
   <td>{{ submission.class_c }}.x</td>
-  <td>{{ submission.best_nameserver.ip }}</td>
+  <td>{% if submission.best_nameserver.name %}{{ submission.best_nameserver.name }}{% else %}{{ submission.best_nameserver.ip }}{% endif %}</td>
+  <td>{% if submission.primary_nameserver.name %}{{ submission.primary_nameserver.name }}{% else %}{{ submission.primary_nameserver.ip }}{% endif %}</td>
+  <td>{% if submission.best_improvement %}{{ submission.best_improvement|floatformat }}%{% else %}N/A{% endif %}</td>
   <td>{{ submission.query_count }}</td>
   <td>{{ submission.timestamp }}</td>
 </tr>
