@@ -51,19 +51,24 @@ class Submission(db.Model):
   os_release = db.StringProperty()
   python_version = db.StringProperty()
   city = db.StringProperty()
-  province = db.StringProperty()
+  region = db.StringProperty()
   country = db.StringProperty()
   coordinates = db.GeoPtProperty()
+  
+  best_nameserver = db.ReferenceProperty(NameServer, collection_name='best_submissions')
+  primary_nameserver = db.ReferenceProperty(NameServer, collection_name="primary_submissions")
 
 class SubmissionNameServer(db.Model):
   nameserver = db.ReferenceProperty(NameServer, collection_name='submissions')
   submission = db.ReferenceProperty(Submission, collection_name='nameservers')
+  overall_average = db.FloatProperty()
   averages = db.ListProperty(float)
   duration_min = db.FloatProperty()
   duration_max = db.FloatProperty()
   failed_count = db.IntegerProperty()
   nx_count = db.IntegerProperty()
   position = db.IntegerProperty()
+  sys_position = db.IntegerProperty()
   notes = db.ListProperty(str)
 
 # Store one row per run for run_results, since we do not need to do much with them.

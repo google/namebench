@@ -73,7 +73,7 @@ class MainHandler(webapp.RequestHandler):
   """Handler for / requests"""
   def get(self):
     query = models.Submission.all()
-    query.filter('listed =', True)
+#    query.filter('listed =', True)
     query.order('-timestamp')
     recent_submissions = query.fetch(10)
     template_values = {
@@ -166,21 +166,38 @@ class SubmitHandler(webapp.RequestHandler):
     submission.os_system = data['config']['platform'][0]
     submission.os_release = data['config']['platform'][1]
     submission.python_version = '.'.join(map(str, data['config']['python']))
-    key = submission.put()
+ 
+    if 'geodata' in data:
+      self.response.out.write("geodata: %s" % data['geodata'])
+      if 'latitude' in data['geodata']:
+        submission.coordinates = ','.join((data['geodata']['latitude'], data['geodata']['longitude']))
+        submission.city = data['geodata']['address'].get('city', None)
+        submission.region = data['geodata']['address'].get('region', None)
+        submission.country = data['geodata']['address'].get('country', None)    
+    else:
+      self.response.out.write("No geodata!")
+    submission.put()
     
     for nsdata in data['nameservers']:
-      ns_record = models.NameServer.get_or_insert(nsdata['ip'], name=nsdata['name'], listed=False)
+      ns_record = models.NameServer.get_or_insert(nsdata['ip'], ip=nsdata['ip'], name=nsdata['name'], listed=False)
       ns_sub = models.SubmissionNameServer()
       ns_sub.submission = submission
       ns_sub.nameserver = ns_record
       ns_sub.averages = nsdata['averages']
+      ns_sub.overall_average =  sum(nsdata['averages']) / float(len(nsdata['averages']))
       ns_sub.duration_min = nsdata['min']
       ns_sub.duration_max = nsdata['max']
       ns_sub.failed_count = nsdata['failed']
       ns_sub.nx_count = nsdata['nx']
+      ns_sub.sys_position = nsdata['sys_position']
       ns_sub.position = nsdata['position']
       ns_sub.notes = nsdata['notes']
       ns_sub_instance = ns_sub.put()
+      if ns_sub.sys_position == 0:
+        submission.primary_nameserver = ns_record
+      
+      if ns_sub.position == 0:
+        submission.best_nameserver = ns_record
       
       for idx, run in enumerate(nsdata['durations']):
         run_results = models.RunResult()
@@ -190,7 +207,9 @@ class SubmitHandler(webapp.RequestHandler):
         run_results.put()
 
       self._process_index_submission(nsdata['index'], ns_sub_instance, cached_index_hosts)
-
+      
+    # Final update with the primary_nameserver / best_nameserver data.
+    submission.put()
 
 
 class GeoLookupHandler(webapp.RequestHandler):

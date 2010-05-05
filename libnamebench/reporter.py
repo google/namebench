@@ -46,7 +46,7 @@ MIN_RELEVANT_COUNT = 50
 class ReportGenerator(object):
   """Generate reports - ASCII, HTML, etc."""
 
-  def __init__(self, config, nameservers, results, index=None,
+  def __init__(self, config, nameservers, results, index=None, geodata=None,
                status_callback=None):
     """Constructor.
 
@@ -59,6 +59,7 @@ class ReportGenerator(object):
     self.results = results
     self.index = index
     self.config = config
+    self.geodata = geodata
     self.status_callback = status_callback
 
   def msg(self, msg, **kwargs):
@@ -284,7 +285,12 @@ class ReportGenerator(object):
     config['python'] = platform.python_version_tuple()
 
     nsdata_list = []
-    for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in self.ComputeAverages():
+    sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
+    placed_at = -1
+    
+    for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in sorted_averages:
+      placed_at += 1
+      
       durations = []
       for test_run in self.results[ns]:
         durations.append([x[2] for x in self.results[ns][0]])
@@ -300,7 +306,8 @@ class ReportGenerator(object):
       nsdata = {
         'ip': masked_ip,
         'name': masked_name,
-        'position': ns.system_position,
+        'sys_position': ns.system_position,
+        'position': placed_at,
         'averages': run_averages,
         'min': fastest,
         'max': slowest,
@@ -313,7 +320,7 @@ class ReportGenerator(object):
       }
       nsdata_list.append(nsdata)
       
-    return {'config': config, 'nameservers': nsdata_list}
+    return {'config': config, 'nameservers': nsdata_list, 'geodata': self.geodata}
     
   def CreateJsonData(self):
     sharing_data = self._CreateSharingData()

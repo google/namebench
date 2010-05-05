@@ -10,7 +10,9 @@
   <h1>Recent Submissions</h1>
   <table>
     <thead>
-      <tr><td>Location</td>
+      <tr>
+        <td>ID</td>
+        <td>Location</td>
         <td>Network</td>
         <td>Best</td>
         <td>Queries</td>
@@ -19,10 +21,11 @@
     </thead>
     <tbody>
 {% for submission in recent_submissions %}
-<tr>
-  <td>Belgium</td>
-  <td><a href="/id/{{ submission.key.id }}">{{ submission.class_c }}</td>
-  <td>???</td>
+<tr {% if not submission.listed %} style="background-color: #aaa;"{% endif %}>
+  <td><a href="/id/{{ submission.key.id }}">{{ submission.key.id }}</td>
+  <td>Unknown</td>
+  <td>{{ submission.class_c }}.x</td>
+  <td>{{ submission.best_nameserver.ip }}</td>
   <td>{{ submission.query_count }}</td>
   <td>{{ submission.timestamp }}</td>
 </tr>

@@ -21,6 +21,7 @@ import better_webbrowser
 
 from . import benchmark
 from . import config
+from . import geoip
 from . import data_sources
 from . import nameserver_list
 from . import reporter
@@ -47,6 +48,7 @@ class BaseUI(object):
     self.bmark = None
     self.html_path = None
     self.csv_path = None
+    self.geodata = None
     self.sources = {}
     self.test_records = []
 
@@ -132,8 +134,12 @@ class BaseUI(object):
         index = self.bmark.RunIndex(index_hosts)
       else:
         index = []
+      
+      if not self.geodata:
+        self.geodata = geoip.GetFromGoogleJSAPI()
+        print "GEODATA: %s" % self.geodata
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
-                                             results, index=index)
+                                             results, index=index, geodata=self.geodata)
 
   def RunAndOpenReports(self):
     """Run the benchmark and open up the HTML report on completion."""
