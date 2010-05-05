@@ -308,6 +308,8 @@ class ReportGenerator(object):
         'name': masked_name,
         'hostname': masked_hostname,
         'sys_position': ns.system_position,
+        'is_error_prone': ns.is_error_prone,
+        'is_disabled': ns.disabled,
         'position': placed_at,
         'averages': run_averages,
         'min': fastest,
