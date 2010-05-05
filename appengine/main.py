@@ -24,17 +24,11 @@ from google.appengine.ext.webapp import util
 from django.utils import simplejson
 
 import models
-from third_party import pygeoip
 
 MIN_QUERY_COUNT = 50
-GEO_DATA_PATH = "./third_party/maxmind/GeoLiteCity.dat"
 # The minimum amount of time between submissions that we list
 MIN_LISTING_DELTA = datetime.timedelta(hours=8)
 
-
-def _get_geoip_data(ip):
-  geo = pygeoip.GeoIP(GEO_DATA_PATH, flags=pygeoip.MEMORY_CACHE)
-  return geo.record_by_addr(ip)  
 
 class ClearDuplicateIdHandler(webapp.RequestHandler):
   """Provide an easy way to clear the duplicate check id from the submissions table.
@@ -170,7 +164,7 @@ class SubmitHandler(webapp.RequestHandler):
     if 'geodata' in data:
       self.response.out.write("geodata: %s" % data['geodata'])
       if 'latitude' in data['geodata']:
-        submission.coordinates = ','.join((data['geodata']['latitude'], data['geodata']['longitude']))
+        submission.coordinates = ','.join((str(data['geodata']['latitude']), str(data['geodata']['longitude'])))
         submission.city = data['geodata']['address'].get('city', None)
         submission.region = data['geodata']['address'].get('region', None)
         submission.country = data['geodata']['address'].get('country', None)    
@@ -212,23 +206,10 @@ class SubmitHandler(webapp.RequestHandler):
     submission.put()
 
 
-class GeoLookupHandler(webapp.RequestHandler):
-
-  """Handler to return location information for a given IP."""
-  
-  def post(self):
-    """Given an IP, dump all location data."""
-    ip = self.request.get('ip', os.environ.get('REMOTE_ADDR'))
-    self.response.out.write(simplejson.dumps(_get_geoip_data(ip)))
-
-  # TODO(tstromberg): Find a better way.
-  get = post
-
 def main():
   url_mapping = [
       ('/', MainHandler),
       ('/id/(\d+)', LookupHandler),
-      ('/geo_lookup', GeoLookupHandler),
       ('/index_hosts', IndexHostsHandler),
       ('/tasks/clear_dupes', ClearDuplicateIdHandler),
       ('/tasks/import_index_hosts', ImportIndexHostsHandler),
