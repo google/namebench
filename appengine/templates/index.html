@@ -23,7 +23,7 @@
 {% for submission in recent_submissions %}
 <tr {% if not submission.listed %} style="background-color: #aaa;"{% endif %}>
   <td><a href="/id/{{ submission.key.id }}">{{ submission.key.id }}</td>
-  <td>Unknown</td>
+  <td>{% if submission.region %}{{ submission.region }}, {{ submission.country }} {% else %} {% if submission.country %} {{ submission.country }} {% else %} Unknown {% endif %} {% endif %}</td>
   <td>{{ submission.class_c }}.x</td>
   <td>{{ submission.best_nameserver.ip }}</td>
   <td>{{ submission.query_count }}</td>
