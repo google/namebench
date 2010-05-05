@@ -1,13 +1,138 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>namebench: {{ timestamp }}</title>
+  <link href="/media/style.css" rel="stylesheet" type="text/css" />
+  
+  <!--Load the AJAX API-->
+  <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+  
+    // Load the Visualization API and the piechart package.
+    google.load('visualization', '1', {'packages':['piechart']});
+    
+    // Set a callback to run when the Google Visualization API is loaded.
+    google.setOnLoadCallback(drawChart);
+    
+    // Callback that creates and populates a data table, 
+    // instantiates the pie chart, passes in the data and
+    // draws it.
+    function drawChart() {
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-<head><title>namebench reports site</title></head>
+    // Create our data table.
+      var data = new google.visualization.DataTable();
+      data.addColumn('string', 'Task');
+      data.addColumn('number', 'Hours per Day');
+      data.addRows([
+        ['Work', 11],
+        ['Eat', 2],
+        ['Commute', 2],
+        ['Watch TV', 2],
+        ['Sleep', 7]
+      ]);
+
+      // Instantiate and draw our chart, passing in some options.
+      var chart = new google.visualization.PieChart(document.getElementById('mean_response_duration'));
+      chart.draw(data, {width: 400, height: 240, is3D: true});
+    }
+    </script> 
+</head>
 <body>
-  <h1>Submissions {{ submission.key.id }}</h1>
-<ul>
-  <li>{{ submission.query_count }}</li>    
-  <li>{{ submission.timestamp }}</li>
-</ul>
+
+<div id="container">
+<div class="version">namebench {{ version }}</div>
+<div id="big_summary" class="greybox">
+{% ifequal submission.best_nameserver submission.primary_nameserver %}
+  Your primary DNS server
+  <h4><strong>{{ submission.best_nameserver.ip }}</strong></h4>
+  Is already the fastest.
+{% else %}
+	<h4><strong>{{ submission.best_nameserver.name }}</strong> is</h4>
+	<h1>{{ submission.best_improvement|floatformat }}%</h1><h5 class="faster">faster than</h5>
+	<h4>your current primary DNS server</h4>
+{% endifequal %}
+</div>
+
+
+<h2>Tested DNS Servers</h2>
+
+<div id="nsdetails">
+<table id="nstable">
+<thead>
+<tr>
+  <td nowrap="nowrap">IP</td>
+  <td nowrap="nowrap">Descr.</td>
+  <td nowrap="nowrap">Hostname</td>
+  <td nowrap="nowrap">Avg (ms)</td>
+	<td nowrap="nowrap">Min</td>
+	<td nowrap="nowrap">Max</td>
+  <td nowrap="nowrap">Err</td>
+  <td nowrap="nowrap">NoAns</td>
+  <td>Notes</td>
+</tr>
+</thead>
+
+{% for sub in submission.nameservers %}
+<tr class="normal {% cycle odd,even %}">
+  <td>{{ sub.nameserver.ip }}</td>
+  <td>{{ sub.nameserver.name }}</td>
+  <td>{{ sub.listed }}</td>
+  <td>{{ sub.overall_average|floatformat }}</td>
+  <td>{{ sub.duration_min|floatformat }}</td>
+  <td>{{ sub.duration_max|floatformat }}</td>
+  <td>{{ sub.failed_count }}</td>
+  <td>{{ sub.nx_count }}</td>
+  <td>
+  {% if sub.notes %}
+    <ul class="warnings">
+		{% for note in sub.notes %}<li>{{ note }}</li>{% endfor %}
+	</ul>
+  {% endif %}
+  </td>
+</tr>
+{% endfor %}
+</table>
+</div>
+
+
+<h2>Graphs</h2>
+
+<div id="graphs" class="section">
+<h3>Mean Response Duration</h3>
+
+<div id="mean_response_duration">
+</div>
+
+<h3>Fastest Individual Response Duration</h3>
+
+<h3>Response Distribution Chart (First 200ms)</h3>
+
+
+<h3>Response Distribution Chart (Full)</h3>
+
+</div>
+
+{% if csv_link %}
+<h2>Query Details</h2>
+
+<div id="details" class="section">
+View the details in <a href="{{ csv_link }}">Comma Separated Values (csv)</a> format.
+</div>
+{% endif %}
+
+{% if config %}
+<h2>Configuration</h2>
+
+
+<div id="config" class="section">
+<table id="configtable">
+	<thead><tr><td>Name</td><td>Value</td></tr></thead>
+	{% for item in config %}
+	  <tr><td>{{ item.0 }}</td><td>{{ item.1 }}</td></tr>
+	{% endfor %}
+</table>
+</div>
+{% endif %}
+</div>
 </body>
 </html>
