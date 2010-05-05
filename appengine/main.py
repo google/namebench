@@ -26,8 +26,15 @@ from django.utils import simplejson
 import models
 
 MIN_QUERY_COUNT = 50
+MIN_SERVER_COUNT = 5
 # The minimum amount of time between submissions that we list
 MIN_LISTING_DELTA = datetime.timedelta(hours=8)
+
+def list_average(values):
+  """Computes the arithmetic mean of a list of numbers."""
+  if not values:
+    return 0
+  return sum(values) / float(len(values))
 
 
 class ClearDuplicateIdHandler(webapp.RequestHandler):
@@ -143,7 +150,11 @@ class SubmitHandler(webapp.RequestHandler):
       listed = True
       
     if data['config']['query_count'] < MIN_QUERY_COUNT:
-      self.response.out.write("Not listing: %s < %s" % (data['config']['query_count'], MIN_QUERY_COUNT))
+      self.response.out.write("Not enough queries to list.")
+      listed = False
+
+    if len(data['nameservers']) < MIN_SERVER_COUNT:
+      self.response.out.write("Not enough servers to list.")
       listed = False
 
     cached_index_hosts = []
@@ -171,6 +182,10 @@ class SubmitHandler(webapp.RequestHandler):
     else:
       self.response.out.write("No geodata!")
     submission.put()
+    reference_latency = None
+    for nsdata in data['nameservers']:
+      if nsdata['sys_position'] == 0:
+        reference_latency = list_average(nsdata['averages'])
     
     for nsdata in data['nameservers']:
       ns_record = models.NameServer.get_or_insert(nsdata['ip'], ip=nsdata['ip'], name=nsdata['name'], listed=False)
@@ -178,7 +193,7 @@ class SubmitHandler(webapp.RequestHandler):
       ns_sub.submission = submission
       ns_sub.nameserver = ns_record
       ns_sub.averages = nsdata['averages']
-      ns_sub.overall_average =  sum(nsdata['averages']) / float(len(nsdata['averages']))
+      ns_sub.overall_average = list_average(nsdata['averages'])
       ns_sub.duration_min = nsdata['min']
       ns_sub.duration_max = nsdata['max']
       ns_sub.failed_count = nsdata['failed']
@@ -186,12 +201,18 @@ class SubmitHandler(webapp.RequestHandler):
       ns_sub.sys_position = nsdata['sys_position']
       ns_sub.position = nsdata['position']
       ns_sub.notes = nsdata['notes']
-      ns_sub_instance = ns_sub.put()
       if ns_sub.sys_position == 0:
         submission.primary_nameserver = ns_record
+      elif reference_latency:
+        ns_sub.improvement = ((reference_latency / ns_sub.overall_average) - 1) * 100
+      
+      ns_sub_instance = ns_sub.put()
+        
       
       if ns_sub.position == 0:
         submission.best_nameserver = ns_record
+        if not ns_sub.sys_position == 0 and ns_sub.improvement:
+          submission.best_improvement = ns_sub.improvement
       
       for idx, run in enumerate(nsdata['durations']):
         run_results = models.RunResult()

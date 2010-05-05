@@ -51,7 +51,7 @@ class SiteConnector(object):
       for record_type, host in simplejson.loads(content):
         hosts.append((str(record_type), str(host)))
       return hosts
-    except IndexError:
+    except (IndexError, AttributeError):
       print '* Unable to fetch %s' % url
       return []
     except simplejson.decoder.JSONDecodeError:

@@ -56,6 +56,7 @@ class Submission(db.Model):
   coordinates = db.GeoPtProperty()
   
   best_nameserver = db.ReferenceProperty(NameServer, collection_name='best_submissions')
+  best_improvement = db.FloatProperty()
   primary_nameserver = db.ReferenceProperty(NameServer, collection_name="primary_submissions")
 
 class SubmissionNameServer(db.Model):
@@ -69,6 +70,7 @@ class SubmissionNameServer(db.Model):
   nx_count = db.IntegerProperty()
   position = db.IntegerProperty()
   sys_position = db.IntegerProperty()
+  improvement = db.FloatProperty()
   notes = db.ListProperty(str)
 
 # Store one row per run for run_results, since we do not need to do much with them.
