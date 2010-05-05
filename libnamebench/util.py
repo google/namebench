@@ -102,13 +102,16 @@ def IsPrivateHostname(hostname):
     return False
 
 def IsPrivateIP(ip):
-  """Boolean check to see if an IP is private or not."""
+  """Boolean check to see if an IP is private or not.
+  
+  Returns: Number of bits that should be masked.
+  """
   if re.match('^10\.', ip):
-    return 1
+    return 2
   elif re.match('^192\.168', ip):
     return 2
   elif re.match('^172\.(1[6-9]|2[0-9]|3[0-1])\.', ip):
-    return 1
+    return 2
   else:
     return None
 
@@ -137,7 +140,7 @@ def MaskPrivateHost(ip, hostname, name):
     hostname = 'internal.name'
 
   if 'SYS-' in name:
-    name = "SYS-%s" % ip
+    name = "SYS-%s" % ip.split('-')[0]
   else:
     name = ''
   return (ip, hostname, name)
