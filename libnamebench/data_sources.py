@@ -220,6 +220,10 @@ class DataSources(object):
       records = selectors.ChunkSelect(records, count)
     elif select_mode == 'random':
       records = selectors.RandomSelect(records, count)
+
+    # For custom filenames
+    if source not in self.source_config:
+      self.source_config[source] = {}
     
     if are_records_fqdn:
       self.source_config[source]['full_hostnames'] = False
