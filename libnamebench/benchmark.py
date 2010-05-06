@@ -101,12 +101,9 @@ class Benchmark(object):
       return None
     
     index_results, pending_tests = self._CheckForIndexHostsInResults(test_records)
-    print "already: %s" % index_results
-    print "pending: %s" % pending_tests
     run_results = self._SingleTestRun(pending_tests)
     for ns in run_results:
       index_results.setdefault(ns, []).extend(run_results[ns])
-    print index_results
     return index_results
 
   def Run(self, test_records=None):
