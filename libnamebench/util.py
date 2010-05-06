@@ -117,14 +117,14 @@ def IsPrivateHostname(hostname):
 def IsPrivateIP(ip):
   """Boolean check to see if an IP is private or not.
   
-  Returns: Number of bits that should be masked.
+  Returns: Number of bits that should be preserved.
   """
   if re.match('^10\.', ip):
-    return 2
+    return 1
   elif re.match('^192\.168', ip):
     return 2
   elif re.match('^172\.(1[6-9]|2[0-9]|3[0-1])\.', ip):
-    return 2
+    return 1
   else:
     return None
 
@@ -133,9 +133,7 @@ def MaskIPBits(ip, use_bits):
   ip_parts = ip.split('.')
   checksum = zlib.crc32(''.join(ip_parts[use_bits:]))
   masked_ip = '.'.join(ip_parts[0:use_bits])
-  for _ in range(use_bits, 4):
-    masked_ip = masked_ip + '.x'
-  return masked_ip + "-" + str(checksum)[-4:]
+  return masked_ip + ".x-" + str(checksum)[-4:]
 
 def MaskPrivateHost(ip, hostname, name):
   """Mask unnamed private IP's."""
@@ -153,7 +151,7 @@ def MaskPrivateHost(ip, hostname, name):
     hostname = 'internal.name'
 
   if 'SYS-' in name:
-    name = "SYS-%s" % ip.split('-')[0]
+    name = "SYS-%s" % ip
   else:
     name = ''
   return (ip, hostname, name)
