@@ -20,6 +20,7 @@ import os
 import os.path
 import random
 import re
+import subprocess
 import sys
 import time
 import ConfigParser
@@ -42,7 +43,7 @@ else:
   DEFAULT_TIMER = time.time
 
 GLOBAL_DATA_CACHE = {}
-INTERNAL_RE = re.compile('^0|\.pro[md]\.|\.corp|\.bor|\.hot$|internal|dmz|intra|\.\w$|\.\w{5,}$')
+INTERNAL_RE = re.compile('^0|\.pro[md]z*\.|\.corp|\.bor|\.hot$|internal|dmz|\._[ut][dc]p\.|intra|\.\w$|\.\w{5,}$')
 # ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
 FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
 
@@ -176,6 +177,8 @@ class DataSources(object):
 
         if FQDN_RE.match(host):
           full_host_count += 1
+#      else:
+#        print "REJECT: %s" % host
 
     # Now that we've read everything, are we dealing with domains or full hostnames?
     full_host_percent = full_host_count / float(len(records)) * 100
@@ -270,7 +273,11 @@ class DataSources(object):
     size_mb = os.path.getsize(filename) / 1024.0 / 1024.0
     self.msg('Reading %s: %s (%0.1fMB)' % (self.GetNameForSource(source), filename, size_mb))
     start_clock = DEFAULT_TIMER()
-    hosts = self._ExtractHostsFromHistoryFile(filename)
+    if filename.endswith('.pcap') or filename.endswith('.tcp'):
+      hosts = self._ExtractHostsFromPcapFile(filename)
+    else:
+      hosts = self._ExtractHostsFromHistoryFile(filename)
+
     if not hosts:
       hosts = self._ReadDataFile(filename)
     duration = DEFAULT_TIMER() - start_clock
@@ -285,6 +292,21 @@ class DataSources(object):
     # than precision at this stage.
     parse_re = re.compile('https*://([\-\w]+\.[\-\w\.]+)')
     return parse_re.findall(open(path, 'rb').read())
+
+  def _ExtractHostsFromPcapFile(self, path):
+    """Get a list of requests out of a pcap file (requires tcpdump)"""
+    self.msg("Extracting requests from pcap file using tcpdump")
+    cmd = 'tcpdump -r %s -n port 53' % path
+    pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
+    parse_re = re.compile(' ([A-Z]+)\? ([\-\w\.]+)')
+    requests = []
+    for line in pipe:
+      if '?' not in line:
+        continue
+      match = parse_re.search(line)
+      if match:
+        requests.append(' '.join(match.groups()))
+    return requests
 
   def _ReadDataFile(self, path):
     """Read a line-based datafile."""
