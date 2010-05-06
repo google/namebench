@@ -20,6 +20,7 @@ import math
 import re
 import util
 import os.path
+import socket
 import sys
 import traceback
 import zlib
@@ -70,7 +71,19 @@ def SplitSequence(seq, size):
 
   return  [ x for x in newseq if x ]
 
-
+def GetExternalIPFromGoogle():
+  """Return our public IP as far as Google is concerned."""
+  ns_ip = socket.gethostbyname('ns1.google.com')
+  if not ns_ip:
+    return None
+  
+  google = nameserver.NameServer(ns_ip)
+  response = google.TimedRequest('TXT', 'o-o.myaddr.google.com.')[0]
+  if response and response.answer:
+    return response.answer[0].to_rdataset().to_text().split('"')[1]
+  else:
+    return None
+  
 def InternalNameServers():
   """Return list of DNS server IP's used by the host."""
   try:

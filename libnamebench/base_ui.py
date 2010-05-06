@@ -137,7 +137,7 @@ class BaseUI(object):
         index = []
       
       if not self.geodata:
-        self.geodata = geoip.GetFromGoogleJSAPI()
+        self.geodata = geoip.GetGeoData()
         print "GEODATA: %s" % self.geodata
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)

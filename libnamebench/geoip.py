@@ -25,6 +25,9 @@ except ImportError:
 
 import httplib2
 import simplejson
+import pygeoip
+
+import util
     
 def GetFromGoogleJSAPI():
   """Using the Google JSAPI API, get the geodata for the current IP.
@@ -38,3 +41,18 @@ def GetFromGoogleJSAPI():
     return simplejson.loads(geo_matches.group(1))
   else:
     return {}
+
+def GetFromMaxmind():
+  data_file = util.FindDataFile('third_party/maxmind/GeoLiteCity.dat')
+  print data_file
+  geo_city = pygeoip.GeoIP(data_file)
+  external_ip = util.GetExternalIPFromGoogle()
+  print external_ip
+  return geo_city.record_by_addr(external_ip)
+
+def GetGeoData():
+  jsapi_data = GetFromGoogleJSAPI()
+  if jsapi_data:
+    return jsapi_data
+  else:
+    return GetFromMaxmind()
