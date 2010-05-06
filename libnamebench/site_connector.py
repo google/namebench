@@ -58,7 +58,7 @@ class SiteConnector(object):
     
     url = self.url + '/submit'
     if not url or not url.startswith('http'):
-      return False
+      return (False, 'error')
     h = httplib2.Http()
     post_data = {
         'duplicate_check': self._CalculateDuplicateCheckId(),
@@ -69,15 +69,15 @@ class SiteConnector(object):
       resp, content = h.request(url, 'POST', urllib.urlencode(post_data))
       try:
         data = simplejson.loads(content)
-        return "%s%s" % (self.url, data['url'])
+        return ("%s%s" % (self.url, data['url']), data['state'])
       except:
         print "Unable to decode response"
         print "RESPONSE for %s: [%s]:\n  %s" % (url, resp, content)
-        return False
+        return (False, 'error')
     # See http://code.google.com/p/httplib2/issues/detail?id=62
     except AttributeError:
       print "%s refused connection" % url
-    return False
+    return (False, 'error')
 
   def _CalculateDuplicateCheckId(self):
     """This is so that we can detect duplicate submissions from a particular host.
