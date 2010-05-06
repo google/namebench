@@ -300,7 +300,7 @@ class ReportGenerator(object):
       if self.index:
         for host, req_type, duration, response, unused_x in self.index[ns]:
           answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
-          index.append((host, req_type, duration, answer_count, ttl))
+          index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
 
       masked_ip, masked_hostname, masked_name = util.MaskPrivateHost(ns.ip, ns.hostname, ns.name)
       nsdata = {

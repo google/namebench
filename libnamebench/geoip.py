@@ -25,7 +25,6 @@ except ImportError:
 
 import httplib2
 import simplejson
-
     
 def GetFromGoogleJSAPI():
   """Using the Google JSAPI API, get the geodata for the current IP.

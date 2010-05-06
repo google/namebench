@@ -166,7 +166,9 @@ class BaseUI(object):
       self.UpdateStatus('Uploading results to %s' % self.options.site_url)
       json_data = self.reporter.CreateJsonData()
       connector = site_connector.SiteConnector(self.options)
-      connector.UploadJsonResults(json_data)
+      url = connector.UploadJsonResults(json_data)
+      if url:
+        self.UpdateStatus("Your results are now available at %s" % url)
 
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
