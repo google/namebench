@@ -64,7 +64,7 @@ def ResponseToAscii(response):
   if not response:
     return None
   if response.answer:
-    answers = [' + '.join(map(str, x.items)) for x in response.answer]
+    answers = [', '.join(map(str, x.items)) for x in response.answer]
     return ' -> '.join(answers)
   else:
     return dns.rcode.to_text(response.rcode())
