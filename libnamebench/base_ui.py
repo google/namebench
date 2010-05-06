@@ -43,12 +43,16 @@ class BaseUI(object):
   """Common methods for all UI implementations."""
 
   def __init__(self):
+    self.SetupDataStructures()
+    
+  def SetupDataStructures(self):
     self.reporter = None
     self.nameservers = None
     self.bmark = None
     self.html_path = None
     self.csv_path = None
     self.geodata = None
+    self.country = None
     self.sources = {}
     self.test_records = []
 
@@ -135,11 +139,16 @@ class BaseUI(object):
         index = self.bmark.RunIndex(index_hosts)
       else:
         index = []
-      
-      if not self.geodata:
-        self.geodata = geoip.GetGeoData()
+      self.DiscoverLocation()
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)
+  def DiscoverLocation(self):
+    if not self.geodata:
+      self.geodata = geoip.GetGeoData()
+      self.country = self.geodata.get('country_name', None)
+      if not self.country and 'address' in self.geodata:
+        self.country = self.geodata['address'].get('country', None)
+    return self.geodata
 
   def RunAndOpenReports(self):
     """Run the benchmark and open up the HTML report on completion."""

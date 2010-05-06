@@ -61,6 +61,7 @@ class controller(NSWindowController, base_ui.BaseUI):
 
   def awakeFromNib(self):
     """Initializes our class, called automatically by Cocoa"""
+    self.SetupDataStructures()
     NSLog("pwd: %s" % os.getcwd())
     NSLog('argv[0]: %s' % sys.argv[0])
     self.resource_dir = os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources')
@@ -71,6 +72,8 @@ class controller(NSWindowController, base_ui.BaseUI):
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
     self.UpdateStatus('Discovering sources')
     self.LoadDataSources()
+    self.UpdateStatus('Discovering location')
+    self.DiscoverLocation()
     self.UpdateStatus('Populating Form...')
     self.setFormDefaults()
     self.UpdateStatus('namebench %s is ready!' % version.VERSION)
@@ -171,7 +174,11 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.query_count.setStringValue_(self.options.query_count)
 
     self.location.removeAllItems()
-    self.location.addItemWithTitle_("(automatic)")
+    if self.country:
+      self.location.addItemWithTitle_(self.country)
+      self.location.addItemWithTitle_("(Other)")
+    else:
+      self.location.addItemWithTitle_("(automatic)")
 
     self.health_performance.removeAllItems()
     self.health_performance.addItemWithTitle_("(automatic)")
