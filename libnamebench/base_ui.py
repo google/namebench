@@ -138,7 +138,6 @@ class BaseUI(object):
       
       if not self.geodata:
         self.geodata = geoip.GetGeoData()
-        print "GEODATA: %s" % self.geodata
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)
 
@@ -166,7 +165,7 @@ class BaseUI(object):
       self.UpdateStatus('Uploading results to %s' % self.options.site_url)
       json_data = self.reporter.CreateJsonData()
       connector = site_connector.SiteConnector(self.options)
-      url = connector.UploadJsonResults(json_data)
+      url = connector.UploadJsonResults(json_data, hide_results=self.options.hide_results)
       if url:
         self.UpdateStatus("Your results are now available at %s" % url)
 

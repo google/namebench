@@ -89,6 +89,8 @@ def DefineAndParseOptions(filename):
                     action='store_true', help='Upload anonmyized results to The Namebench Project')
   parser.add_option('-U', '--site_url', dest='site_url',
                     help='URL to communicate results to.')
+  parser.add_option('-H', '--hide_results', dest='hide_results', action='store_true',
+                    help='Upload results, but keep them hidden from indexes.')
   parser.add_option('-x', '--no_gui', dest='no_gui',
                     action='store_true', help='Disable GUI')
   parser.add_option('-C', '--enable-censorship-checks', dest='enable_censorship_checks',
