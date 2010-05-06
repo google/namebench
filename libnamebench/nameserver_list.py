@@ -71,6 +71,11 @@ class TooFewNameservers(Exception):
   def __str__(self):
     return repr(self.value)
 
+class ThreadFailure(Exception):
+
+  def __init__(self):
+    pass
+
 class QueryThreads(threading.Thread):
   """Quickly see which nameservers are awake."""
   def __init__(self, input_queue, results_queue, action_type, checks=None):
@@ -79,10 +84,16 @@ class QueryThreads(threading.Thread):
     self.action_type = action_type
     self.results = results_queue
     self.checks = checks
+    self.halt = False
+
+
+  def stop(self):
+    self.halt = True
+
 
   def run(self):
     """Iterate over the queue, processing each item."""
-    while not self.input.empty():
+    while not self.halt and not self.input.empty():
       # check_wildcards is special: it has a tuple of two nameservers
       if self.action_type == 'wildcard_check':
         try:
@@ -515,7 +526,14 @@ class NameServers(list):
     self.msg(status_message, count=0, total=len(items))
     for thread_num in range(0, thread_count):
       thread = QueryThreads(input_queue, results_queue, action_type, **kwargs)
-      thread.start()
+      try:
+        thread.start()
+      except:
+        self.msg("ThreadingError with %s threads: waiting for completion before retrying." % thread_count) 
+        for thread in threads:
+          thread.stop()
+          thread.join()
+        raise ThreadFailure()
       threads.append(thread)
 
     while results_queue.qsize() != len(items):
@@ -539,16 +557,13 @@ class NameServers(list):
     """Quickly ping nameservers to see which are available."""
     try:
       results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
-      success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-      total_failure = False
-    except:
-      self.msg("Fail: %s" % util.GetLastExceptionString())
-      total_failure = True
-      
-    if total_failure:
+    except ThreadFailure:
       self.msg("It looks like you couldn't handle %s threads, trying again with %s (slow)" % (self.thread_count, SLOW_MODE_THREAD_COUNT))
       self.thread_count = SLOW_MODE_THREAD_COUNT
       self.ResetTestResults()
+      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
+
+    success_rate = (float(len(self.enabled)) / float(len(self))) * 100
     if success_rate < MIN_PINGABLE_PERCENT:
       self.msg('How odd! Only %0.1f percent of name servers were pingable. Trying again with %s threads (slow)'
                % (success_rate, SLOW_MODE_THREAD_COUNT))
@@ -568,8 +583,17 @@ class NameServers(list):
       thread_count = MAX_INITIAL_HEALTH_THREAD_COUNT
     else:
       thread_count = self.thread_count
-    results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
-                                       list(self), checks=checks, thread_count=thread_count)
+
+    try:
+      results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
+                                         list(self), checks=checks, thread_count=thread_count)
+    except ThreadFailure:
+      self.msg("It looks like you couldn't handle %s threads, trying again with %s (slow)" % (thread_count, SLOW_MODE_THREAD_COUNT))
+      self.thread_count = SLOW_MODE_THREAD_COUNT
+      self.ResetTestResults()
+      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
+
+
 
     success_rate = (float(len(self.enabled)) / float(len(self))) * 100
     if success_rate < self.min_healthy_percent:
