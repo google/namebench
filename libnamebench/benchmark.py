@@ -62,7 +62,6 @@ class Benchmark(object):
     self.thread_count = thread_count
     self.nameservers = nameservers
     self.results = {}
-    self.index_results = {}
     self.status_callback = status_callback
 
   def msg(self, msg, **kwargs):
@@ -76,19 +75,24 @@ class Benchmark(object):
       List of tuples of test records (type, record)
       
     Returns:
+      A list of results that have already been tested
       A list of records that still need to be tested.
     """
     needs_test = []
+    index_results = {}
     for test in test_records:
       matched = False
       for ns in self.results:
-        for (hostname, request_type, duration, response, error_msg) in self.results[ns][0]:
+        for result in self.results[ns][0]:
+          hostname, request_type, duration, response, error_msg = result
           if (request_type, hostname) == test:
             matched = True
-            self.index_results.setdefault(ns, []).append((test, duration, 1))
+            index_results.setdefault(ns, []).append(result)
+            # So that we don't include the second results if duplicates exist.
+            break
       if not matched:
         needs_test.append(test)
-    return needs_test
+    return (index_results, needs_test)
 
   def RunIndex(self, test_records):
     """Run index tests using the same mechanism as a standard benchmark."""    
@@ -96,12 +100,13 @@ class Benchmark(object):
       print "No records to test."
       return None
     
-    pending_tests = self._CheckForIndexHostsInResults(test_records)
-    index_results = self._SingleTestRun(pending_tests)
-    for ns in index_results:
-      for (hostname, request_type, duration, response, error_msg) in index_results[ns]:
-        index = test_records.index((request_type, hostname))
-        self.index_results.setdefault(ns, []).append((index, duration, 0))
+    index_results, pending_tests = self._CheckForIndexHostsInResults(test_records)
+    print "already: %s" % index_results
+    print "pending: %s" % pending_tests
+    run_results = self._SingleTestRun(pending_tests)
+    for ns in run_results:
+      index_results.setdefault(ns, []).extend(run_results[ns])
+    print index_results
     return index_results
 
   def Run(self, test_records=None):
