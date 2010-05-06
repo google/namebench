@@ -171,7 +171,7 @@ def ProcessConfigurationFile(options):
     if not hasattr(options, option) or not getattr(options, option):
       if 'timeout' in option:
         value = float(general[option])
-      elif 'count' in option or 'num' in option:
+      elif 'count' in option or 'num' in option or 'hide' in option:
         value = int(general[option])
       else:
         value = general[option]

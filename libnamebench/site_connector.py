@@ -62,13 +62,15 @@ class SiteConnector(object):
     h = httplib2.Http()
     post_data = {
         'duplicate_check': self._CalculateDuplicateCheckId(),
-        'hidden': hide_results,
+        'hidden': bool(hide_results),
         'data': json_data
     }
     try:
       resp, content = h.request(url, 'POST', urllib.urlencode(post_data))
       try:
         data = simplejson.loads(content)
+        for note in data['notes']:
+          print "    * %s" % note
         return ("%s%s" % (self.url, data['url']), data['state'])
       except:
         print "Unable to decode response"
