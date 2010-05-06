@@ -215,7 +215,7 @@ class DataSources(object):
       else:
         select_mode = 'weighted'
 
-    self.msg('Selecting %s out of %s %s records.' % (count, len(records), select_mode))
+    self.msg('Selecting %s out of %s sanitized records (%s mode).' % (count, len(records), select_mode))
     # Now make the real selection.
     if select_mode == 'weighted':
       records = selectors.WeightedDistribution(records, count)
