@@ -42,7 +42,17 @@ def GetFromGoogleJSAPI():
   else:
     return {}
 
-def GetFromMaxmind():
+def GetFromMaxmindJSAPI():
+  h = httplib2.Http(tempfile.gettempdir(), timeout=10)
+  resp, content = h.request("http://j.maxmind.com/app/geoip.js", 'GET')
+  results = re.findall("geoip_(.*?)\(.*?\'(.*?)\'", content)
+  if results:
+    return dict(results)
+  else:
+    return {}
+
+def GetFromMaxmindGeoLite():
+  """Currently obsoleted (data file was too large to include!)"""
   data_file = util.FindDataFile('third_party/maxmind/GeoLiteCity.dat')
   print data_file
   geo_city = pygeoip.GeoIP(data_file)
@@ -55,4 +65,4 @@ def GetGeoData():
   if jsapi_data:
     return jsapi_data
   else:
-    return GetFromMaxmind()
+    return GetFromMaxmindJSAPI()
