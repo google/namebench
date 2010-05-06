@@ -25,8 +25,8 @@ import threading
 import time
 import Queue
 
-from . import selectors
-from . import util
+import selectors
+import util
 
 class BenchmarkThreads(threading.Thread):
   """Benchmark multiple nameservers in parallel."""

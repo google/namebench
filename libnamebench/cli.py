@@ -25,10 +25,10 @@ import datetime
 import math
 import sys
 
-from . import base_ui
-from . import data_sources
-from . import nameserver_list
-from . import conn_quality
+import base_ui
+import data_sources
+import nameserver_list
+import conn_quality
 
 class NameBenchCli(base_ui.BaseUI):
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):

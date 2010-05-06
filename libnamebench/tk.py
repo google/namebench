@@ -26,12 +26,12 @@ import Queue
 from Tkinter import *
 import tkMessageBox
 
-from . import base_ui
-from . import conn_quality
-from . import data_sources
-from . import nameserver_list
-from . import selectors
-from . import util
+import base_ui
+import conn_quality
+import data_sources
+import nameserver_list
+import selectors
+import util
 
 THREAD_UNSAFE_TK = 0
 LOG_FILE_PATH = base_ui.GenerateOutputFilename('log')

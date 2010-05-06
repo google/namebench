@@ -33,8 +33,8 @@ except ImportError:
 
 
 # relative
-from . import util
-from . import selectors
+import util
+import selectors
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:
 if sys.platform[:3] == 'win':

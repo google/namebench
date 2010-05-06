@@ -29,10 +29,10 @@ except ImportError:
 import jinja2
 import simplejson
 
-from . import charts
-from . import nameserver
-from . import selectors
-from . import util
+import charts
+import nameserver
+import selectors
+import util
 
 
 FAQ_MAP = {

@@ -25,9 +25,9 @@ import tempfile
 # from third_party
 import httplib2
 
-from . import data_sources
-from . import util
-from . import version
+import data_sources
+import util
+import version
 
 SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/config/hostname_reference.cfg'
 

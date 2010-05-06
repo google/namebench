@@ -25,7 +25,9 @@ except ImportError:
 
 import httplib2
 import simplejson
-import pygeoip
+
+# TODO(tstromberg): Remove if we aren't going to use it.
+#import pygeoip
 
 import util
     

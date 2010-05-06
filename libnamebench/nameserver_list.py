@@ -132,6 +132,7 @@ class NameServers(list):
     self.requested_health_timeout = health_timeout
     self.skip_cache_collusion_checks = skip_cache_collusion_checks
     self.health_timeout = health_timeout
+    self.min_healthy_percent = MIN_HEALTHY_PERCENT
     self.status_callback = status_callback
     self.cache_dir = tempfile.gettempdir()
     self.ipv6_only = ipv6_only
@@ -562,7 +563,7 @@ class NameServers(list):
                                        list(self), checks=checks, thread_count=thread_count)
 
     success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-    if success_rate < MIN_HEALTHY_PERCENT:
+    if success_rate < self.min_healthy_percent:
       self.msg('How odd! Only %0.1f percent of name servers are healthy. Trying again with %s threads (slow)'
                % (success_rate, SLOW_MODE_THREAD_COUNT))
       self.ResetTestResults()

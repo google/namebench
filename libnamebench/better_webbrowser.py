@@ -25,7 +25,7 @@ import traceback
 import webbrowser
 import time
 
-from . import util
+import util
 
 def output(string):
   print string

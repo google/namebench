@@ -19,14 +19,14 @@ import os
 import tempfile
 import better_webbrowser
 
-from . import benchmark
-from . import config
-from . import geoip
-from . import data_sources
-from . import nameserver_list
-from . import reporter
-from . import site_connector
-from . import util
+import benchmark
+import config
+import geoip
+import data_sources
+import nameserver_list
+import reporter
+import site_connector
+import util
 
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
