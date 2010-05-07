@@ -177,7 +177,7 @@ class BaseUI(object):
       connector = site_connector.SiteConnector(self.options)
       url, state = connector.UploadJsonResults(json_data, hide_results=self.options.hide_results)
       if url:
-        self.UpdateStatus("Your results are available at: %s (%s)" % (url, state))
+        self.UpdateStatus("Your sharing URL: %s (%s)" % (url, state))
 
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
