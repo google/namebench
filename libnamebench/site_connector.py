@@ -78,7 +78,7 @@ class SiteConnector(object):
         print "RESPONSE for %s: [%s]:\n  %s" % (url, resp, content)
         if not fail_quickly:
           time.sleep(5)
-          self.UploadJsonResults(self, json_data, hide_results=hide_results, fail_quickly=True)
+          self.UploadJsonResults(json_data, hide_results=hide_results, fail_quickly=True)
         else:
           return (False, 'error')
     # See http://code.google.com/p/httplib2/issues/detail?id=62

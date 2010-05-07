@@ -104,11 +104,17 @@ class NameServer(health_checks.NameServerHealthChecks):
     
   @property
   def fastest_check_duration(self):
-    return min([x[3] for x in self.checks])
+    if self.checks:
+      return min([x[3] for x in self.checks])
+    else:
+      return None
 
   @property
   def slowest_check_duration(self):
-    return max([x[3] for x in self.checks])
+    if self.checks:
+      return max([x[3] for x in self.checks])
+    else:
+      return None
 
   @property
   def check_duration(self):

@@ -178,7 +178,7 @@ class ReportGenerator(object):
     compare_reference = None
     reference_records = [x for x in ns_summary if x['is_reference']]
     if reference_records:
-      if len(reference_records[0]['durations']) >= MIN_RELEVANT_COUNT:
+      if len(reference_records[0]['durations'][0]) >= MIN_RELEVANT_COUNT:
         compare_reference = reference_records[0]
         compare_title = "%0.1f%%" % [x['diff'] for x in ns_summary if x['ip'] == best_ns.ip][0]
         compare_subtitle = 'Faster'
@@ -279,7 +279,7 @@ class ReportGenerator(object):
       
       durations = []
       for test_run in self.results[ns]:
-        durations.extend([x[2] for x in self.results[ns][0]])
+        durations.append([x[2] for x in self.results[ns][0]])
         
       # Append notes with associated URL's
       notes = []
@@ -340,7 +340,7 @@ class ReportGenerator(object):
     config = dict(self.FilteredConfig())
     config['platform'] = (platform.system(), platform.release())
     config['python'] = platform.python_version_tuple()
-    nsdata_list = _GenerateNameServerSummary()
+    nsdata_list = self._GenerateNameServerSummary()
     # Purge sensitive information
     for row in nsdata_list:
       row['ip'], row['hostname'], row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
