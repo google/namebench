@@ -63,7 +63,7 @@ h5.faster {
   padding-left:  3px;
   padding-bottom: 3px;
   padding-right:  3px;
-  margin-left: 1em;
+  margin-left: 0.25em;
 }
 
 table#nstable {
@@ -96,7 +96,7 @@ ul.warnings {
 .warnings li {
 }
 #nstable td {
-  padding:  3px;
+  padding:  2px;
   border-right:  1px solid #C2CFF1;
 }
 
@@ -167,7 +167,7 @@ ul.warnings {
 }
 
 .section {
-  margin-left:  1em;
+  margin-left: 0.25em;
   padding: 1em;
   background-color:  #fff;
   max-width: 910px;
