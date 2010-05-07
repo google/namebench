@@ -130,7 +130,8 @@ class QueryThreads(threading.Thread):
 
 class NameServers(list):
 
-  def __init__(self, nameservers, secondary=None, num_servers=1,
+  def __init__(self, nameservers, global_servers=None, regional_servers=None,
+               num_servers=1,
                include_internal=False, threads=5, status_callback=None,
                timeout=5, health_timeout=5, ping_timeout=1,
                skip_cache_collusion_checks=False,
@@ -158,15 +159,17 @@ class NameServers(list):
     super(NameServers, self).__init__()
     self.system_nameservers = util.InternalNameServers()
     for (ip, name) in nameservers:
-      self.AddServer(ip, name, preferred=True)
+      self.AddServer(ip, name, is_custom=True, is_preferred=True)
 
-    if secondary:
-      for (ip, name) in secondary:
-        self.AddServer(ip, name, preferred=False)
+    for (ip, name) in global_servers:
+      self.AddServer(ip, name, is_global=True, is_preferred=True)
+
+    for (ip, name) in regional_servers:
+      self.AddServer(ip, name)
 
     if include_internal:
       for ip in self.system_nameservers:
-        self.AddServer(ip, 'SYS-%s' % ip, preferred=True)
+        self.AddServer(ip, 'SYS-%s' % ip, is_preferred=True)
 
   @property
   def preferred(self):
@@ -198,18 +201,22 @@ class NameServers(list):
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
-  def AddServer(self, ip, name, preferred=False):
+  def AddServer(self, ip, name, is_preferred=False, is_global=False, is_regional=False,
+                is_custom=False):
     """Add a server to the list given an IP and name."""
 
-    ns = nameserver.NameServer(ip, name=name, preferred=preferred)
+    ns = nameserver.NameServer(ip, name=name, preferred=is_preferred)
     if self.ipv6_only and not ns.is_ipv6:
       return
     
     if ip in self.system_nameservers:
       ns.is_system = True
       ns.is_preferred = True
+      ns.is_custom = False
       ns.system_position = self.system_nameservers.index(ip)
 
+    ns.is_global = is_global
+    ns.is_regional = is_regional
     ns.timeout = self.timeout
     ns.ping_timeout = self.ping_timeout
     # Give them a little extra love for the road.
@@ -429,7 +436,7 @@ class NameServers(list):
   def _LoadSecondaryCache(self, cpath):
     """Check if our health cache has any good data."""
     if os.path.exists(cpath) and os.path.isfile(cpath):
-      self.msg('Loading local server health cache: %s' % cpath)
+#      self.msg('Loading local server health cache: %s' % cpath)
       cf = open(cpath, 'r')
       try:
         return pickle.load(cf)
@@ -494,7 +501,7 @@ class NameServers(list):
           faster.disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
           slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
         else:
-          self.msg("Disabling %s [%s] (slower replica of %s [%s])" % (slower.name, slower.check_average, faster.name, faster.check_average))
+          self.msg("Disabling %s [%0.3f] (slower replica of %s [%0.3f])" % (slower.name, slower.check_average, faster.name, faster.check_average))
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
           faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
 

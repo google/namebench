@@ -16,8 +16,8 @@ Recommended configuration (fastest + nearest):
 ----------------------------------------------
 {% for ns in recommended %}{{ "nameserver %-15.15s # %s  %s\n"|format(ns.ip, ns.name, ns.warnings_string) }}{% endfor %}
 
-{% if comparison.title %}
+{% if compare_title %}
 ********************************************************************************
-In this test, {% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %} is {{ comparison.title }}: {{comparison.subtitle }} {% if comparison.ns %}than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}{% endif %}
+In this test, {% if best_ns.ip == system_primary %}Your current primary DNS server{% else %}{{ best_ns.name }}{% endif %} is {{ compare_title }}: {{compare_subtitle }} {% if compare_reference.ns %}than {% if compare_reference.ip == system_primary %}your current primary DNS server{% else %}{{ compare_reference.name }}{% endif %}{% endif %}
 ********************************************************************************
 {% endif %}

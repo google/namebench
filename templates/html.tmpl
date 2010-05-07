@@ -11,9 +11,9 @@
 <div id="container">
 <div class="version">namebench {{ version }}</div>
 <div id="big_summary" class="greybox">
-	<h4><strong>{% if best.ip == system_primary %}Your current primary DNS server{% else %}{{ best.name }}{% endif %}</strong> is</h4>
-	<h1>{{ comparison.title }}</h1><h5 class="faster">{{ comparison.subtitle }}</h5>
-	<h4>{% if comparison.ns %}than {% if comparison.ns.ip == system_primary %}your current primary DNS server{% else %}{{ comparison.ns.name }}{% endif %}{% endif %}</h4>
+	<h4><strong>{% if best_ns.ip == system_primary %}Your current primary DNS server{% else %}{{ best_ns.name }}{% endif %}</strong> is</h4>
+	<h1>{{ compare_title }}</h1><h5 class="faster">{{ compare_subtitle }}</h5>
+	<h4>{% if compare_reference.name %}than {% if compare_reference.ip == system_primary %}your current primary DNS server{% else %}{{ compare_reference.name }}{% endif %}{% endif %}</h4>
 </div>
 
 <div id="recommended_config" class="greybox">
@@ -36,36 +36,34 @@
 <thead>
 <tr>
   <td nowrap="nowrap">IP</td>
-  <td nowrap="nowrap">Descr.</td>
+  <td>Descr.</td>
   <td nowrap="nowrap">Hostname</td>
+  <td nowrap="nowrap">Diff</td>
   <td nowrap="nowrap">Avg (ms)</td>
 	<td nowrap="nowrap">Min</td>
 	<td nowrap="nowrap">Max</td>
   <td nowrap="nowrap">Err</td>
-  <td nowrap="nowrap">NoAns</td>
+  <td nowrap="nowrap">NX</td>
   <td>Notes</td>
 </tr>
 </thead>
 {# (ns, overall_average, run_averages, fastest, slowest, failure_count, nx_count) #}
-{% for row in nameserver_details %}
-<tr class="{% if row.0.disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.0.system_position == 0 %} primary_row{% endif %}{% if row.0.is_error_prone %} unhealthy_host{% endif %}">
-  <td>{{ row.0.ip }}</td>
-  <td>{{ row.0.name }}</td>
-  <td>{{ row.0.hostname }}</td>
-  <td>{{ "%0.2f"|format(row.1) }}</td>
-  <td>{{ "%0.2f"|format(row.3) }}</td>
-  <td>{{ "%0.2f"|format(row.4) }}</td>
-  <td {% if row.5 != 0 %}class="error_count"{% endif %}>{{ row.5 }}</td>
-  <td>{{ row.6 }}</td>
+{% for row in ns_summary %}
+<tr class="{% if row.is_disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.sys_position == 0 %} primary_row{% endif %}{% if row.is_error_prone %} unhealthy_host{% endif %}">
+  <td>{{ row.ip }}</td>
+  <td>{{ row.name }}</td>
+  <td>{{ row.hostname }}</td>
+  <td>{{ "%0.1f"|format(row.diff) }}%</td>
+  <td>{{ "%0.2f"|format(row.overall_average) }}</td>
+  <td>{{ "%0.1f"|format(row.min) }}</td>
+  <td>{{ "%0.1f"|format(row.max) }}</td>
+  <td {% if row.failed != 0 %}class="error_count"{% endif %}>{{ row.failed }}</td>
+  <td>{{ row.nx }}</td>
   <td>
-  {% if row.0.notes %}
+  {% if row.notes %}
     <ul class="warnings">
-      {% for note_data in row.0.notes %}
-		<li>
-        {% if note_data.1 %}<a href="{{ note_data.1|e }}">{% endif %}
-    		{{ note_data.0|e }}
-	    {% if note_data.1 %}</a>{% endif %}
-	    </li>
+      {% for note in row.notes %}
+      <li>{% if note.url %}<a href="{{ note_url }}">{% endif %}{{ note.text }}{% if note.url %}</a>{% endif %}</li>
       {% endfor %}
 	</ul>
   {% endif %}

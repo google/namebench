@@ -78,6 +78,9 @@ class NameServer(health_checks.NameServerHealthChecks):
     # We use _ for IPV6 representation in our configuration due to ConfigParser issues.
     self.ip = ip.replace('_', ':')
     self.is_system = internal
+    self.is_regional = False
+    self.is_global = False
+    self.is_custom = False
     self.system_position = None
     self.is_preferred = preferred
     self.timeout = 6
@@ -104,6 +107,10 @@ class NameServer(health_checks.NameServerHealthChecks):
     return min([x[3] for x in self.checks])
 
   @property
+  def slowest_check_duration(self):
+    return max([x[3] for x in self.checks])
+
+  @property
   def check_duration(self):
     return sum([x[3] for x in self.checks])
 
@@ -128,6 +135,27 @@ class NameServer(health_checks.NameServerHealthChecks):
       return '# ' + self.warnings_string
     else:
       return ''
+
+  @property
+  def errors(self):
+    return ["%s (%s requests)" % (_[0], _[1]) for _ in self.error_map.items()]
+    
+  @property
+  def notes(self):
+    _notes = []
+    if self.system_position == 0:
+      _notes.append('The current preferred DNS server.')
+    elif self.system_position:
+      _notes.append('A backup DNS server for this system.')
+    if self.is_error_prone:
+      _notes.append('%0.0f queries to this host failed' % self.error_rate)
+    if self.disabled:
+      _notes.append(self.disabled)
+    else:
+      _notes.extend(self.warnings)
+    if self.errors:
+      _notes.extend(self.errors)
+    return _notes
 
   @property
   def hostname(self):
@@ -170,6 +198,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.checks = []
     self.request_count = 0
     self.error_count = 0
+    self.error_map = {}
     self.failed_test_count = 0
     self.share_check_count = 0
     self.cache_checks = []
@@ -272,9 +301,10 @@ class NameServer(health_checks.NameServerHealthChecks):
 
     if exc and not error_msg:
       error_msg = '%s: %s' % (record_string, util.GetLastExceptionString())
-
-#    if error_msg:
-#      print '%s will report: %s' % (self, error_msg)
+    
+    if error_msg:
+      key = util.GetLastExceptionString()
+      self.error_map[key] = self.error_map.setdefault(key, 0) + 1
 
     return (response, util.SecondsToMilliseconds(duration), error_msg)
 

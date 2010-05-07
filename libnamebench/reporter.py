@@ -37,7 +37,7 @@ import util
 
 FAQ_MAP = {
   'NXDOMAIN': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"NXDOMAIN_hijacking"_mean?',
-  'Incorrect result': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"Incorrect_result_for..."_mean?'
+  'Wrong result': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"Incorrect_result_for..."_mean?'
 }
 
 # Only bother showing a percentage if we have this many tests.
@@ -61,6 +61,7 @@ class ReportGenerator(object):
     self.config = config
     self.geodata = geodata
     self.status_callback = status_callback
+    self.cached_averages = {}
 
   def msg(self, msg, **kwargs):
     if self.status_callback:
@@ -68,6 +69,10 @@ class ReportGenerator(object):
 
   def ComputeAverages(self):
     """Process all runs for all hosts, yielding an average for each host."""
+    if len(self.results) in self.cached_averages:
+      return self.cached_averages[len(self.results)]
+    
+    records = []
     for ns in self.results:
       failure_count = 0
       nx_count = 0
@@ -85,8 +90,10 @@ class ReportGenerator(object):
       overall_average = util.CalculateListAverage(run_averages)
       (fastest, slowest) = self.FastestAndSlowestDurationForNameServer(ns)
 
-      yield (ns, overall_average, run_averages, fastest, slowest,
-             failure_count, nx_count, total_count)
+      records.append((ns, overall_average, run_averages, fastest, slowest,
+                     failure_count, nx_count, total_count))
+    self.cached_averages[len(self.results)] = records
+    return self.cached_averages[len(self.results)]
 
   def FastestAndSlowestDurationForNameServer(self, ns):
     """For a given nameserver, find the fastest/slowest non-error durations."""
@@ -144,83 +151,39 @@ class ReportGenerator(object):
     return chart
 
   def CreateReport(self, format='ascii', output_fp=None, csv_path=None):
-    lowest_latency = self._LowestLatencyAsciiChart()
-    mean_duration = self._MeanRequestAsciiChart()
-    sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
+    
+    # First generate all of the charts necessary.
+    if format == 'ascii':
+      lowest_latency = self._LowestLatencyAsciiChart()
+      mean_duration = self._MeanRequestAsciiChart()
+    else:
+      lowest_latency = None
+      mean_duration = None
 
+    sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     runs_data = [(x[0].name, x[2]) for x in sorted_averages]
     mean_duration_url = charts.PerRunDurationBarGraph(runs_data)
     min_duration_url = charts.MinimumDurationBarGraph(self.FastestNameServerResult())
     distribution_url_200 = charts.DistributionLineGraph(self.DigestedResults(),
                                                         scale=200)
+    distribution_url = charts.DistributionLineGraph(self.DigestedResults(), scale=self.config.timeout * 1000)
+    
+    # Now generate all of the required textual information.
+    ns_summary = self._GenerateNameServerSummary()
+    best_ns = self.BestOverallNameServer()
+    recommended = [best_ns] + [x for x in self.NearestNameServers(3) if x.ip != best_ns.ip][0:2]
 
-    # timeout in ms, scaled to the non-adjusted timeout
-    max_timeout = self.config.timeout * 1000
-    distribution_url = charts.DistributionLineGraph(self.DigestedResults(), scale=max_timeout)
-    best = self.BestOverallNameServer()
-    nearest = [x for x in self.NearestNameServers(3) if x.ip != best.ip][0:2]
-    recommended = [best] + nearest
-
-    nameserver_details = list(sorted_averages)
-    for ns in self.nameservers:
-      if ns.disabled:
-        nameserver_details.append((ns, 0.0, [], 0, 0, 0, 0))
-
-      # TODO(tstromberg): Do this properly without injecting variables into the nameserver object.
-      # Tuples: Note, URL
-      ns.notes = []
-      if ns.system_position == 0:
-        ns.notes.append(('The current preferred DNS server.', None))
-      elif ns.system_position:
-        ns.notes.append(('A backup DNS server for this system.', None))
-      if ns.is_error_prone:
-        ns.notes.append(('%0.0f queries to this host failed' % ns.error_rate, None))
-      if ns.disabled:
-        ns.notes.append((ns.disabled, None))
+    compare_title = 'Undecided'
+    compare_subtitle = 'Not enough servers to compare.'
+    compare_reference = None
+    reference_records = [x for x in ns_summary if x['is_reference']]
+    if reference_records:
+      if len(reference_records[0]['durations']) >= MIN_RELEVANT_COUNT:
+        compare_reference = reference_records[0]
+        compare_title = "%0.1f%%" % [x['diff'] for x in ns_summary if x['ip'] == best_ns.ip][0]
+        compare_subtitle = 'Faster'
       else:
-        for warning in ns.warnings:
-          use_url = None
-          for keyword in FAQ_MAP:
-            if keyword in warning:
-              use_url = FAQ_MAP[keyword]
-          ns.notes.append((warning, use_url))
-
-    builtin_servers = util.InternalNameServers()
-    if builtin_servers:
-      system_primary = builtin_servers[0]
-    else:
-      system_primary = False
-    other_records = [ x for x in nameserver_details if x[0] != best and not x[0].disabled and not x[0].is_error_prone ]
-
-    if other_records:
-      # First try to compare against our primary DNS
-      comparison_record = [x for x in other_records if x[0].system_position == 0]
-      # Then the fastest "primary"
-      if not comparison_record:
-        comparison_record = [x for x in other_records if x[0].is_preferred]
-      # Fall back to the second fastest of any type.
-      if not comparison_record:
-        comparison_record = other_records
-
-      percent = ((comparison_record[0][1] / nameserver_details[0][1])-1) * 100
-      if nameserver_details[0][-1] >= MIN_RELEVANT_COUNT:
-        comparison = {
-          'title': "%0.0f%%" % percent,
-          'subtitle': 'Faster',
-          'ns': comparison_record[0][0]
-        }
-      else:
-        comparison = {
-          'title': 'Undecided',
-          'subtitle': 'Too few tests (try %s)' % MIN_RELEVANT_COUNT,
-          'ns': None
-        }
-    else:
-      comparison = {
-        'title': None,
-        'subtitle': None,
-        'ns': nameserver_details[0][0]
-      }
+        compare_subtitle = 'Too few tests (needs %s)' % (MIN_RELEVANT_COUNT)
 
     # Fragile, makes assumption about the CSV being in the same path as the HTML file
     if csv_path:
@@ -234,17 +197,18 @@ class ReportGenerator(object):
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
-#    self.msg('Rendering template: %s' % template_name)
     rendered = template.render(
-        system_primary=system_primary,
+        best_ns = best_ns,
+        system_primary = util.InternalNameServers()[0],
         timestamp = datetime.datetime.now(),
         lowest_latency=lowest_latency,
-        best=best,
         version=self.config.version,
-        comparison=comparison,
+        compare_subtitle=compare_subtitle,
+        compare_title=compare_title,
+        compare_reference=compare_reference,
         config=filtered_config,
         mean_duration=mean_duration,
-        nameserver_details=nameserver_details,
+        ns_summary=ns_summary,
         mean_duration_url=mean_duration_url,
         min_duration_url=min_duration_url,
         distribution_url=distribution_url,
@@ -260,7 +224,7 @@ class ReportGenerator(object):
 
   def FilteredConfig(self):
     """Generate a watered down config listing for our report."""
-    keys = [x for x in dir(self.config) if not x.startswith('_') and x != 'config' ]
+    keys = [x for x in dir(self.config) if not x.startswith('_') and x != 'config' and x != 'site_url' ]
     config_items = []
     for key in keys:
       value = getattr(self.config, key)
@@ -278,50 +242,109 @@ class ReportGenerator(object):
         durations += [x[2] for x in test_run_results]
       duration_data.append((ns, durations))
     return duration_data
-
-  def _CreateSharingData(self):
-    config = dict(self.FilteredConfig())
-    config['platform'] = (platform.system(), platform.release())
-    config['python'] = platform.python_version_tuple()
-
-    nsdata_list = []
+    
+  def _GenerateNameServerSummary(self):
+    nsdata = {}
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     placed_at = -1
-    
+    fastest = {}
+    fastest_nonglobal = {}
+    reference = {}
+
+    # Fill in basic information for all nameservers, even those without scores.
+    for ns in self.nameservers:
+      nsdata[ns] = {
+        'ip': ns.ip,
+        'name': ns.name,
+        'hostname': ns.hostname,
+        'sys_position': ns.system_position,
+        'diff': 0,
+        'is_error_prone': ns.is_error_prone,
+        'is_global': ns.is_global,
+        'is_regional': ns.is_regional,
+        'is_custom': ns.is_custom,
+        'is_disabled': ns.disabled,
+        'is_reference': False,
+        'check_average': ns.check_average,
+        'overall_average': ns.check_average,
+        'min': ns.fastest_check_duration,
+        'max': ns.slowest_check_duration,
+        'failed': ns.error_count,
+        'nx': 0
+      }
+
+    # Fill the scores in.
     for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in sorted_averages:
       placed_at += 1
       
       durations = []
       for test_run in self.results[ns]:
-        durations.append([x[2] for x in self.results[ns][0]])
+        durations.extend([x[2] for x in self.results[ns][0]])
+        
+      # Append notes with associated URL's
+      notes = []
+      for note in ns.notes:
+        url = None
+        for keyword in FAQ_MAP:
+          if keyword in note:
+            url = FAQ_MAP[keyword]
+        notes.append({'text': note, 'url': url})
 
-      # Get the meat out of the index data.
-      index = []
-      if self.index:
-        for host, req_type, duration, response, unused_x in self.index[ns]:
-          answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
-          index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
-
-      masked_ip, masked_hostname, masked_name = util.MaskPrivateHost(ns.ip, ns.hostname, ns.name)
-      nsdata = {
-        'ip': masked_ip,
-        'name': masked_name,
-        'hostname': masked_hostname,
-        'sys_position': ns.system_position,
-        'is_error_prone': ns.is_error_prone,
-        'is_disabled': ns.disabled,
+      nsdata[ns].update({
         'position': placed_at,
+        'overall_average': util.CalculateListAverage(run_averages),
         'averages': run_averages,
         'min': fastest,
         'max': slowest,
-        'failed': failure_count,
+#        'failed': failure_count,
         'nx': nx_count,
+        'notes': notes,
         'durations': durations,
-        # No need to use the second part of the tuple (URL)
-        'notes': [ x[0] for x in ns.notes ],
-        'index': index
-      }
-      nsdata_list.append(nsdata)
+        'index': self._GenerateIndexSummary(),
+      })
+      # Determine which nameserver to refer to for improvement scoring
+      if not ns.disabled:
+        if ns.system_position == 0:
+          reference = ns
+        elif not fastest_nonglobal and not ns.is_global:
+          fastest_nonglobal = ns
+      
+    # If no reference was found, use the fastest non-global nameserver record.
+    if not reference:
+      if fastest_nonglobal:
+        reference = fastest_nonglobal
+      else:
+        # The second ns. 
+        reference = sorted_averages[1][0]
+
+    # Update the improvement scores for each nameserver.
+    for ns in nsdata:
+      if nsdata[ns]['ip'] != nsdata[reference]['ip']:
+        nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
+      else:
+        nsdata[ns]['is_reference'] = True
+      
+    return sorted(nsdata.values(), key=operator.itemgetter('overall_average'))
+
+  def _GenerateIndexSummary(self):
+    # Get the meat out of the index data.
+    index = []
+    if self.index:
+      for ns in self.index:
+        for host, req_type, duration, response, unused_x in self.index[ns]:
+          answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
+          index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
+    return index
+
+  def _CreateSharingData(self):
+    config = dict(self.FilteredConfig())
+    config['platform'] = (platform.system(), platform.release())
+    config['python'] = platform.python_version_tuple()
+    nsdata_list = _GenerateNameServerSummary()
+    # Purge sensitive information
+    for row in nsdata_list:
+      row['ip'], row['hostname'], row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
+      
       
     return {'config': config, 'nameservers': nsdata_list, 'geodata': self.geodata}
     

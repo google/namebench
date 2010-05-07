@@ -114,12 +114,7 @@ class NameBenchCli(base_ui.BaseUI):
       if not self.supplied_ns:
         print 'If you use --only, you must provide nameservers to use.'
         sys.exit(1)
-      self.preferred = self.supplied_ns
-      self.secondary = []
       self.include_internal = False
-    else:
-      self.preferred = self.supplied_ns + self.global_ns
-      self.secondary = self.regional_ns
 
     try:
       self.LoadDataSources()
