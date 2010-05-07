@@ -253,34 +253,7 @@ class ReportGenerator(object):
 
     # Fill in basic information for all nameservers, even those without scores.
     for ns in self.nameservers:
-      nsdata[ns] = {
-        'ip': ns.ip,
-        'name': ns.name,
-        'hostname': ns.hostname,
-        'sys_position': ns.system_position,
-        'diff': 0,
-        'is_error_prone': ns.is_error_prone,
-        'is_global': ns.is_global,
-        'is_regional': ns.is_regional,
-        'is_custom': ns.is_custom,
-        'is_disabled': ns.disabled,
-        'is_reference': False,
-        'check_average': ns.check_average,
-        'overall_average': ns.check_average,
-        'min': ns.fastest_check_duration,
-        'max': ns.slowest_check_duration,
-        'failed': ns.error_count,
-        'nx': 0
-      }
 
-    # Fill the scores in.
-    for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in sorted_averages:
-      placed_at += 1
-      
-      durations = []
-      for test_run in self.results[ns]:
-        durations.append([x[2] for x in self.results[ns][0]])
-        
       # Append notes with associated URL's
       notes = []
       for note in ns.notes:
@@ -290,6 +263,40 @@ class ReportGenerator(object):
             url = FAQ_MAP[keyword]
         notes.append({'text': note, 'url': url})
 
+      nsdata[ns] = {
+        'ip': ns.ip,
+        'name': ns.name,
+        'hostname': ns.hostname,
+        'sys_position': ns.system_position,
+        'durations': [],
+        'index': [],
+        'diff': 0.0,
+        'is_error_prone': ns.is_error_prone,
+        'is_global': ns.is_global,
+        'is_regional': ns.is_regional,
+        'is_custom': ns.is_custom,
+        'is_disabled': bool(ns.disabled),
+        'is_reference': False,
+        'averages': [],
+        'check_average': ns.check_average,
+        'overall_average': 0.0,
+        'min': 0.0,
+        'max': 0.0,
+        'failed': ns.error_count,
+        'nx': 0,
+        'notes': notes,
+      }
+      
+      
+
+    # Fill the scores in.
+    for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in sorted_averages:
+      placed_at += 1
+      
+      durations = []
+      for test_run in self.results[ns]:
+        durations.append([x[2] for x in self.results[ns][0]])
+
       nsdata[ns].update({
         'position': placed_at,
         'overall_average': util.CalculateListAverage(run_averages),
@@ -298,7 +305,6 @@ class ReportGenerator(object):
         'max': slowest,
 #        'failed': failure_count,
         'nx': nx_count,
-        'notes': notes,
         'durations': durations,
         'index': self._GenerateIndexSummary(),
       })
@@ -320,10 +326,11 @@ class ReportGenerator(object):
     # Update the improvement scores for each nameserver.
     for ns in nsdata:
       if nsdata[ns]['ip'] != nsdata[reference]['ip']:
-        nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
+        if nsdata[ns]['overall_average']:
+          nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
       else:
         nsdata[ns]['is_reference'] = True
-      
+    
     return sorted(nsdata.values(), key=operator.itemgetter('overall_average'))
 
   def _GenerateIndexSummary(self):
