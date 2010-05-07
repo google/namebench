@@ -375,7 +375,7 @@ class DataSources(object):
 
       for filename in glob.glob(path):
         if min_file_size and os.path.getsize(filename) < min_file_size:
-          self.msg('Ignoring %s (only %s bytes)' % (filename, os.path.getsize(filename)))
+          self.msg('Skipping %s (only %sb)' % (filename, os.path.getsize(filename)))
         else:
           found.append(filename)
 
@@ -383,7 +383,7 @@ class DataSources(object):
       newest = sorted(found, key=os.path.getmtime)[-1]
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
       if max_mtime_age_days and age_days > max_mtime_age_days:
-        self.msg('Ignoring %s from %s (%2.0f days old)' % (newest, source, age_days))
+        self.msg('Skipping %s (%2.0fd old)' % (newest, age_days))
       else:
         return newest
     else:
