@@ -54,6 +54,11 @@ if __name__ == '__main__':
       use_tk = False
     elif platform.system() == 'Windows':
       use_tk = True
+      
+  # TODO(tstromberg): Remove
+  if use_tk:
+    print "** Your system supports it, but the namebench UI is broken in this release."
+    use_tk = False
 
   if use_tk:
     try:
