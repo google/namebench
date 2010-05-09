@@ -32,7 +32,7 @@ SANITY_CHECKS_URL='http://namebench.googlecode.com/svn/wiki/HostnameSanityChecks
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many checks to consider when calculating ns check_duration
-SHARED_CACHE_TIMEOUT_MULTIPLIER = 1.25
+SHARED_CACHE_TIMEOUT_MULTIPLIER = 2
 ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
 CENSORSHIP_TIMEOUT_MULTIPLIER = 2
 MAX_STORE_ATTEMPTS = 4
