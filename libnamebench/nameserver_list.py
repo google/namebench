@@ -38,8 +38,8 @@ CACHE_VER = 4
 
 # How many nameservers get through the first ping to the health tests.
 FIRST_CUT_MULTIPLIER = 0.10
-PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 2.25
-SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2.5
+PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
+SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
 
 # If we can't ping more than this, go into slowmode.
 MIN_PINGABLE_PERCENT = 20
