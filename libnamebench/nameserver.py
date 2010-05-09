@@ -55,6 +55,7 @@ else:
 
 
 # How many failures before we disable system nameservers
+MAX_NORMAL_FAILURES = 2
 MAX_SYSTEM_FAILURES = 7
 MAX_PREFERRED_FAILURES = 5
 
@@ -219,7 +220,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     elif self.is_preferred:
       max = MAX_PREFERRED_FAILURES
     else:
-      max = 0
+      max = MAX_NORMAL_FAILURES
 
     self.failed_test_count += 1
 
