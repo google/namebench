@@ -74,6 +74,8 @@ class ReportGenerator(object):
     
     records = []
     for ns in self.results:
+      if ns.disabled:
+        continue
       failure_count = 0
       nx_count = 0
       run_averages = []
@@ -184,11 +186,16 @@ class ReportGenerator(object):
     compare_title = 'Undecided'
     compare_subtitle = 'Not enough servers to compare.'
     compare_reference = None
+    print ns_summary[0]
     for ns_record in ns_summary:
       if ns_record.get('is_reference'):
-        if len(ns_record['durations'][0]) >= MIN_RELEVANT_COUNT:
+        if ns_record == ns_summary[0]:
           compare_reference = ns_record
-          compare_title = "%0.1f%%" % [x.get('diff') for x in ns_summary if x['ip'] == best_ns.ip][0]
+          compare_title = 'N/A'
+          compare_subtitle = ''        
+        elif len(ns_record['durations'][0]) >= MIN_RELEVANT_COUNT:
+          compare_reference = ns_record
+          compare_title = "%0.1f%%" % ns_summary[0]['diff']
           compare_subtitle = 'Faster'
         else:
           compare_subtitle = 'Too few tests (needs %s)' % (MIN_RELEVANT_COUNT)
