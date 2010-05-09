@@ -116,7 +116,6 @@ class ReportGenerator(object):
       fastest_duration = min(durations)
     if slowest_duration == -1:
       slowest_duration = max(durations)
-    print "fastest for %s: %s" % (ns, fastest_duration)
     return (fastest_duration, slowest_duration)
 
   def FastestNameServerResult(self):
@@ -332,8 +331,6 @@ class ReportGenerator(object):
       else:
         nsdata[ns]['is_reference'] = True
         
-      print nsdata[ns]
-    
     return sorted(nsdata.values(), key=operator.itemgetter('position'))
 
   def _GenerateIndexSummary(self):
