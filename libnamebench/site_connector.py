@@ -16,6 +16,7 @@
 
 import os
 import platform
+import random
 import sys
 import time
 import tempfile
@@ -62,7 +63,8 @@ class SiteConnector(object):
       return (False, 'error')
     h = httplib2.Http()
     post_data = {
-        'duplicate_check': self._CalculateDuplicateCheckId(),
+        'client_id': self._CalculateDuplicateCheckId(),
+        'rand_id': random.randint(0,2**32),
         'hidden': bool(hide_results),
         'data': json_data
     }
@@ -80,6 +82,8 @@ class SiteConnector(object):
           time.sleep(5)
           self.UploadJsonResults(json_data, hide_results=hide_results, fail_quickly=True)
         else:
+          print "DATA SENT:"
+          print post_data
           return (False, 'error')
     # See http://code.google.com/p/httplib2/issues/detail?id=62
     except AttributeError:

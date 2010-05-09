@@ -63,8 +63,12 @@ def GetFromMaxmindGeoLite():
   return geo_city.record_by_addr(external_ip)
 
 def GetGeoData():
-  jsapi_data = GetFromGoogleJSAPI()
-  if jsapi_data:
-    return jsapi_data
-  else:
-    return GetFromMaxmindJSAPI()
+  try:
+    jsapi_data = GetFromGoogleJSAPI()
+    if jsapi_data:
+      return jsapi_data
+    else:
+      return GetFromMaxmindJSAPI()
+  except:
+    print "Failed to get Geodata: %s" % util.GetLastExceptionString()
+    return {}

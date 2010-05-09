@@ -38,11 +38,11 @@
   <td nowrap="nowrap">IP</td>
   <td>Descr.</td>
   <td nowrap="nowrap">Hostname</td>
-  <td nowrap="nowrap">Diff</td>
   <td nowrap="nowrap">Avg (ms)</td>
+  <td nowrap="nowrap">Diff</td>
 	<td nowrap="nowrap">Min</td>
 	<td nowrap="nowrap">Max</td>
-  <td nowrap="nowrap">Err</td>
+  <td nowrap="nowrap">TmOut</td>
   <td nowrap="nowrap">NX</td>
   <td>Notes</td>
 </tr>
@@ -53,12 +53,12 @@
   <td>{{ row.ip }}</td>
   <td>{{ row.name }}</td>
   <td>{{ row.hostname }}</td>
-  <td>{{ "%0.1f"|format(row.diff) }}%</td>
-  <td>{{ "%0.2f"|format(row.overall_average) }}</td>
-  <td>{{ "%0.1f"|format(row.min) }}</td>
-  <td>{{ "%0.1f"|format(row.max) }}</td>
-  <td {% if row.failed != 0 %}class="error_count"{% endif %}>{{ row.failed }}</td>
-  <td>{{ row.nx }}</td>
+  <td>{% if row.overall_average %}{{ "%0.2f"|format(row.overall_average) }}{% else %}{{ "%0.2f"|format(row.check_average) }}{% endif %}</td>
+  <td>{% if row.diff %}{{ "%0.1f"|format(row.diff) }}%{% endif %}</td>
+  <td>{% if row.min %}{{ "%0.1f"|format(row.min) }}{% endif %}</td>
+  <td>{% if row.max %}{{ "%0.1f"|format(row.max) }}{% endif %}</td>
+  <td {% if row.timeout_count != 0 %}class="error_count"{% endif %}>{{ row.timeout_count }}</td>
+  <td>{{ row.nx_count }}</td>
   <td>
   {% if row.notes %}
     <ul class="warnings">

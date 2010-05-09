@@ -101,13 +101,22 @@ class ReportGenerator(object):
     fastest_duration = 2**32
     slowest_duration = -1
     
+    durations = []
     for test_run_results in self.results[ns]:
       for (host, req_type, duration, response, error_msg) in test_run_results:
+        durations.append(duration)
         if response and response.answer:
           if duration < fastest_duration:
             fastest_duration = duration
         if duration > slowest_duration:
           slowest_duration = duration
+
+    # If we have no error-free durations, settle for anything.
+    if fastest_duration == 2**32:
+      fastest_duration = min(durations)
+    if slowest_duration == -1:
+      slowest_duration = max(durations)
+    print "fastest for %s: %s" % (ns, fastest_duration)
     return (fastest_duration, slowest_duration)
 
   def FastestNameServerResult(self):
@@ -120,7 +129,7 @@ class ReportGenerator(object):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     hosts = [ x[0] for x in sorted_averages ]
     for host in [ x[0] for x in sorted_averages ]:
-      if not host.is_error_prone:
+      if not host.is_failure_prone:
         return host
     # return something if none of them are good.
     return hosts[0]
@@ -176,14 +185,15 @@ class ReportGenerator(object):
     compare_title = 'Undecided'
     compare_subtitle = 'Not enough servers to compare.'
     compare_reference = None
-    reference_records = [x for x in ns_summary if x['is_reference']]
-    if reference_records:
-      if len(reference_records[0]['durations'][0]) >= MIN_RELEVANT_COUNT:
-        compare_reference = reference_records[0]
-        compare_title = "%0.1f%%" % [x['diff'] for x in ns_summary if x['ip'] == best_ns.ip][0]
-        compare_subtitle = 'Faster'
-      else:
-        compare_subtitle = 'Too few tests (needs %s)' % (MIN_RELEVANT_COUNT)
+    for ns_record in ns_summary:
+      if ns_record.get('is_reference'):
+        if len(ns_record['durations'][0]) >= MIN_RELEVANT_COUNT:
+          compare_reference = ns_record
+          compare_title = "%0.1f%%" % [x['diff'] for x in ns_summary if x['ip'] == best_ns.ip][0]
+          compare_subtitle = 'Faster'
+        else:
+          compare_subtitle = 'Too few tests (needs %s)' % (MIN_RELEVANT_COUNT)
+        break
 
     # Fragile, makes assumption about the CSV being in the same path as the HTML file
     if csv_path:
@@ -268,26 +278,18 @@ class ReportGenerator(object):
         'name': ns.name,
         'hostname': ns.hostname,
         'sys_position': ns.system_position,
-        'durations': [],
-        'index': [],
-        'diff': 0.0,
-        'is_error_prone': ns.is_error_prone,
+        'is_failure_prone': ns.is_failure_prone,
         'is_global': ns.is_global,
         'is_regional': ns.is_regional,
         'is_custom': ns.is_custom,
-        'is_disabled': bool(ns.disabled),
         'is_reference': False,
-        'averages': [],
+        'is_disabled': bool(ns.disabled),
         'check_average': ns.check_average,
-        'overall_average': 0.0,
-        'min': 0.0,
-        'max': 0.0,
-        'failed': ns.error_count,
-        'nx': 0,
+        'error_count': ns.error_count,
+        'timeout_count': ns.timeout_count,
         'notes': notes,
+        'position': 999
       }
-      
-      
 
     # Fill the scores in.
     for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in sorted_averages:
@@ -303,8 +305,7 @@ class ReportGenerator(object):
         'averages': run_averages,
         'min': fastest,
         'max': slowest,
-#        'failed': failure_count,
-        'nx': nx_count,
+        'nx_count': nx_count,
         'durations': durations,
         'index': self._GenerateIndexSummary(),
       })
@@ -326,12 +327,14 @@ class ReportGenerator(object):
     # Update the improvement scores for each nameserver.
     for ns in nsdata:
       if nsdata[ns]['ip'] != nsdata[reference]['ip']:
-        if nsdata[ns]['overall_average']:
+        if 'overall_average' in nsdata[ns]:
           nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
       else:
         nsdata[ns]['is_reference'] = True
+        
+      print nsdata[ns]
     
-    return sorted(nsdata.values(), key=operator.itemgetter('overall_average'))
+    return sorted(nsdata.values(), key=operator.itemgetter('position'))
 
   def _GenerateIndexSummary(self):
     # Get the meat out of the index data.

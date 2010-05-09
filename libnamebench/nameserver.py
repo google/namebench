@@ -58,7 +58,7 @@ else:
 MAX_SYSTEM_FAILURES = 7
 MAX_PREFERRED_FAILURES = 5
 
-ERROR_PRONE_RATE = 10
+FAILURE_PRONE_RATE = 10
 
 def ResponseToAscii(response):
   if not response:
@@ -121,14 +121,6 @@ class NameServer(health_checks.NameServerHealthChecks):
     return sum([x[3] for x in self.checks])
 
   @property
-  def failure(self):
-    failures = [x for x in self.checks if x[1]]
-    if failures:
-      return failures[0]
-    else:
-      return None
-
-  @property
   def warnings_string(self):
     if self.disabled:
       return '(excluded: %s)' % self.disabled
@@ -144,7 +136,17 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   @property
   def errors(self):
-    return ["%s (%s requests)" % (_[0], _[1]) for _ in self.error_map.items()]
+    return ['%s (%s requests)' % (_[0], _[1]) for _ in self.error_map.items() if _[0] != 'Timeout']
+
+  @property
+  def error_count(self):
+    for _ in self.error_map.items():
+      print "'%s': '%s'" % (_[0], _[1])
+    return sum([_[1] for _ in self.error_map.items() if _[0] != 'Timeout'])
+    
+  @property
+  def timeout_count(self):
+    return self.error_map.get('Timeout', 0)
     
   @property
   def notes(self):
@@ -153,8 +155,8 @@ class NameServer(health_checks.NameServerHealthChecks):
       _notes.append('The current preferred DNS server.')
     elif self.system_position:
       _notes.append('A backup DNS server for this system.')
-    if self.is_error_prone:
-      _notes.append('%0.0f queries to this host failed' % self.error_rate)
+    if self.is_failure_prone:
+      _notes.append('%0.0f queries to this host failed' % self.failure_rate)
     if self.disabled:
       _notes.append(self.disabled)
     else:
@@ -177,18 +179,18 @@ class NameServer(health_checks.NameServerHealthChecks):
     return self._cached_hostname
 
   @property
-  def is_error_prone(self):
-    if self.error_rate >= ERROR_PRONE_RATE:
+  def is_failure_prone(self):
+    if self.failure_rate >= FAILURE_PRONE_RATE:
       return True
     else:
       return False
 
   @property
-  def error_rate(self):
-    if not self.error_count or not self.request_count:
+  def failure_rate(self):
+    if not self.failure_count or not self.request_count:
       return 0
     else:
-      return (float(self.error_count) / float(self.request_count)) * 100
+      return (float(self.failure_count) / float(self.request_count)) * 100
 
   def __str__(self):
     return '%s [%s]' % (self.name, self.ip)
@@ -203,7 +205,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.disabled = False
     self.checks = []
     self.request_count = 0
-    self.error_count = 0
+    self.failure_count = 0
     self.error_map = {}
     self.failed_test_count = 0
     self.share_check_count = 0
@@ -300,7 +302,7 @@ class NameServer(health_checks.NameServerHealthChecks):
       response = None
 
     if not response:
-      self.error_count += 1
+      self.failure_count += 1
 
     if not duration:
       duration = self.timer() - start_time

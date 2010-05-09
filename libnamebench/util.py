@@ -197,4 +197,6 @@ def GetLastExceptionString():
     exc_msg = exc_msg.split("'")[1]
 
   exc_msg = exc_msg.replace('dns.exception.', '')
-  return '%s %s' % (exc_msg, error)
+  error = '%s %s' % (exc_msg, error)
+  # We need to remove the trailing space at some point.
+  return error.rstrip()

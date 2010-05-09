@@ -268,7 +268,8 @@ class NameServers(list):
           'router configuration or file a support request with your ISP.'
       )
     if multiplier > 1:
-      self.timeout *= multiplier
+# TODO(tstromberg): Consider retiring this feature for good.
+#      self.timeout *= multiplier
       self.health_timeout *= multiplier
       self.ping_timeout *= multiplier
       self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f ping, %2.1f standard, %2.1f health.'

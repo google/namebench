@@ -83,6 +83,7 @@ class BaseUI(object):
 
   def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""
+    
     self.nameservers = nameserver_list.NameServers(
         self.supplied_ns,
         global_servers=self.global_ns,

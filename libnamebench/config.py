@@ -81,8 +81,8 @@ def DefineAndParseOptions(filename):
                     help='Selection algorithm to use (weighted, random, chunk)')
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
-  parser.add_option('-S', '--no_regional', dest='no_regional',
-                    action='store_true', help='Disable regional_ns servers')
+  parser.add_option('-S', '--system_only', dest='system_only',
+                    action='store_true', help='Only test the currently configured system nameservers.')
   parser.add_option('-w', '--open_webbrowser', dest='open_webbrowser',
                     action='store_true', help='Opens the final report in your browser')
   parser.add_option('-u', '--upload_results', dest='upload_results',
@@ -157,15 +157,12 @@ def ProcessConfigurationFile(options):
     raise ValueError('Could not find usable configuration in %s (%s)' % (full_path, options.config))
   general = dict(config.items('general'))
 
-  if options.only:
+  if options.only or options.system_only:
     global_ns = []
     regional_ns = []
   else:
     global_ns = config.items('global')
     regional_ns = config.items('regional') + config.items('private')
-
-  if options.no_regional:
-    regional_ns = []
 
   for option in general:
     if not hasattr(options, option) or not getattr(options, option):
