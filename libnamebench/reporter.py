@@ -189,7 +189,7 @@ class ReportGenerator(object):
       if ns_record.get('is_reference'):
         if len(ns_record['durations'][0]) >= MIN_RELEVANT_COUNT:
           compare_reference = ns_record
-          compare_title = "%0.1f%%" % [x['diff'] for x in ns_summary if x['ip'] == best_ns.ip][0]
+          compare_title = "%0.1f%%" % [x.get('diff') for x in ns_summary if x['ip'] == best_ns.ip][0]
           compare_subtitle = 'Faster'
         else:
           compare_subtitle = 'Too few tests (needs %s)' % (MIN_RELEVANT_COUNT)
