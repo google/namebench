@@ -16,6 +16,7 @@
 
 import re
 import tempfile
+import urllib
 
 # external dependencies (from third_party)
 try:
@@ -26,45 +27,49 @@ except ImportError:
 import httplib2
 import simplejson
 
-# TODO(tstromberg): Remove if we aren't going to use it.
-#import pygeoip
-
 import util
     
-def GetFromGoogleJSAPI():
-  """Using the Google JSAPI API, get the geodata for the current IP.
+
+def GetFromGoogleLocAPI():
+  """Use the Google Loc JSON API from Google Gears.
   
-  NOTE: This will return the geodata for the proxy server in use!
+  NOTE: This is in violation of the Gears Terms of Service. See:  
+  http://code.google.com/p/gears/wiki/GeolocationAPI
+  
+  This method does however return the most accurate results.
   """
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
-  resp, content = h.request("http://google.com/jsapi", 'GET')  
-  geo_matches = re.search('google.loader.ClientLocation = ({.*?});', content)  
-  if geo_matches:
-    return simplejson.loads(geo_matches.group(1))
-  else:
+  url = 'http://www.google.com/loc/json'
+  post_data = { 'request_address': 'true', 'version': '1.1.0', 'source': 'namebench ' }
+  resp, content = h.request(url, 'POST', simplejson.dumps(post_data))
+  try:
+    data = simplejson.loads(content)['location']
+    return {
+      'region_name': data['address'].get('region'),
+      'country_name': data['address'].get('country'),
+      'city': data['address'].get('city'),
+      'latitude': data['latitude'],
+      'longitude': data['longitude'],
+      'source': 'gloc'
+    }
+  except:
+    print "* Failed to use GoogleLocAPI: %s" % util.GetLastExceptionString()
     return {}
 
 def GetFromMaxmindJSAPI():
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   resp, content = h.request("http://j.maxmind.com/app/geoip.js", 'GET')
-  results = re.findall("geoip_(.*?)\(.*?\'(.*?)\'", content)
+  keep = ['region_name', 'country_name', 'city', 'latitude', 'longitude']
+  results = dict([x for x in re.findall("geoip_(.*?)\(.*?\'(.*?)\'", content) if x[0] in keep])
+  results.update({'source': 'mmind'})
   if results:
-    return dict(results)
+    return results
   else:
     return {}
 
-def GetFromMaxmindGeoLite():
-  """Currently obsoleted (data file was too large to include!)"""
-  data_file = util.FindDataFile('third_party/maxmind/GeoLiteCity.dat')
-  print data_file
-  geo_city = pygeoip.GeoIP(data_file)
-  external_ip = util.GetExternalIPFromGoogle()
-  print external_ip
-  return geo_city.record_by_addr(external_ip)
-
 def GetGeoData():
   try:
-    jsapi_data = GetFromGoogleJSAPI()
+    jsapi_data = GetFromGoogleLocAPI()
     if jsapi_data:
       return jsapi_data
     else:

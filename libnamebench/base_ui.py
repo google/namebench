@@ -148,8 +148,6 @@ class BaseUI(object):
     if not self.geodata:
       self.geodata = geoip.GetGeoData()
       self.country = self.geodata.get('country_name', None)
-      if not self.country and 'address' in self.geodata:
-        self.country = self.geodata['address'].get('country', None)
     return self.geodata
 
   def RunAndOpenReports(self):
