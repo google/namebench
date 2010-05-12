@@ -32,7 +32,7 @@ SANITY_CHECKS_URL='http://namebench.googlecode.com/svn/wiki/HostnameSanityChecks
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 
 # How many checks to consider when calculating ns check_duration
-SHARED_CACHE_TIMEOUT_MULTIPLIER = 2
+SHARED_CACHE_TIMEOUT_MULTIPLIER = 1.25
 ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
 CENSORSHIP_TIMEOUT_MULTIPLIER = 2
 MAX_STORE_ATTEMPTS = 4
@@ -183,7 +183,11 @@ class NameServerHealthChecks(object):
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
       (response, duration, error_msg) = self.TimedRequest('A', ref_hostname, timeout=timeout)
-
+      # Retry once - this *may* cause false positives however, as the TTL may be updated.
+      if not response or not response.answer:
+        sys.stdout.write('x')
+        (response, duration, error_msg) = self.TimedRequest('A', ref_hostname, timeout=timeout)
+        
       if response and response.answer:
         ref_ttl = ref_response.answer[0].ttl
         ttl = response.answer[0].ttl
@@ -194,8 +198,7 @@ class NameServerHealthChecks(object):
         if delta > 0 and delta_age_delta < 2:
           return other_ns
       else:
-        sys.stdout.write('x')
-
+        sys.stdout.write('!')
       checked.append(ref_hostname)
 
     if not checked:

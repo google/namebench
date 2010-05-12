@@ -108,6 +108,11 @@ class Benchmark(object):
 
   def Run(self, test_records=None):
     """Run all test runs for all nameservers."""
+    
+    # We don't want to keep stats on how many queries timed out from previous runs.
+    for ns in self.nameservers.enabled:
+      ns.ResetErrorCounts()
+    
     for test_run in range(self.run_count):
       run_results = self._SingleTestRun(test_records)
       for ns in run_results:

@@ -32,6 +32,8 @@ except ImportError:
 import httplib2
 import simplejson
 
+RETRY_WAIT = 15
+
 class SiteConnector(object):
   
   def __init__(self, config):
@@ -64,7 +66,7 @@ class SiteConnector(object):
     h = httplib2.Http()
     post_data = {
         'client_id': self._CalculateDuplicateCheckId(),
-        'rand_id': random.randint(0,2**32),
+        'submit_id': random.randint(0,2**32),
         'hidden': bool(hide_results),
         'data': json_data
     }
@@ -76,10 +78,11 @@ class SiteConnector(object):
           print "    * %s" % note
         return ("%s%s" % (self.url, data['url']), data['state'])
       except:
-        print "Unable to decode response (trying again)"
-        print "RESPONSE for %s: [%s]:\n  %s" % (url, resp, content)
+        print "ERROR in RESPONSE for %s: [%s]:\n  %s" % (url, resp, content)
         if not fail_quickly:
-          time.sleep(5)
+          print ""
+          print "(sleeping %ss before trying again)" % RETRY_WAIT
+          time.sleep(RETRY_WAIT)
           self.UploadJsonResults(json_data, hide_results=hide_results, fail_quickly=True)
         else:
           print "DATA SENT:"

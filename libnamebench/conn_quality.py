@@ -96,9 +96,9 @@ class ConnectionQuality(object):
     
     durations.append(i_duration)
 
-    try_count = 2
+    try_count = 4
     for i in range(try_count):
-      self.msg('Checking connection quality', count=i+1, total=2)
+      self.msg('Checking connection quality', count=i+1, total=try_count)
       (broken, warning, n_duration) = self.GetNegativeResponseDuration()
       if not broken:
         is_connection_offline = False

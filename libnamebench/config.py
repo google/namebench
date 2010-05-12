@@ -164,6 +164,10 @@ def ProcessConfigurationFile(options):
     global_ns = config.items('global')
     regional_ns = config.items('regional') + config.items('private')
 
+  # -U implies -u
+  if options.site_url:
+    options.upload_results = True
+
   for option in general:
     if not hasattr(options, option) or not getattr(options, option):
       if 'timeout' in option:

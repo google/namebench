@@ -393,13 +393,18 @@ class NameServers(list):
     """If all nameservers have the same warning, remove it. It's likely false."""
     ns_count = len(self.enabled)
     seen_counts = {}
+
+    # No sense in checking for duplicate warnings if we only have one server.
+    if len(self.enabled) == 1:
+      return
+  
     for ns in self.enabled:
       for warning in ns.warnings:
         seen_counts[warning] = seen_counts.get(warning, 0) + 1
 
     for warning in seen_counts:
       if seen_counts[warning] == ns_count:
-        self.msg('* All nameservers have warning: %s (likely a false positive)' % warning)
+        self.msg('All nameservers have warning: %s (likely a false positive)' % warning)
         for ns in self.enabled:
           ns.warnings.remove(warning)
 
@@ -564,12 +569,12 @@ class NameServers(list):
   def PingNameServers(self):
     """Quickly ping nameservers to see which are available."""
     try:
-      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
+      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self.enabled))
     except ThreadFailure:
       self.msg("It looks like you couldn't handle %s threads, trying again with %s (slow)" % (self.thread_count, SLOW_MODE_THREAD_COUNT))
       self.thread_count = SLOW_MODE_THREAD_COUNT
       self.ResetTestResults()
-      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
+      results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self.enabled))
 
     success_rate = (float(len(self.enabled)) / float(len(self))) * 100
     if success_rate < MIN_PINGABLE_PERCENT:
@@ -594,7 +599,7 @@ class NameServers(list):
 
     try:
       results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
-                                         list(self), checks=checks, thread_count=thread_count)
+                                         list(self.enabled), checks=checks, thread_count=thread_count)
     except ThreadFailure:
       self.msg("It looks like you couldn't handle %s threads, trying again with %s (slow)" % (thread_count, SLOW_MODE_THREAD_COUNT))
       self.thread_count = SLOW_MODE_THREAD_COUNT
@@ -611,7 +616,7 @@ class NameServers(list):
       self.thread_count = SLOW_MODE_THREAD_COUNT
       time.sleep(5)
       results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
-                                         list(self), checks=checks, thread_count=thread_count)
+                                         list(self.enabled), checks=checks, thread_count=thread_count)
     if self.enabled:
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
       self.msg('%s of %s tested name servers are healthy' %
@@ -627,5 +632,5 @@ class NameServers(list):
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
-    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries from %s servers' % len(self.enabled), list(self))
+    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries from %s servers' % len(self.enabled), list(self.enabled))
 

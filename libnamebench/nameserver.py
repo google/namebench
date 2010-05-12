@@ -205,13 +205,18 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.shared_with = set()
     self.disabled = False
     self.checks = []
-    self.request_count = 0
-    self.failure_count = 0
-    self.error_map = {}
     self.failed_test_count = 0
     self.share_check_count = 0
     self.cache_checks = []
     self.is_slower_replica = False
+    self.ResetErrorCounts()
+    
+  def ResetErrorCounts(self):
+    """NOTE: This gets called by benchmark.Run()!"""
+    
+    self.request_count = 0
+    self.failure_count = 0
+    self.error_map = {}
 
   def AddFailure(self, message):
     """Add a failure for this nameserver. This will effectively disable it's use."""

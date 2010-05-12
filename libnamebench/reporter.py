@@ -62,6 +62,7 @@ class ReportGenerator(object):
     self.geodata = geodata
     self.status_callback = status_callback
     self.cached_averages = {}
+    self.cached_summary = None
 
   def msg(self, msg, **kwargs):
     if self.status_callback:
@@ -181,12 +182,16 @@ class ReportGenerator(object):
     # Now generate all of the required textual information.
     ns_summary = self._GenerateNameServerSummary()
     best_ns = self.BestOverallNameServer()
-    recommended = [best_ns] + [x for x in self.NearestNameServers(3) if x.ip != best_ns.ip][0:2]
+    recommended = [ns_summary[0]]
+    for row in sorted(ns_summary, key=operator.itemgetter('duration_min')):
+      if row['ip'] != ns_summary[0]['ip']:
+        recommended.append(row)
+      if len(recommended) == 3:
+        break
 
     compare_title = 'Undecided'
     compare_subtitle = 'Not enough servers to compare.'
     compare_reference = None
-    print ns_summary[0]
     for ns_record in ns_summary:
       if ns_record.get('is_reference'):
         if ns_record == ns_summary[0]:
@@ -260,6 +265,9 @@ class ReportGenerator(object):
     return duration_data
     
   def _GenerateNameServerSummary(self):
+    if self.cached_summary:
+      return self.cached_summary
+    
     nsdata = {}
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     placed_at = -1
@@ -268,7 +276,9 @@ class ReportGenerator(object):
     reference = {}
 
     # Fill in basic information for all nameservers, even those without scores.
-    for ns in self.nameservers:
+    fake_position = 1000
+    for ns in sorted(self.nameservers, key=operator.attrgetter('check_average')):
+      fake_position += 1
 
       # Append notes with associated URL's
       notes = []
@@ -285,6 +295,7 @@ class ReportGenerator(object):
         'hostname': ns.hostname,
         'sys_position': ns.system_position,
         'is_failure_prone': ns.is_failure_prone,
+        'duration_min': ns.fastest_check_duration,
         'is_global': ns.is_global,
         'is_regional': ns.is_regional,
         'is_custom': ns.is_custom,
@@ -294,7 +305,7 @@ class ReportGenerator(object):
         'error_count': ns.error_count,
         'timeout_count': ns.timeout_count,
         'notes': notes,
-        'position': 999
+        'position': fake_position
       }
 
     # Fill the scores in.
@@ -309,8 +320,8 @@ class ReportGenerator(object):
         'position': placed_at,
         'overall_average': util.CalculateListAverage(run_averages),
         'averages': run_averages,
-        'min': fastest,
-        'max': slowest,
+        'duration_min': fastest,
+        'duration_max': slowest,
         'nx_count': nx_count,
         'durations': durations,
         'index': self._GenerateIndexSummary(),
@@ -337,8 +348,13 @@ class ReportGenerator(object):
           nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
       else:
         nsdata[ns]['is_reference'] = True
-        
-    return sorted(nsdata.values(), key=operator.itemgetter('position'))
+      
+#      print "--- %s ---" % ns
+#      print nsdata[ns]
+#      print ""
+      
+    self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
+    return self.cached_summary
 
   def _GenerateIndexSummary(self):
     # Get the meat out of the index data.

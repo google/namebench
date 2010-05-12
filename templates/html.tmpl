@@ -60,8 +60,8 @@
   <td>{{ row.hostname }}</td>
   <td>{% if row.overall_average %}{{ "%0.2f"|format(row.overall_average) }}{% else %}{{ "%0.2f"|format(row.check_average) }}{% endif %}</td>
   <td>{% if row.diff %}{{ "%0.1f"|format(row.diff) }}%{% endif %}</td>
-  <td>{% if row.min %}{{ "%0.1f"|format(row.min) }}{% endif %}</td>
-  <td>{% if row.max %}{{ "%0.1f"|format(row.max) }}{% endif %}</td>
+  <td>{% if row.duration_min %}{{ "%0.1f"|format(row.duration_min) }}{% endif %}</td>
+  <td>{% if row.duration_max %}{{ "%0.1f"|format(row.duration_max) }}{% endif %}</td>
   <td {% if row.timeout_count != 0 %}class="error_count"{% endif %}>{{ row.timeout_count }}</td>
   <td>{{ row.nx_count }}</td>
   <td>
