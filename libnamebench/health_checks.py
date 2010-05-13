@@ -146,6 +146,7 @@ class NameServerHealthChecks(object):
 
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
       if len(attempted) == MAX_STORE_ATTEMPTS:
+        self.disabled = True
         self.AddFailure('Could not recursively query: %s' % ', '.join(attempted))
         return False
       domain = random.choice(WILDCARD_DOMAINS)
