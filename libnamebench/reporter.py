@@ -324,7 +324,7 @@ class ReportGenerator(object):
         'duration_max': slowest,
         'nx_count': nx_count,
         'durations': durations,
-        'index': self._GenerateIndexSummary(),
+        'index': self._GenerateIndexSummary(ns),
       })
       # Determine which nameserver to refer to for improvement scoring
       if not ns.disabled:
@@ -349,21 +349,22 @@ class ReportGenerator(object):
       else:
         nsdata[ns]['is_reference'] = True
       
-#      print "--- %s ---" % ns
-#      print nsdata[ns]
-#      print ""
+      print "--- %s ---" % ns
+      print nsdata[ns]
+      if 'index' in nsdata[ns]:
+        print "index length: %s" % len(nsdata[ns]['index'])
+      print ""
       
     self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
     return self.cached_summary
 
-  def _GenerateIndexSummary(self):
+  def _GenerateIndexSummary(self, ns):
     # Get the meat out of the index data.
     index = []
-    if self.index:
-      for ns in self.index:
-        for host, req_type, duration, response, unused_x in self.index[ns]:
-          answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
-          index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
+    if ns in self.index:
+      for host, req_type, duration, response, unused_x in self.index[ns]:
+        answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
+        index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
     return index
 
   def _CreateSharingData(self):
