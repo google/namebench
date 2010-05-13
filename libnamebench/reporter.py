@@ -349,11 +349,11 @@ class ReportGenerator(object):
       else:
         nsdata[ns]['is_reference'] = True
       
-      print "--- %s ---" % ns
-      print nsdata[ns]
-      if 'index' in nsdata[ns]:
-        print "index length: %s" % len(nsdata[ns]['index'])
-      print ""
+#      print "--- %s ---" % ns
+#      print nsdata[ns]
+#      if 'index' in nsdata[ns]:
+#        print "index length: %s" % len(nsdata[ns]['index'])
+#      print ""
       
     self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
     return self.cached_summary
