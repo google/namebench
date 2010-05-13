@@ -178,7 +178,8 @@ class NameServerHealthChecks(object):
       return False
 
     if not other_ns.cache_checks:
-      print "%s has no cache checks" % other_ns
+      print "%s has no cache checks (disabling - how did this happen?)" % other_ns
+      other_ns.disabled = True
       return False
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
