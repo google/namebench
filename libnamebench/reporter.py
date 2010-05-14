@@ -37,6 +37,7 @@ import util
 
 FAQ_MAP = {
   'NXDOMAIN': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"NXDOMAIN_hijacking"_mean?',
+  'cache poisoning': 'http://www.kb.cert.org/vuls/id/800113',
   'Wrong result': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"Incorrect_result_for..."_mean?'
 }
 
