@@ -47,6 +47,7 @@ def GetFromGoogleLocAPI():
     return {
       'region_name': data['address'].get('region'),
       'country_name': data['address'].get('country'),
+      'country_code': data['address'].get('country_code'),
       'city': data['address'].get('city'),
       'latitude': data['latitude'],
       'longitude': data['longitude'],
@@ -59,7 +60,7 @@ def GetFromGoogleLocAPI():
 def GetFromMaxmindJSAPI():
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   resp, content = h.request("http://j.maxmind.com/app/geoip.js", 'GET')
-  keep = ['region_name', 'country_name', 'city', 'latitude', 'longitude']
+  keep = ['region_name', 'country_name', 'city', 'latitude', 'longitude', 'country_code']
   results = dict([x for x in re.findall("geoip_(.*?)\(.*?\'(.*?)\'", content) if x[0] in keep])
   results.update({'source': 'mmind'})
   if results:
