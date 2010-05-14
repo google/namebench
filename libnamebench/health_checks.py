@@ -19,6 +19,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import random
 import sys
+import time
 
 # See if a third_party library exists -- use it if so.
 try:
@@ -37,6 +38,7 @@ ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
 CENSORSHIP_TIMEOUT_MULTIPLIER = 2
 MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
+MAX_PORT_BEHAVIOR_TRIES = 5
 
 class NameServerHealthChecks(object):
   """Health checks for a nameserver."""
@@ -136,8 +138,28 @@ class NameServerHealthChecks(object):
     return self.TestNegativeResponse(prefix='www')
 
   def TestRootServerResponse(self):
-    timeout = self.health_timeout * ROOT_SERVER_TIMEOUT_MULTIPLIER
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
+    
+  def TestPortBehavior(self, tries=0):
+    """This is designed to be called multiple times to retry bad results."""
+    
+    if self.port_behavior:
+      if 'UNKNOWN' not in self.port_behavior:
+        return (False, None, 0)
+
+    tries += 1
+    response = self.TimedRequest('TXT', 'porttest.dns-oarc.net.', timeout=5)[0]
+    if response and response.answer:
+      if len(response.answer) > 1:
+        text = response.answer[1].to_rdataset().to_text()
+        self.port_behavior = text.split('"')[1]
+
+    if (not self.port_behavior or 'UNKNOWN' in self.port_behavior) and tries < MAX_PORT_BEHAVIOR_TRIES:
+      time.sleep(1)
+      return self.TestPortBehavior(tries=tries)
+    
+    print "%s behavior: %s (tries=%s)" % (self, self.port_behavior, tries)
+    return (False, None, 0)
 
   def StoreWildcardCache(self):
     """Store a set of wildcard records."""
@@ -218,21 +240,24 @@ class NameServerHealthChecks(object):
        if warning:
          self.warnings.add(warning)
 
-  def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False):
+  def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):
     """Qualify a nameserver to see if it is any good."""
 
     if fast_check:
       tests = [(self.TestBindVersion, [])]
       sanity_checks = []
     elif final_check:
-      tests = [(self.TestWwwNegativeResponse, [])]
+      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, [])]
+    elif port_check:
+      tests = [(self.TestPortBehavior, [])]
     else:
       tests = [(self.TestNegativeResponse, [])]
 
-    for (check, expected_value) in sanity_checks:
-      (req_type, req_name) = check.split(' ')
-      expected_values = expected_value.split(',')
-      tests.append((self.TestAnswers, [req_type.upper(), req_name, expected_values]))
+    if sanity_checks:
+      for (check, expected_value) in sanity_checks:
+        (req_type, req_name) = check.split(' ')
+        expected_values = expected_value.split(',')
+        tests.append((self.TestAnswers, [req_type.upper(), req_name, expected_values]))
 
     for test in tests:
       (function, args) = test

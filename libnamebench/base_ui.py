@@ -142,6 +142,9 @@ class BaseUI(object):
       else:
         index = []
       self.DiscoverLocation()
+      print '(running port behavior threads)'
+      self.nameservers.RunPortBehaviorThreads()
+
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)
   def DiscoverLocation(self):
@@ -160,6 +163,7 @@ class BaseUI(object):
 
   def CreateReports(self):
     """Create CSV & HTML reports for the latest run."""
+
     if self.options.output_file:
       self.html_path = self.options.output_file
     else:

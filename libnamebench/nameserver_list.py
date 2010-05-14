@@ -121,6 +121,8 @@ class QueryThreads(threading.Thread):
           self.results.put(ns.CheckHealth(sanity_checks=self.checks))
         elif self.action_type == 'final':
           self.results.put(ns.CheckHealth(sanity_checks=self.checks, final_check=True))
+        elif self.action_type == 'port_behavior':
+          self.results.put(ns.CheckHealth(sanity_checks=self.checks, port_check=True))
         elif self.action_type == 'censorship':
           self.results.put(ns.CheckCensorship(self.checks))
         elif self.action_type == 'store_wildcards':
@@ -624,11 +626,15 @@ class NameServers(list):
                
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('final', 'Running final health checks on %s servers' % len(self.enabled), list(self), checks=checks)
+    results = self._LaunchQueryThreads('final', 'Running final health checks on %s servers' % len(self.enabled), list(self.enabled), checks=checks)
 
   def RunCensorshipCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('censorship', 'Running censorship checks on %s servers' % len(self.enabled), list(self), checks=checks)
+    results = self._LaunchQueryThreads('censorship', 'Running censorship checks on %s servers' % len(self.enabled), list(self.enabled), checks=checks)
+
+  def RunPortBehaviorThreads(self):
+    """Get port behavior data."""
+    results = self._LaunchQueryThreads('port_behavior', 'Running port behavior checks on %s servers' % len(self.enabled), list(self.enabled))
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""

@@ -305,6 +305,7 @@ class ReportGenerator(object):
         'error_count': ns.error_count,
         'timeout_count': ns.timeout_count,
         'notes': notes,
+        'port_behavior': ns.port_behavior,
         'position': fake_position
       }
 
@@ -342,18 +343,18 @@ class ReportGenerator(object):
         reference = sorted_averages[1][0]
 
     # Update the improvement scores for each nameserver.
-    for ns in nsdata:
+    for ns in nsdata:      
       if nsdata[ns]['ip'] != nsdata[reference]['ip']:
         if 'overall_average' in nsdata[ns]:
           nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
       else:
         nsdata[ns]['is_reference'] = True
       
-#      print "--- %s ---" % ns
-#      print nsdata[ns]
-#      if 'index' in nsdata[ns]:
-#        print "index length: %s" % len(nsdata[ns]['index'])
-#      print ""
+      print "--- DEBUG: %s ---" % ns
+      print nsdata[ns]
+      if 'index' in nsdata[ns]:
+        print "index length: %s" % len(nsdata[ns]['index'])
+      print ""
       
     self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
     return self.cached_summary

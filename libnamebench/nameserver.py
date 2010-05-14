@@ -88,6 +88,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.health_timeout = 6
     self.ping_timeout = 1
     self.ResetTestStatus()
+    self.port_behavior = None
     self.timer = DEFAULT_TIMER
 
     if ':' in self.ip:
@@ -108,7 +109,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     if self.checks:
       return min([x[3] for x in self.checks])
     else:
-      return None
+      return 0.0
 
   @property
   def slowest_check_duration(self):
