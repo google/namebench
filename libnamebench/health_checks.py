@@ -158,7 +158,7 @@ class NameServerHealthChecks(object):
       time.sleep(1)
       return self.TestPortBehavior(tries=tries)
     
-    print "%s behavior: %s (tries=%s)" % (self, self.port_behavior, tries)
+#    print "%s behavior: %s (tries=%s)" % (self, self.port_behavior, tries)
     return (False, None, 0)
 
   def StoreWildcardCache(self):

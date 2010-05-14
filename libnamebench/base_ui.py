@@ -142,7 +142,7 @@ class BaseUI(object):
       else:
         index = []
       self.DiscoverLocation()
-      print '(running port behavior threads)'
+#      print '(running port behavior threads)'
       self.nameservers.RunPortBehaviorThreads()
 
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
