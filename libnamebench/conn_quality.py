@@ -53,11 +53,14 @@ class ConnectionQuality(object):
     """Check if our packets are actually getting to the correct servers."""
 
     opendns = nameserver.NameServer(OPENDNS_NS)
-    if 'I am not an OpenDNS resolver' in opendns.node_id:
+    (node_id, duration, error_msg) = opendns.RequestNodeName()
+    if 'I am not an OpenDNS resolver' in node_id:
       return (True, duration)
+    elif node_id:
+      return (False, duration)
     else:
       self.msg('DNS interception test failed (no response)')
-      return (False, None)
+      return (False, duration)
 
     return (False, duration)
     
@@ -115,9 +118,6 @@ class ConnectionQuality(object):
                               'namebench is not gettng a response for DNS queries to '
                               '%s, %s, or %s.' % (self.primary.ip, GOOGLE_NS, OPENDNS_NS))
 
-    if None in durations:
-      self.msg('Odd, empty duration found: %s' % durations)
-      durations = [ x for x in durations if x != None ]
     duration = util.CalculateListAverage(durations)
     congestion = duration / EXPECTED_CONGESTION_DURATION
     self.msg('Congestion level is %2.2fX (check duration: %2.2fms)' % (congestion, duration))

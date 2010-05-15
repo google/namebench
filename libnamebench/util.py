@@ -100,6 +100,16 @@ def IsPrivateHostname(hostname):
     return True
   else:
     return False
+    
+def IsLoopbackIP(ip):
+  """Boolean check to see if an IP is private or not.
+  
+  Returns: Number of bits that should be preserved.
+  """
+  if ip.startswith('127.') or ip == '::1':
+    return True
+  else:
+    return False
 
 def IsPrivateIP(ip):
   """Boolean check to see if an IP is private or not.

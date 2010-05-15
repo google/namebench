@@ -361,10 +361,13 @@ class ReportGenerator(object):
     config['platform'] = (platform.system(), platform.release())
     config['python'] = platform.python_version_tuple()
     nsdata_list = self._GenerateNameServerSummary()
-    # Purge sensitive information
+
+    # Purge sensitive information (be aggressive!)
     for row in nsdata_list:
+      if util.IsPrivateIP(row['ip']) or util.IsLoopbackIP(row['ip']) or util.IsPrivateHostname(row['hostname']):
+        row['node_id'] = None
+        row['version'] = None
       row['ip'], row['hostname'], row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
-      
       
     return {'config': config, 'nameservers': nsdata_list, 'geodata': self.geodata}
     
