@@ -53,11 +53,8 @@ class ConnectionQuality(object):
     """Check if our packets are actually getting to the correct servers."""
 
     opendns = nameserver.NameServer(OPENDNS_NS)
-    (response, duration) = opendns.TimedRequest('TXT', 'which.opendns.com.')[0:2]
-    if response and response.answer:
-      for answer in response.answer:
-        if 'I am not an OpenDNS resolver' in answer.to_text():
-          return (True, duration)
+    if 'I am not an OpenDNS resolver' in opendns.node_id:
+      return (True, duration)
     else:
       self.msg('DNS interception test failed (no response)')
       return (False, None)

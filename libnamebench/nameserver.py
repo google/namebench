@@ -17,10 +17,14 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
+import re
 import socket
 import sys
 import time
 import traceback
+
+if __name__ == '__main__':
+  sys.path.append('..')
 
 # See if a third_party library exists -- use it if so.
 try:
@@ -66,7 +70,7 @@ def ResponseToAscii(response):
     return None
   if response.answer:
     answers = [', '.join(map(str, x.items)) for x in response.answer]
-    return ' -> '.join(answers)
+    return ' -> '.join(answers).rstrip('"').lstrip('"')
   else:
     return dns.rcode.to_text(response.rcode())
 
@@ -89,6 +93,9 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.ping_timeout = 1
     self.ResetTestStatus()
     self.port_behavior = None
+    self._version = None
+    self._node_id = None
+    self._hostname = None
     self.timer = DEFAULT_TIMER
 
     if ':' in self.ip:
@@ -158,7 +165,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     if self.is_failure_prone:
       _notes.append('%0.0f queries to this host failed' % self.failure_rate)
     if self.port_behavior and 'POOR' in self.port_behavior:
-      _notes.append('Vulnerable to cache poisoning attacks (poor randomization)')
+      _notes.append('Vulnerable to poisoning attacks (poor port diversity)')
     if self.disabled:
       _notes.append(self.disabled)
     else:
@@ -169,16 +176,24 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   @property
   def hostname(self):
-    if hasattr(self, '_cached_hostname'):
-      return self._cached_hostname
-    
-    try:
-      answer = dns.resolver.query(dns.reversename.from_address(self.ip), 'PTR')
-      if answer:
-        self._cached_hostname = str(answer[0]).rstrip('.')
-    except:
-      self._cached_hostname = ''
-    return self._cached_hostname
+    if self._hostname == None:
+      self._hostname = self.RequestReverseIP(self.ip)      
+    return self._hostname
+
+  @property
+  def version(self):
+    if self._version == None:
+      answer = self.RequestVersion()[0]
+      # Don't bother storing all of the snarky strings we recieve.
+      if re.search('\d', answer):
+        self._version = answer
+    return self._version
+
+  @property
+  def node_id(self):
+    if self._node_id == None:
+      self._node_id = self.RequestNodeName()
+    return self._node_id
 
   @property
   def is_failure_prone(self):
@@ -323,4 +338,58 @@ class NameServer(health_checks.NameServerHealthChecks):
 
     return (response, util.SecondsToMilliseconds(duration), error_msg)
 
+  def RequestVersion(self):
+    (response, duration, error_msg) = self.TimedRequest('TXT', 'version.bind.', rdataclass='CHAOS')
+    if response and response.answer:
+      version = ResponseToAscii(response)
+    else:
+      version = ''
+    return (version, duration, error_msg)
+    
+  def RequestReverseIP(self, ip):
+    try:
+      answer = dns.resolver.query(dns.reversename.from_address(ip), 'PTR')
+    except:
+      answer = None
+    if answer:
+      return answer[0].to_text().rstrip('.')
+    else:
+      return ip
+     
+  def RequestNodeName(self):
+    node = ''
+    rdataclass = None
+    reverse_lookup = False
+    
+    if self.hostname.endswith('ultradns.net') or self.ip.startswith('156.154.7'):
+      query_type, record_name = ('A', 'whoareyou.ultradns.net.')
+      reverse_lookup = True
+    elif self.ip.startswith('8.8'):
+      query_type, record_name = ('TXT', 'o-o.myaddr.google.com.')
+      reverse_lookup = True
+    elif self.hostname.endswith('opendns.com') or self.ip.startswith('208.67.22'):
+      query_type, record_name = ('TXT', 'which.opendns.com.')
+    else:
+      query_type, record_name, rdataclass = ('TXT', 'hostname.bind.', 'CHAOS')
+    
+    (response, duration, error_msg) = self.TimedRequest(query_type, record_name, rdataclass=rdataclass)
+    if not response or not response.answer:
+      query_type, record_name, rdataclass = ('TXT', 'id.server.', 'CHAOS')
+      (response, duration, error_msg) = self.TimedRequest(query_type, record_name, rdataclass=rdataclass)
+  
+    if response and response.answer:
+      node = ResponseToAscii(response)
+      if reverse_lookup:
+        node = self.RequestReverseIP(node)
+      
+    return node
+  
 
+
+if __name__ == '__main__':
+  ns = NameServer(sys.argv[1])
+  print "-" * 64
+  print "IP:      %s" % ns.ip
+  print "Host:    %s" % ns.hostname
+  print "Version: %s" % ns.version
+  print "Node:    %s" % ns.node_id

@@ -68,7 +68,7 @@
   {% if row.notes %}
     <ul class="warnings">
       {% for note in row.notes %}
-      <li>{% if note.url %}<a href="{{ note_url }}">{% endif %}{{ note.text }}{% if note.url %}</a>{% endif %}</li>
+      <li>{% if note.url %}<a href="{{ note.url }}">{% endif %}{{ note.text }}{% if note.url %}</a>{% endif %}</li>
       {% endfor %}
 	</ul>
   {% endif %}

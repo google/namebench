@@ -31,6 +31,7 @@ import dns.reversename
 
 SANITY_CHECKS_URL='http://namebench.googlecode.com/svn/wiki/HostnameSanityChecks.wiki'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
+LIKELY_HIJACKS = ['www.google.com.', 'windowsupdate.microsoft.com.', 'www.paypal.com.']
 
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 1.25
@@ -100,18 +101,19 @@ class NameServerHealthChecks(object):
             unmatched_answers.append(reply)
 
       if unmatched_answers:
-        error_msg = ('Wrong result for %s: %s' %
-                     (record.rstrip('.'), ', '.join(unmatched_answers).rstrip('.')))
+        hijack_text = ', '.join(unmatched_answers).rstrip('.')
+        if record in LIKELY_HIJACKS:
+          error_msg = '%s is hijacked: %s' % (record.rstrip('.'), hijack_text)
+        else:
+          error_msg = '%s appears incorrect: %s' % (record.rstrip('.'), hijack_text)
 
     return (is_broken, error_msg, duration)
 
   def TestBindVersion(self):
     """Test for BIND version. This acts as a pretty decent ping."""
-    (response, duration, error_msg) = self.TimedRequest('TXT', 'version.bind.',
-                                                  timeout=self.ping_timeout,
-                                                  rdataclass='CHAOS')
+    (response, duration, error_msg) = self.RequestVersion()
     return (error_msg, False, duration)
-
+    
   def TestNegativeResponse(self, prefix=None):
     """Test for NXDOMAIN hijaaking."""
     is_broken = False
@@ -160,6 +162,16 @@ class NameServerHealthChecks(object):
     
 #    print "%s behavior: %s (tries=%s)" % (self, self.port_behavior, tries)
     return (False, None, 0)
+    
+  def StoreAnycastID(self):
+    if not self.is_global:
+      return (False, None, 0)
+
+      (response, duration, error_msg) = self.TimedRequest('TXT', 'version.bind.',
+                                                    timeout=self.ping_timeout,
+                                                    rdataclass='CHAOS')
+      return (error_msg, False, duration)
+      
 
   def StoreWildcardCache(self):
     """Store a set of wildcard records."""

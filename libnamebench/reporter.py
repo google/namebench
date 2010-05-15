@@ -33,13 +33,7 @@ import charts
 import nameserver
 import selectors
 import util
-
-
-FAQ_MAP = {
-  'NXDOMAIN': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"NXDOMAIN_hijacking"_mean?',
-  'cache poisoning': 'http://www.kb.cert.org/vuls/id/800113',
-  'Wrong result': 'http://code.google.com/p/namebench/wiki/FAQ#What_does_"Incorrect_result_for..."_mean?'
-}
+import url_map
 
 # Only bother showing a percentage if we have this many tests.
 MIN_RELEVANT_COUNT = 50
@@ -281,19 +275,12 @@ class ReportGenerator(object):
     for ns in sorted(self.nameservers, key=operator.attrgetter('check_average')):
       fake_position += 1
 
-      # Append notes with associated URL's
-      notes = []
-      for note in ns.notes:
-        url = None
-        for keyword in FAQ_MAP:
-          if keyword in note:
-            url = FAQ_MAP[keyword]
-        notes.append({'text': note, 'url': url})
-
       nsdata[ns] = {
         'ip': ns.ip,
         'name': ns.name,
         'hostname': ns.hostname,
+        'version': ns.version,
+        'node_id': ns.node_id,
         'sys_position': ns.system_position,
         'is_failure_prone': ns.is_failure_prone,
         'duration_min': ns.fastest_check_duration,
@@ -305,7 +292,7 @@ class ReportGenerator(object):
         'check_average': ns.check_average,
         'error_count': ns.error_count,
         'timeout_count': ns.timeout_count,
-        'notes': notes,
+        'notes':  url_map.CreateNoteUrlTuples(ns.notes),
         'port_behavior': ns.port_behavior,
         'position': fake_position
       }
