@@ -32,12 +32,18 @@ import util
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 
-def GenerateOutputFilename(extension):
+def GenerateOutputFilename(template):
+  # used for resolv.conf
+  if '.' in template:
+    filename = template
+  else:
+    output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
+                                                              '%Y-%m-%d %H%M')
+    output_base = output_base.replace(':', '').replace(' ', '_')
+    filename = '.'.join((output_base, template))
+  
   output_dir = tempfile.gettempdir()
-  output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
-                                                            '%Y-%m-%d %H%M')
-  output_base = output_base.replace(':', '').replace(' ', '_')
-  return os.path.join(output_dir, '%s.%s' % (output_base, extension))
+  return os.path.join(output_dir, filename)
 
 class BaseUI(object):
   """Common methods for all UI implementations."""
@@ -49,7 +55,7 @@ class BaseUI(object):
     self.reporter = None
     self.nameservers = None
     self.bmark = None
-    self.html_path = None
+    self.report_path = None
     self.csv_path = None
     self.geodata = None
     self.country = None
@@ -155,11 +161,12 @@ class BaseUI(object):
     return self.geodata
 
   def RunAndOpenReports(self):
-    """Run the benchmark and open up the HTML report on completion."""
+    """Run the benchmark and open up the report on completion."""
     self.RunBenchmark()
     best = self.reporter.BestOverallNameServer()
     self.CreateReports()
-    self.DisplayHtmlReport()
+    if self.options.template == 'html':
+      self.DisplayHtmlReport()
     if self.url:
       self.UpdateStatus('Complete! Your results: %s' % self.url)
     else:
@@ -169,9 +176,9 @@ class BaseUI(object):
     """Create CSV & HTML reports for the latest run."""
 
     if self.options.output_file:
-      self.html_path = self.options.output_file
+      self.report_path = self.options.output_file
     else:
-      self.html_path = GenerateOutputFilename('html')
+      self.report_path = GenerateOutputFilename(self.options.template)
 
     if self.options.csv_file:
       self.csv_path = self.options_csv_file
@@ -186,9 +193,9 @@ class BaseUI(object):
       if self.url:
         self.UpdateStatus("Your sharing URL: %s (%s)" % (self.url, self.share_state))
 
-    self.UpdateStatus('Saving HTML report to %s' % self.html_path)
-    f = open(self.html_path, 'w')
-    self.reporter.CreateReport(format='html', output_fp=f,
+    self.UpdateStatus('Saving report to %s' % self.report_path)
+    f = open(self.report_path, 'w')
+    self.reporter.CreateReport(format=self.options.template, output_fp=f,
                                csv_path=self.csv_path, sharing_url=self.url, sharing_state=self.share_state)
     f.close()
 
@@ -196,7 +203,7 @@ class BaseUI(object):
     self.reporter.SaveResultsToCsv(self.csv_path)
 
   def DisplayHtmlReport(self):
-    self.UpdateStatus('Opening %s' % self.html_path)
+    self.UpdateStatus('Opening %s' % self.report_path)
     better_webbrowser.output = self.DebugMsg
-    better_webbrowser.open(self.html_path)
+    better_webbrowser.open(self.report_path)
 

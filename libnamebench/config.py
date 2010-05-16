@@ -55,9 +55,11 @@ def DefineAndParseOptions(filename):
   parser.add_option('-z', '--config', dest='config', default=filename,
                     help='Config file to use.')
   parser.add_option('-o', '--output', dest='output_file', default=None,
-                    help='Filename to write HTML output to')
+                    help='Filename to write output to')
+  parser.add_option('-t', '--template', dest='template', default='html',
+                    help='Template to use for output generation (ascii, html, resolv.conf)')
   parser.add_option('-c', '--csv_output', dest='csv_file', default=None,
-                    help='Filename to write CSV output to')
+                    help='Filename to write query details to (CSV)')
   parser.add_option('-j', '--health_threads', dest='health_thread_count', type='int',
                     help='# of health check threads to use')
   parser.add_option('-J', '--benchmark_threads', dest='benchmark_thread_count', type='int',
