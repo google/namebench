@@ -138,7 +138,7 @@ def MinimumDurationBarGraph(fastest_data, scale=None):
   return chart.display.Url(720, _BarGraphHeight(len(chart.left.labels)))
 
 
-def _MakeCumulativeDistribution(run_data, x_chunk=0.75, percent_chunk=3):
+def _MakeCumulativeDistribution(run_data, x_chunk=1.5, percent_chunk=3.5):
   """Given run data, generate a cumulative distribution (X in Xms).
 
   Args:

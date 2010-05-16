@@ -40,6 +40,10 @@ class BenchmarkThreads(threading.Thread):
     while not self.input.empty():
       try:
         (ns, request_type, hostname) = self.input.get_nowait()
+        # We've moved this here so that it's after all of the random selection goes through.
+        if '__RANDOM__' in hostname:
+          hostname = hostname.replace('__RANDOM__', str(random.random() * random.randint(0,99999)))
+
         (response, duration, error_msg) = ns.TimedRequest(request_type, hostname)
         self.results.put((ns, request_type, hostname, response, duration, error_msg))
       except Queue.Empty:

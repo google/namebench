@@ -80,6 +80,7 @@ class DataSources(object):
           'search_paths': set(),
           # Store whether or not this data source contains personal data
           'full_hostnames': True,
+          'include_duplicates': False,
           'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
         }
 
@@ -90,6 +91,8 @@ class DataSources(object):
           self.source_config[section]['full_hostnames'] = False
         elif key == 'max_mtime_days':
           self.source_config[section]['max_mtime_days'] = int(value)
+        elif key == 'include_duplicates':
+          self.source_config[section]['include_duplicates'] = bool(value)
         else:
           self.source_config[section]['search_paths'].add(value)
 
@@ -142,7 +145,7 @@ class DataSources(object):
   def GetCachedRecordCountForSource(self, source):
     return len(self.source_cache[source])
 
-  def _CreateRecordsFromHostEntries(self, entries):
+  def _CreateRecordsFromHostEntries(self, entries, include_duplicates=False):
     """Create records from hosts, removing duplicate entries and IP's
 
     Args:
@@ -158,7 +161,7 @@ class DataSources(object):
     records = []
     full_host_count = 0
     for entry in entries:
-      if entry == last_entry:
+      if entry == last_entry and not include_duplicates:
         continue
       else:
         last_entry = entry
@@ -177,12 +180,12 @@ class DataSources(object):
 
         if FQDN_RE.match(host):
           full_host_count += 1
-#      else:
-#        print "REJECT: %s" % host
+      
+    if not len(records):
+      raise ValueError("No records could be created from: %s" % entries)
 
     # Now that we've read everything, are we dealing with domains or full hostnames?
     full_host_percent = full_host_count / float(len(records)) * 100
-#    self.msg('%0.1f%% of input records are using fully qualified hostnames.' % full_host_percent)
     if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
       full_host_names = True
     else:
@@ -203,12 +206,21 @@ class DataSources(object):
     # Convert entries into tuples, determine if we are using full hostnames
     full_host_count = 0
     www_host_count = 0
+    include_duplicates = self.source_config[source]['include_duplicates']
     records = self._GetHostsFromSource(source)
-    self.msg('Generating tests from %s (%s records, selecting %s %s)' % (self.GetNameForSource(source), len(records), count, select_mode))
-    (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records)
+    self.msg('Generating tests from %s (%s records, selecting %s %s)'
+             % (self.GetNameForSource(source), len(records), count, select_mode))
+    (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records,
+                                                                     include_duplicates=include_duplicates)
     # First try to resolve whether to use weighted or random.
     if select_mode in ('weighted', 'automatic', None):
-      if len(records) != len(set(records)):
+      # If we are in include_duplicates mode (cachemiss, cachehit, etc.), we have different rules.
+      if include_duplicates:
+        if count > len(records) :
+          records = selectors.RandomSelect(records, count, include_duplicates=include_duplicates)
+        else:
+          records = selectors.ChunkSelect(records, count)
+      elif len(records) != len(set(records)):
         if select_mode == 'weighted':
           self.msg('%s data contains duplicates, switching select_mode to random' % source)
         select_mode = 'random'
@@ -216,7 +228,6 @@ class DataSources(object):
         select_mode = 'weighted'
 
     self.msg('Selecting %s out of %s sanitized records (%s mode).' % (count, len(records), select_mode))
-    # Now make the real selection.
     if select_mode == 'weighted':
       records = selectors.WeightedDistribution(records, count)
     elif select_mode == 'chunk':
@@ -311,8 +322,8 @@ class DataSources(object):
   def _ReadDataFile(self, path):
     """Read a line-based datafile."""
     records = []
-    domains_re = re.compile('^\w[\w\.]+[a-zA-Z]$')
-    requests_re = re.compile('^[A-Z]{1,4} \w[\w\.]+\.$')
+    domains_re = re.compile('^\w[\w\.-]+[a-zA-Z]$')
+    requests_re = re.compile('^[A-Z]{1,4} \w[\w\.-]+\.$')
     for line in open(path).readlines():
       if domains_re.match(line) or requests_re.match(line):
         records.append(line.rstrip())

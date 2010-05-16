@@ -86,11 +86,15 @@ def ChunkSelect(elements, count):
   start = random.randint(0, len(elements) - count)
   return elements[start:start + count]
 
-def RandomSelect(elements, count):
+def RandomSelect(elements, count, include_duplicates=False):
+  
+  print "%s: %s" % (count, include_duplicates)
   picks = []
   picked = {}
-
-  max_repeat = MaxRepeatCount(elements, count)
+  if include_duplicates:
+    max_repeat = 2**32
+  else:
+    max_repeat = MaxRepeatCount(elements, count)
   attempts = 0
   while len(picks) < count:
     attempts += 1

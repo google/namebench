@@ -126,7 +126,7 @@ class NameServerHealthChecks(object):
       warning_suffix = ''
     poison_test = '%s.nb%s.google.com.' % (hostname, random.random())
     (response, duration, error_msg) = self.TimedRequest('A', poison_test,
-                                                  timeout=self.health_timeout)
+                                                  timeout=self.health_timeout*2)
     if not response:
       if not error_msg:
         error_msg = "No response"

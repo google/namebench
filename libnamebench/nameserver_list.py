@@ -419,8 +419,8 @@ class NameServers(list):
         provider = ns.name.replace('-2', '')
         if provider in seen and not ns.is_system:
           faster_ns = seen[provider]
-          self.msg('Demoting %s to alternate anycast. %s is faster by %2.2fms' %
-                   (ns.name_and_node, faster_ns.name_and_node, ns.check_average - faster_ns.check_average))
+          self.msg('Making %s the primary anycast - faster than %s by %2.2fms' %
+                   (faster_ns.name_and_node, ns.name_and_node, ns.check_average - faster_ns.check_average))
           ns.is_preferred = False
 #          ns.warnings.add('Alternate anycast address for %s' % provider)
         else:
