@@ -156,8 +156,8 @@ class ReportGenerator(object):
       chart.append((ns.name, textbar, overall_mean))
     return chart
 
-  def CreateReport(self, format='ascii', output_fp=None, csv_path=None):
-    
+  def CreateReport(self, format='ascii', output_fp=None, csv_path=None,
+                   sharing_url=None, sharing_state=None):
     # First generate all of the charts necessary.
     if format == 'ascii':
       lowest_latency = self._LowestLatencyAsciiChart()
@@ -222,6 +222,8 @@ class ReportGenerator(object):
         compare_subtitle=compare_subtitle,
         compare_title=compare_title,
         compare_reference=compare_reference,
+        sharing_url=sharing_url,
+        sharing_state=sharing_state,
         config=filtered_config,
         mean_duration=mean_duration,
         ns_summary=ns_summary,

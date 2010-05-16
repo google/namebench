@@ -97,6 +97,8 @@ class controller(NSWindowController, base_ui.BaseUI):
     else:
       state = message
 
+    state = state.replace('%', '%%')
+    print state
     NSLog(state)
     self.status.setStringValue_(state)
 
@@ -121,6 +123,11 @@ class controller(NSWindowController, base_ui.BaseUI):
 
     if int(self.include_censorship_checks.stringValue()):
       self.options.enable_censorship_checks = True
+
+    print self.health_performance.titleOfSelectedItem()
+    if 'Slow' in self.health_performance.titleOfSelectedItem():
+      self.options.health_thread_count = 10
+
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.preferred.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
@@ -181,7 +188,8 @@ class controller(NSWindowController, base_ui.BaseUI):
       self.location.addItemWithTitle_("(automatic)")
 
     self.health_performance.removeAllItems()
-    self.health_performance.addItemWithTitle_("(automatic)")
+    self.health_performance.addItemWithTitle_("Fast")
+    self.health_performance.addItemWithTitle_("Slow (for problematic routers)")
 
     self.data_source.removeAllItems()
     for source in self.data_src.ListSourceTitles():

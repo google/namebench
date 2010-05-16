@@ -54,6 +54,8 @@ class BaseUI(object):
     self.geodata = None
     self.country = None
     self.sources = {}
+    self.url = None
+    self.share_state = None
     self.test_records = []
 
   def UpdateStatus(self, msg, **kwargs):
@@ -142,7 +144,6 @@ class BaseUI(object):
       else:
         index = []
       self.DiscoverLocation()
-#      print '(running port behavior threads)'
       self.nameservers.RunPortBehaviorThreads()
 
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
@@ -159,7 +160,10 @@ class BaseUI(object):
     best = self.reporter.BestOverallNameServer()
     self.CreateReports()
     self.DisplayHtmlReport()
-    self.UpdateStatus('Complete! %s [%s] is the best.' % (best.name, best.ip))
+    if self.url:
+      self.UpdateStatus('Complete! Your results: %s' % self.url)
+    else:
+      self.UpdateStatus('Complete! %s [%s] is the best.' % (best.name, best.ip))
 
   def CreateReports(self):
     """Create CSV & HTML reports for the latest run."""
@@ -178,14 +182,14 @@ class BaseUI(object):
       self.UpdateStatus('Uploading results to %s' % self.options.site_url)
       json_data = self.reporter.CreateJsonData()
       connector = site_connector.SiteConnector(self.options)
-      url, state = connector.UploadJsonResults(json_data, hide_results=self.options.hide_results)
-      if url:
-        self.UpdateStatus("Your sharing URL: %s (%s)" % (url, state))
+      self.url, self.share_state = connector.UploadJsonResults(json_data, hide_results=self.options.hide_results)
+      if self.url:
+        self.UpdateStatus("Your sharing URL: %s (%s)" % (self.url, self.share_state))
 
     self.UpdateStatus('Saving HTML report to %s' % self.html_path)
     f = open(self.html_path, 'w')
     self.reporter.CreateReport(format='html', output_fp=f,
-                               csv_path=self.csv_path)
+                               csv_path=self.csv_path, sharing_url=self.url, sharing_state=self.share_state)
     f.close()
 
     self.UpdateStatus('Saving detailed results to %s' % self.csv_path)

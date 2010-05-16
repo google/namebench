@@ -9,7 +9,10 @@
 <body>
 
 <div id="container">
+{% if sharing_url %}<div id="notice">Thanks for uploading your results! Your URL: <a href="{{ sharing_url }}">{{ sharing_url }}</a> ({{ sharing_state }})</div>{% endif %}
 <div class="version">namebench {{ version }}</div>
+
+
 <div id="big_summary" class="greybox">
 	<h4><strong>{% if best_ns.ip == system_primary %}Your current primary DNS server{% else %}{{ best_ns.name }}{% endif %}</strong> is</h4>
 {% if compare_reference.ip != best_ns.ip %}
@@ -55,9 +58,10 @@
 {# (ns, overall_average, run_averages, fastest, slowest, failure_count, nx_count) #}
 {% for row in ns_summary %}
 <tr class="{% if row.is_disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.sys_position == 0 %} primary_row{% endif %}{% if row.is_error_prone %} unhealthy_host{% endif %}">
-  <td>{{ row.ip }}</td>
+
+  <td><a href="http://www.google.com/search?q={{ row.ip}}" class="info">{{ row.ip }}{% if row.version %}<span>{{ row.version }}</span>{% endif %}</td>
   <td>{{ row.name }}</td>
-  <td>{{ row.hostname }}</td>
+  <td><a href="http://www.google.com/search?q={{ row.hostname}}" class="info">{{ row.hostname }}{% if row.node_id %}<span>{{ row.node_id }}</span>{% endif %}</a></td>
   <td>{% if row.overall_average %}{{ "%0.2f"|format(row.overall_average) }}{% else %}{{ "%0.2f"|format(row.check_average) }}{% endif %}</td>
   <td>{% if row.diff %}{{ "%0.1f"|format(row.diff) }}%{% endif %}</td>
   <td>{% if row.duration_min %}{{ "%0.1f"|format(row.duration_min) }}{% endif %}</td>
