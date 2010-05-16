@@ -37,7 +37,8 @@ BASE_COLORS = ('ff9900', '1a00ff', 'ff00e6', '80ff00', '00e6ff', 'fae30a',
                'BE81F7', '9f5734', '000000', 'ff0000', '3090c0', '477248f',
                'ababab', '7b9f34', '00ff00', '0000ff', '9900ff', '405090',
                '051290', 'f3e000', '9030f0', 'f03060', 'e0a030', '4598cd')
-
+CHART_WIDTH = 720
+CHART_HEIGHT = 415
 
 def DarkenHexColorCode(color, shade=1):
   """Given a color in hex format (for HTML), darken it X shades."""
@@ -67,7 +68,12 @@ def _GoodTicks(max_value, tick_size=2.5, num_ticks=10.0):
 
 
 def _BarGraphHeight(bar_count):
-  return 52 + (bar_count*13)
+  # TODO(tstromberg): Fix hardcoding.
+  proposed_height = 52 + (bar_count*13)
+  if proposed_height > CHART_HEIGHT:
+    return CHART_HEIGHT
+  else:
+    return proposed_height
 
 
 def PerRunDurationBarGraph(run_data, scale=None):
@@ -111,7 +117,7 @@ def PerRunDurationBarGraph(run_data, scale=None):
   bottom_axis.label_positions = [int((max_run_avg/2.0)*.9)]
   chart.bottom.labels = labels
   chart.bottom.max = labels[-1]
-  return chart.display.Url(720, _BarGraphHeight(bar_count))
+  return chart.display.Url(CHART_WIDTH, _BarGraphHeight(bar_count))
 
 def MinimumDurationBarGraph(fastest_data, scale=None):
   """Output a Google Chart API URL showing minimum-run durations."""
@@ -135,7 +141,7 @@ def MinimumDurationBarGraph(fastest_data, scale=None):
   bottom_axis.labels = ['Duration in ms.']
   bottom_axis.label_positions = [int((scale/2.0)*.9)]
   chart.bottom.labels = labels
-  return chart.display.Url(720, _BarGraphHeight(len(chart.left.labels)))
+  return chart.display.Url(CHART_WIDTH, _BarGraphHeight(len(chart.left.labels)))
 
 
 def _MakeCumulativeDistribution(run_data, x_chunk=1.5, percent_chunk=3.5):
@@ -242,11 +248,11 @@ def DistributionLineGraph(run_data, scale=None):
     datasets.append(','.join(map(str, y)))
 
   # TODO(tstromberg): See if we can get the % sign in the labels!
-  uri = (('%(uri)s?cht=lxy&chs=720x410&chxt=x,y&chg=10,20'
+  uri = (('%(uri)s?cht=lxy&chs=%(x)sx%(y)s&chxt=x,y&chg=10,20'
           '&chxr=0,0,%(max)s|1,0,100&chd=t:%(datasets)s&chco=%(colors)s'
           '&chxt=x,y,x,y&chxl=2:||Duration+in+ms||3:||%%25|'
           '&chdl=%(labels)s') %
          {'uri': CHART_URI, 'datasets': '|'.join(map(str, datasets)),
-          'max': int(round(max_value)),
+          'max': int(round(max_value)), 'x': CHART_WIDTH, 'y': CHART_HEIGHT,
           'colors': ','.join(colors), 'labels': '|'.join(labels)})
   return uri
