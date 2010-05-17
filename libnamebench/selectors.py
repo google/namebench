@@ -87,8 +87,6 @@ def ChunkSelect(elements, count):
   return elements[start:start + count]
 
 def RandomSelect(elements, count, include_duplicates=False):
-  
-  print "%s: %s" % (count, include_duplicates)
   picks = []
   picked = {}
   if include_duplicates:
