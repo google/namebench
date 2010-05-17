@@ -70,6 +70,7 @@ class ConnectionQuality(object):
     internal = util.InternalNameServers()
     # In rare cases, we may not find any to use.
     if not internal:
+      print "Odd - no built-in nameservers found."
       return None
     else:
       primary_ip = internal[0]
@@ -77,7 +78,8 @@ class ConnectionQuality(object):
     
   def GetNegativeResponseDuration(self):
     """Use the built-in DNS server to query for a negative response."""
-    return self.primary.TestNegativeResponse()
+    if self.primary:
+      return self.primary.TestNegativeResponse()
 
   def GetGoogleResponseDuration(self):
     """See how quickly we can query for www.google.com using a remote nameserver."""
@@ -99,12 +101,14 @@ class ConnectionQuality(object):
     try_count = 4
     for i in range(try_count):
       self.msg('Checking connection quality', count=i+1, total=try_count)
-      (broken, warning, n_duration) = self.GetNegativeResponseDuration()
-      if not broken:
-        is_connection_offline = False
+      if self.primary:
+        (broken, warning, n_duration) = self.GetNegativeResponseDuration()
+        if not broken:
+          is_connection_offline = False
+        durations.append(n_duration)
 
       (response, g_duration, error_msg) = self.GetGoogleResponseDuration()
-      durations.extend([n_duration, g_duration])
+      durations.append(g_duration)
       if not error_msg:
         is_connection_offline = False
 
