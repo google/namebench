@@ -1173,7 +1173,7 @@
 													<object class="NSButtonCell" key="NSCell" id="652011469">
 														<int key="NSCellFlags">67239424</int>
 														<int key="NSCellFlags2">0</int>
-														<string key="NSContents">Make anonymized results publically available (to help speed up the internet)</string>
+														<string key="NSContents">Make anonymized results publically available (help speed up the internet!)</string>
 														<reference key="NSSupport" ref="105947925"/>
 														<reference key="NSControlView" ref="480043036"/>
 														<int key="NSButtonFlags">1211912703</int>
@@ -3107,7 +3107,7 @@
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<reference ref="9"/>
 					<string>{{525, 802}, {197, 73}}</string>
-					<string>{{1400, 356}, {447, 20}}</string>
+					<string>{{925, 49}, {447, 20}}</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<reference ref="9"/>
 					<string>{74, 862}</string>
