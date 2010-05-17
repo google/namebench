@@ -154,6 +154,7 @@ def MaskPrivateHost(ip, hostname, name):
   return (ip, hostname, name)
     
 def FindDataFile(filename):
+  filename = os.path.expanduser(filename)
   if os.path.exists(filename):
     return filename
 
