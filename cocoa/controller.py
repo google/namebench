@@ -189,9 +189,8 @@ class controller(NSWindowController, base_ui.BaseUI):
 
     self.health_performance.removeAllItems()
     self.health_performance.addItemWithTitle_("Fast")
-    self.health_performance.addItemWithTitle_("Slow (for problematic routers)")
+    self.health_performance.addItemWithTitle_("Slow (for unstable routers)")
 
     self.data_source.removeAllItems()
-    for source in self.data_src.ListSourceTitles():
-      self.data_source.addItemWithTitle_(source)
+    self.data_source.addItemsWithTitles_(self.data_src.ListSourceTitles())
 
