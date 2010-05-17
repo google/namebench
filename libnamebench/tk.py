@@ -59,11 +59,13 @@ def AddMsg(message, master=None, backup_notifier=None, **kwargs):
         global_last_message = new_message
       # Tk thread-safety workaround #1
       except TclError:
+        print "First TCL Error:"
+        traceback.print_exc()          
         try:
           backup_notifier(-1)
           THREAD_UNSAFE_TK = 1
         except:
-          print "TCL error encountered, not pushing update to UI:"
+          print "Backup notifier failure:"
           traceback.print_exc()
 
 class Message(object):
@@ -83,16 +85,17 @@ class Message(object):
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
 
-  def __init__(self, preferred, secondary, options, data_source=None, master=None,
+  def __init__(self, supplied_ns, global_ns, regional_ns, options, data_source=None, master=None,
                backup_notifier=None):
     threading.Thread.__init__(self)
     self.status_callback = self.msg
     self.data_src = data_source
     self.backup_notifier = backup_notifier
     self.include_internal = False
-    self.preferred = preferred
+    self.supplied_ns = supplied_ns
+    self.global_ns = global_ns
+    self.regional_ns = regional_ns
     self.master = master
-    self.secondary = secondary
     self.options = options
     self.resource_dir = os.path.dirname(os.path.dirname(__file__))
 
@@ -149,6 +152,8 @@ class MainWindow(Frame, base_ui.BaseUI):
     Frame.__init__(self)
     self.master = master
     self.options = options
+
+    self.SetupDataStructures()
     self.supplied_ns = supplied_ns
     self.global_ns = global_ns
     self.regional_ns = regional_ns
@@ -185,12 +190,13 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.nameserver_form = StringVar()
     self.status = StringVar()
     self.query_count = IntVar()
-    self.run_count = IntVar()
     self.data_source = StringVar()
-    self.selection_mode = StringVar()
+    self.health_performance = StringVar()
+    self.location = StringVar()
     self.use_global = IntVar()
     self.use_regional = IntVar()
     self.use_censor_checks = IntVar()
+    self.share_results = IntVar()
 
     self.master.title("namebench")
     outer_frame = Frame(self.master)
@@ -222,49 +228,58 @@ class MainWindow(Frame, base_ui.BaseUI):
     censorship_button = Checkbutton(inner_frame, text="Include censorship checks", variable=self.use_censor_checks)
     censorship_button.grid(row=4, columnspan=2, sticky=W)
 
+    share_button = Checkbutton(inner_frame, text="Make anonymized results publically available (help speed up the internet!)",
+                               variable=self.share_results)
+    share_button.grid(row=5, columnspan=2, sticky=W)
+
+
     if sys.platform[:3] == 'win':
       seperator_width = 470
     else:
       seperator_width = 585
     separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
-    separator.grid(row=5, padx=5, pady=5, columnspan=2)
+    separator.grid(row=6, padx=5, pady=5, columnspan=2)
 
-    ds_label = Label(inner_frame, text="Test Data Source")
-    ds_label.grid(row=10, column=0, sticky=W)
+    loc_label = Label(inner_frame, text="Your location")
+    loc_label.grid(row=10, column=0, sticky=W)
+    loc_label['font'] = bold_font
+
+    run_count_label = Label(inner_frame, text="Health Check Performance")
+    run_count_label.grid(row=10, column=1, sticky=W)
+    run_count_label['font'] = bold_font
+
+    self.DiscoverLocation()
+    location_choices = [self.country, "(Other)"]
+    location = OptionMenu(inner_frame, self.location, *location_choices)
+    location.configure(width=40)
+    location.grid(row=11, column=0, sticky=W)
+    self.location.set(location_choices[0])
+
+    mode_choices = ["Fast", "Slow (for unstable routers)"]
+    health_performance = OptionMenu(inner_frame, self.health_performance, *mode_choices)
+    health_performance.configure(width=28)
+    health_performance.grid(row=11, column=1, sticky=W)
+    self.health_performance.set(mode_choices[0])
+
+    ds_label = Label(inner_frame, text="Query Data Source")
+    ds_label.grid(row=12, column=0, sticky=W)
     ds_label['font'] = bold_font
 
     numqueries_label = Label(inner_frame, text="Number of queries")
-    numqueries_label.grid(row=10, column=1, sticky=W)
+    numqueries_label.grid(row=12, column=1, sticky=W)
     numqueries_label['font'] = bold_font
 
     self.LoadDataSources()
     source_titles = self.data_src.ListSourceTitles()
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
     data_source.configure(width=40)
-    data_source.grid(row=11, column=0, sticky=W)
+    data_source.grid(row=13, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
+
     query_count = Entry(inner_frame, bg="white", textvariable=self.query_count)
-    query_count.grid(row=11, column=1, sticky=W, padx=4)
+    query_count.grid(row=13, column=1, sticky=W, padx=4)
     self.query_count.set(self.options.query_count)
-
-    bds_label = Label(inner_frame, text="Test Selection Mode")
-    bds_label.grid(row=12, column=0, sticky=W)
-    bds_label['font'] = bold_font
-
-    run_count_label = Label(inner_frame, text="Number of runs")
-    run_count_label.grid(row=12, column=1, sticky=W)
-    run_count_label['font'] = bold_font
-
-    modes = [x.title() for x in selectors.GetTypes()]
-    selection_mode = OptionMenu(inner_frame, self.selection_mode, *modes)
-    selection_mode.configure(width=40)
-    selection_mode.grid(row=13, column=0, sticky=W)
-    self.selection_mode.set(modes[0])
-
-    run_count = Entry(inner_frame, bg="white", textvariable=self.run_count)
-    run_count.grid(row=13, column=1, sticky=W, padx=4)
-    self.run_count.set(self.options.run_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
     self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
@@ -315,23 +330,25 @@ class MainWindow(Frame, base_ui.BaseUI):
     """Events that get called when the Start button is pressed."""
 
     self.ProcessForm()
-    thread = WorkerThread(self.preferred, self.secondary, self.options,
+    thread = WorkerThread(self.supplied_ns, self.global_ns, self.regional_ns, self.options,
                           data_source=self.data_src,
                           master=self.master, backup_notifier=self.MessageHandler)
     thread.start()
 
   def ProcessForm(self):
     """Read form and populate instance variables."""
-    self.preferred = self.supplied_ns + util.ExtractIPTuplesFromString(self.nameserver_form.get())
+    self.supplied_ns = self.nameserver_form.get()
 
-    if self.use_global.get():
-      self.preferred += self.global_ns
-    if self.use_regional.get():
-      self.secondary = self.regional_ns
-    else:
-      self.secondary = []
-    self.options.run_count = self.run_count.get()
+    if not self.use_global.get():
+      self.global_ns = []
+    if not self.use_regional.get():
+      self.regional_ns = []
+
+    if 'Slow' in self.health_performance.get():
+       self.options.health_thread_count = 10
+
     self.options.query_count = self.query_count.get()
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.get())
-    self.options.select_mode = self.selection_mode.get().lower()
     self.options.enable_censorship_checks = self.use_censor_checks.get()
+    self.options.upload_results = self.share_results.get()
+    
