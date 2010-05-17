@@ -155,7 +155,7 @@ class BaseUI(object):
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)
   def DiscoverLocation(self):
-    if not self.geodata:
+    if not getattr(self, 'geodata', None):
       self.geodata = geoip.GetGeoData()
       self.country = self.geodata.get('country_name', None)
     return self.geodata
