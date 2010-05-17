@@ -222,7 +222,7 @@ class DataSources(object):
           records = selectors.ChunkSelect(records, count)
       elif len(records) != len(set(records)):
         if select_mode == 'weighted':
-          self.msg('%s data contains duplicates, switching select_mode to random' % source)
+          self.msg('%s data contains duplicates, switching select_mode to random' % source)     
         select_mode = 'random'
       else:
         select_mode = 'weighted'
@@ -234,7 +234,9 @@ class DataSources(object):
       records = selectors.ChunkSelect(records, count)
     elif select_mode == 'random':
       records = selectors.RandomSelect(records, count)
-
+    else:
+      raise ValueError("No such final selection mode: %s" % select_mode)
+      
     # For custom filenames
     if source not in self.source_config:
       self.source_config[source] = {}
