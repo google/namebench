@@ -21,6 +21,7 @@ import ConfigParser
 import optparse
 import StringIO
 import tempfile
+import os.path
 
 # from third_party
 import httplib2
@@ -171,7 +172,7 @@ def ProcessConfigurationFile(options):
     options.upload_results = True
 
   for option in general:
-    if not hasattr(options, option) or not getattr(options, option):
+    if not getattr(options, option, None):
       if 'timeout' in option:
         value = float(general[option])
       elif 'count' in option or 'num' in option or 'hide' in option:
@@ -180,5 +181,11 @@ def ProcessConfigurationFile(options):
         value = general[option]
       setattr(options, option, value)
 
+  for key in ('input_file', 'output_file', 'csv_file', 'input_source'):
+    value = getattr(options, key, None)
+    if value:
+      setattr(options, key, os.path.expanduser(value))
+      
   options.version = version.VERSION
+  
   return (options, global_ns, regional_ns)
