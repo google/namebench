@@ -80,6 +80,7 @@ class DataSources(object):
           'search_paths': set(),
           # Store whether or not this data source contains personal data
           'full_hostnames': True,
+          'synthetic': False,
           'include_duplicates': False,
           'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
         }
@@ -93,6 +94,8 @@ class DataSources(object):
           self.source_config[section]['max_mtime_days'] = int(value)
         elif key == 'include_duplicates':
           self.source_config[section]['include_duplicates'] = bool(value)
+        elif key == 'synthetic':
+          self.source_config[section]['synthetic'] = bool(value)
         else:
           self.source_config[section]['search_paths'].add(value)
 
@@ -115,14 +118,18 @@ class DataSources(object):
     for source in self.source_cache:
       details.append((source,
                       self.source_config[source]['name'],
-                      self.source_config[source]['full_hostnames'],
+                      self.source_config[source]['synthetic'],
                       len(self.source_cache[source])))
-    return sorted(details, key=lambda x:(x[2], x[3]), reverse=True)
+    return sorted(details, key=lambda x:(x[2], x[3] * -1))
 
   def ListSourceTitles(self):
     """Return a list of sources in title + count format."""
     titles = []
-    for (source_type, name, full_hostnames, count) in self.ListSourcesWithDetails():
+    seen_synthetic = False
+    for (source_type, name, is_synthetic, count) in self.ListSourcesWithDetails():
+      if is_synthetic and not seen_synthetic:
+        titles.append('-' * 36)
+        seen_synthetic = True
       titles.append("%s (%s)" % (name, count))
     return titles
 
@@ -239,7 +246,7 @@ class DataSources(object):
       
     # For custom filenames
     if source not in self.source_config:
-      self.source_config[source] = {}
+      self.source_config[source] = {'synthetic': True}
     
     if are_records_fqdn:
       self.source_config[source]['full_hostnames'] = False
