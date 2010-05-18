@@ -94,7 +94,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.ResetTestStatus()
     self.port_behavior = None
     self._version = None
-    self._node_id = None
+    self._node_ids = set()
     self._hostname = None
     self.timer = DEFAULT_TIMER
 
@@ -190,14 +190,14 @@ class NameServer(health_checks.NameServerHealthChecks):
     return self._version
 
   @property
-  def node_id(self):
-    if self._node_id == None:
-      self._node_id = self.RequestNodeName()[0]
-    return self._node_id
+  def node_ids(self):
+    if not self._node_ids:
+      self._node_ids.add(self.RequestNodeId()[0])
+    return ', '.join(self._node_ids)
 
   @property
-  def partial_node_id(self):
-    node_bits = self.node_id.split('.')
+  def partial_node_ids(self):
+    node_bits = self.node_ids.split('.')
     if len(node_bits) >= 3:
       return '.'.join(node_bits[0:-2])
     else:
@@ -205,8 +205,8 @@ class NameServer(health_checks.NameServerHealthChecks):
   
   @property
   def name_and_node(self):
-    if self.node_id:
-      return '%s [%s]' % (self.name, self.partial_node_id)
+    if self.node_ids:
+      return '%s [%s]' % (self.name, self.partial_node_ids)
     else:
       return self.name
 
@@ -371,7 +371,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     else:
       return ip
      
-  def RequestNodeName(self):
+  def RequestNodeId(self):
     node = ''
     rdataclass = None
     reverse_lookup = False
@@ -396,7 +396,6 @@ class NameServer(health_checks.NameServerHealthChecks):
       node = ResponseToAscii(response)
       if reverse_lookup:
         node = self.RequestReverseIP(node)
-      
     return (node, duration, error_msg)
   
 
@@ -407,4 +406,4 @@ if __name__ == '__main__':
   print "IP:      %s" % ns.ip
   print "Host:    %s" % ns.hostname
   print "Version: %s" % ns.version
-  print "Node:    %s" % ns.node_id
+  print "Node:    %s" % ns.node_ids

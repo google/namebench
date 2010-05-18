@@ -53,7 +53,7 @@ class ConnectionQuality(object):
     """Check if our packets are actually getting to the correct servers."""
 
     opendns = nameserver.NameServer(OPENDNS_NS)
-    (node_id, duration, error_msg) = opendns.RequestNodeName()
+    (node_id, duration, error_msg) = opendns.RequestNodeId()
     if 'I am not an OpenDNS resolver' in node_id:
       return (True, duration)
     elif node_id:

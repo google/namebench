@@ -112,7 +112,12 @@ class NameServerHealthChecks(object):
   def TestBindVersion(self):
     """Test for BIND version. This acts as a pretty decent ping."""
     (response, duration, error_msg) = self.RequestVersion()
-    return (error_msg, False, duration)
+    return (False, error_msg, duration)
+    
+  def TestNodeId(self):
+    """Test for BIND version. This acts as a pretty decent ping."""
+    (response, duration, error_msg) = self.RequestNodeId()
+    return (False, False, 0.0)
     
   def TestNegativeResponse(self, prefix=None):
     """Test for NXDOMAIN hijaaking."""
@@ -259,9 +264,9 @@ class NameServerHealthChecks(object):
       tests = [(self.TestBindVersion, [])]
       sanity_checks = []
     elif final_check:
-      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, [])]
+      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, []), (self.TestNodeId, [])]
     elif port_check:
-      tests = [(self.TestPortBehavior, [])]
+      tests = [(self.TestPortBehavior, []), (self.TestNodeId, [])]
     else:
       tests = [(self.TestNegativeResponse, [])]
 

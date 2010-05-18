@@ -282,7 +282,7 @@ class ReportGenerator(object):
         'name': ns.name,
         'hostname': ns.hostname,
         'version': ns.version,
-        'node_id': ns.node_id,
+        'node_id': ns.node_ids,
         'sys_position': ns.system_position,
         'is_failure_prone': ns.is_failure_prone,
         'duration_min': ns.fastest_check_duration,
