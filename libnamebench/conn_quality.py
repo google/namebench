@@ -98,7 +98,7 @@ class ConnectionQuality(object):
     
     durations.append(i_duration)
 
-    try_count = 4
+    try_count = 3
     for i in range(try_count):
       self.msg('Checking connection quality', count=i+1, total=try_count)
       if self.primary:
