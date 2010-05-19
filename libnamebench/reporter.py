@@ -357,21 +357,34 @@ class ReportGenerator(object):
         answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
         index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
     return index
-
+    
+  def _GetPlatform(self):
+    if os.path.exists('/usr/sbin/sw_vers') or os.path.exists('/usr/sbin/system_profiler'):
+      platform = 'Mac OS X'
+    else:
+      platform = platform.system()
+      
+    if platform == 'Linux':
+      distro = platform.dist()[0]
+      if distro:
+        platform = 'Linux (%s)' % distro
+    return platform
+    
   def _CreateSharingData(self):
     config = dict(self.FilteredConfig())
-    config['platform'] = (platform.system(), platform.release())
-    config['python'] = platform.python_version_tuple()
-    nsdata_list = self._GenerateNameServerSummary()
+    config['platform'] = self._GetPlatform()
 
     # Purge sensitive information (be aggressive!)
-    for row in nsdata_list:
+    purged_rows = []
+    for row in self._GenerateNameServerSummary():
+      purged_row = dict(row)      
       if util.IsPrivateIP(row['ip']) or util.IsLoopbackIP(row['ip']) or util.IsPrivateHostname(row['hostname']):
-        row['node_ids'] = ['private']
-        row['version'] = None
-      row['ip'], row['hostname'], row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
+        purged_row['node_ids'] = ['private']
+        purged_row['version'] = None
+        purged_row['ip'], purged_row['hostname'], purged_row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
+      purged_rows.append(purged_row)
       
-    return {'config': config, 'nameservers': nsdata_list, 'geodata': self.geodata}
+    return {'config': config, 'nameservers': purged_rows, 'geodata': self.geodata}
     
   def CreateJsonData(self):
     sharing_data = self._CreateSharingData()
