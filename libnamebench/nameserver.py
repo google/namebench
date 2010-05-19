@@ -270,7 +270,7 @@ class NameServer(health_checks.NameServerHealthChecks):
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max, message)
 
     if self.failed_test_count >= max:
-      self.disabled = message
+      self.disabled = "Failed %s tests, last: %s" % (self.failed_test_count, message)
 
   def CreateRequest(self, record, request_type, return_type):
     """Function to work around any dnspython make_query quirks."""
