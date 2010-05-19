@@ -510,7 +510,8 @@ class NameServers(list):
           faster.disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
           slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
         else:
-          self.msg("Disabling %s [%0.3f] (slower replica of %s [%0.3f])" % (slower.name, slower.check_average, faster.name, faster.check_average))
+          diff = slower.check_average - faster.check_average
+          self.msg("Disabling %s - slower replica of %s by %0.1fms." % (slower.name_and_node, faster.name_and_node, diff))
           slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
           faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
 
