@@ -61,7 +61,7 @@
 
   <td><a href="http://www.google.com/search?q={{ row.ip}}" class="info">{{ row.ip }}{% if row.version %}<span>{{ row.version }}</span>{% endif %}</td>
   <td>{{ row.name }}</td>
-  <td><a href="http://www.google.com/search?q={{ row.hostname}}" class="info">{{ row.hostname }}{% if row.node_id %}<span>{{ row.node_id }}</span>{% endif %}</a></td>
+  <td><a href="http://www.google.com/search?q={{ row.hostname}}" class="info">{{ row.hostname }}{% if row.node_ids %}<span>{% for node in row.node_ids %}{{ node }} {% endfor %}</span>{% endif %}</a></td>
   <td>{% if row.overall_average %}{{ "%0.2f"|format(row.overall_average) }}{% else %}{{ "%0.2f"|format(row.check_average) }}{% endif %}</td>
   <td>{% if row.diff %}{{ "%0.1f"|format(row.diff) }}%{% endif %}</td>
   <td>{% if row.duration_min %}{{ "%0.1f"|format(row.duration_min) }}{% endif %}</td>
