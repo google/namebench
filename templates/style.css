@@ -230,4 +230,10 @@ a.info:hover span {
     text-align: center
 }
 
- 
+#notice {
+  font-size: small;
+  text-align: center;
+  background-color: #ffa;
+  border: 1px solid #cc7;
+}
+
