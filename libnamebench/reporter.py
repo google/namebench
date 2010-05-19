@@ -379,7 +379,7 @@ class ReportGenerator(object):
     for row in self._GenerateNameServerSummary():
       purged_row = dict(row)      
       if util.IsPrivateIP(row['ip']) or util.IsLoopbackIP(row['ip']) or util.IsPrivateHostname(row['hostname']):
-        purged_row['node_ids'] = ['private']
+        purged_row['node_ids'] = []
         purged_row['version'] = None
         purged_row['ip'], purged_row['hostname'], purged_row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
       purged_rows.append(purged_row)
