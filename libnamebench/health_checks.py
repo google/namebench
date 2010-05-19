@@ -115,7 +115,7 @@ class NameServerHealthChecks(object):
     return (False, error_msg, duration)
     
   def TestNodeId(self):
-    """Test for BIND version. This acts as a pretty decent ping."""
+    """Get the current node id. This acts as a pretty decent ping."""
     (response, duration, error_msg) = self.RequestNodeId()
     return (False, False, 0.0)
     
