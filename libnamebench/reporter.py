@@ -282,7 +282,7 @@ class ReportGenerator(object):
         'name': ns.name,
         'hostname': ns.hostname,
         'version': ns.version,
-        'node_id': ns.node_ids,
+        'node_ids': list(ns.node_ids),
         'sys_position': ns.system_position,
         'is_failure_prone': ns.is_failure_prone,
         'duration_min': ns.fastest_check_duration,
@@ -367,7 +367,7 @@ class ReportGenerator(object):
     # Purge sensitive information (be aggressive!)
     for row in nsdata_list:
       if util.IsPrivateIP(row['ip']) or util.IsLoopbackIP(row['ip']) or util.IsPrivateHostname(row['hostname']):
-        row['node_id'] = None
+        row['node_ids'] = ['private']
         row['version'] = None
       row['ip'], row['hostname'], row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
       
