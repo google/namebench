@@ -378,10 +378,10 @@ class ReportGenerator(object):
     purged_rows = []
     for row in self._GenerateNameServerSummary():
       purged_row = dict(row)      
+      purged_row['ip'], purged_row['hostname'], purged_row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
       if util.IsPrivateIP(row['ip']) or util.IsLoopbackIP(row['ip']) or util.IsPrivateHostname(row['hostname']):
         purged_row['node_ids'] = []
         purged_row['version'] = None
-        purged_row['ip'], purged_row['hostname'], purged_row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
       purged_rows.append(purged_row)
       
     return {'config': config, 'nameservers': purged_rows, 'geodata': self.geodata}
