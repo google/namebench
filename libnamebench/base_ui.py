@@ -150,7 +150,8 @@ class BaseUI(object):
       else:
         index = []
       self.DiscoverLocation()
-      self.nameservers.RunPortBehaviorThreads()
+      if len(self.nameservers) > 1:
+        self.nameservers.RunPortBehaviorThreads()
 
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)
