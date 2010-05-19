@@ -213,8 +213,15 @@ class DataSources(object):
     # Convert entries into tuples, determine if we are using full hostnames
     full_host_count = 0
     www_host_count = 0
-    include_duplicates = self.source_config[source]['include_duplicates']
+    if source in self.source_config:
+      include_duplicates = self.source_config[source].get('include_duplicates', False)
+    else:
+      include_duplicates = False
+
     records = self._GetHostsFromSource(source)
+    if not records:
+      raise ValueError("Unable to generate records from %s (nothing found)" % source)
+    
     self.msg('Generating tests from %s (%s records, selecting %s %s)'
              % (self.GetNameForSource(source), len(records), count, select_mode))
     (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records,
@@ -224,9 +231,9 @@ class DataSources(object):
       # If we are in include_duplicates mode (cachemiss, cachehit, etc.), we have different rules.
       if include_duplicates:
         if count > len(records) :
-          records = selectors.RandomSelect(records, count, include_duplicates=include_duplicates)
+          select_mode = 'random'
         else:
-          records = selectors.ChunkSelect(records, count)
+          select_mode = 'chunk'
       elif len(records) != len(set(records)):
         if select_mode == 'weighted':
           self.msg('%s data contains duplicates, switching select_mode to random' % source)     
@@ -240,7 +247,7 @@ class DataSources(object):
     elif select_mode == 'chunk':
       records = selectors.ChunkSelect(records, count)
     elif select_mode == 'random':
-      records = selectors.RandomSelect(records, count)
+      records = selectors.RandomSelect(records, count, include_duplicates=include_duplicates)
     else:
       raise ValueError("No such final selection mode: %s" % select_mode)
       
