@@ -1,16 +1,16 @@
 namebench has an opt-in feature that enables users to upload and share results.
 This is a technical description to show exactly what data is communicated to
-the server:
+the server via JSON:
 
 -------------------------------------------------------------------------------
 # The client_id is a simple signed integer, designed to detect subsequent runs
 # from the same user, so that the new runs can be hidden. To arrive at a unique
 # integer, we hash the following items into an integer: (see site_connector.py):
 # 
-# * platform.platform()  Operating system name and version
-# * sys.version          Python interpreter version
-# * platform.node()      Hostname of machine
-# * os.getenv('HOME')    Filesystem path to home directory
+#   platform.platform()  Operating system name and version
+#   sys.version          Python interpreter version
+#   platform.node()      Hostname of machine
+#   os.getenv('HOME')    Filesystem path to home directory
 #
 # zlib.crc32() is used as the hashing element. It has a high rate of collision, 
 # and is not designed to create unique numbers. However, we do not need absolute
