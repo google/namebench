@@ -109,14 +109,17 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.include_internal = False
     
     if not int(self.include_global.stringValue()):
-      self.UpdateStatus('Not using primary')
+      self.UpdateStatus('Not using global')
+      self.global_ns = []
     else:
       self.preferred.extend(self.global_ns)
     if not int(self.include_regional.stringValue()):
-      self.UpdateStatus('Not using secondary')
-      self.secondary = []
-    else:
-      self.secondary = self.regional_ns
+      self.UpdateStatus('Not using regional')
+      self.regional_ns = []
+
+    # TODO(tstromberg): Remove this easter-egg once legal is happy.
+    if 'share' in self.nameserver_form.stringValue():
+      self.options.upload_results = True
 
     if int(self.enable_sharing.stringValue()):
       self.options.upload_results = True
@@ -193,4 +196,7 @@ class controller(NSWindowController, base_ui.BaseUI):
 
     self.data_source.removeAllItems()
     self.data_source.addItemsWithTitles_(self.data_src.ListSourceTitles())
+    
+    # TODO(tstromberg): Remove this once legal is happy.
+    self.enable_sharing.setEnabled_(False)
 
