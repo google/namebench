@@ -211,7 +211,7 @@ def _SortDistribution(a, b):
   return cmp(a[0].name, b[0].name)
 
 
-def DistributionLineGraph(run_data, scale=None):
+def DistributionLineGraph(run_data, scale=None, sort_by=None):
   """Return a Google Chart API URL showing duration distribution per ns."""
 
   # TODO(tstromberg): Rewrite this method using graphy. Graphy does not
@@ -223,6 +223,10 @@ def DistributionLineGraph(run_data, scale=None):
   # TODO(tstromberg): Find a way to make colors consistent between runs.
   colors = BASE_COLORS[0:len(distribution)]
 
+  if not sort_by:
+    sort_by = _SortDistribution
+
+
   max_value = _MaximumRunDuration(run_data)
   if not scale:
     scale = max_value
@@ -231,7 +235,7 @@ def DistributionLineGraph(run_data, scale=None):
 
   scale = max_value / 100.0
 
-  for (ns, xy_pairs) in sorted(distribution, cmp=_SortDistribution):
+  for (ns, xy_pairs) in sorted(distribution, cmp=sort_by):
     labels.append(urllib.quote_plus(ns.name))
     x = []
     y = []
