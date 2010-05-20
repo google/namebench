@@ -219,6 +219,10 @@ a.info {
     color: #000;
     text-decoration:none
 }
+.disabled a.info {
+    color: #fff;
+}
+
 a.info:hover {z-index:25; }
 a.info span {display: none}
 a.info:hover span {
