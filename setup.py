@@ -121,11 +121,18 @@ setup(name='namebench',
           ),
           ('namebench/templates',
            ['templates/ascii.tmpl',
-                'templates/html.tmpl',
-                'templates/style.css'
+            'templates/html.tmpl',
+            'templates/resolv.conf.tmpl',
+            'templates/style.css'
            ]
           ),
-          ('namebench/data', ['data/alexa-top-10000-global.txt'])
+          ('namebench/data',
+           ['data/alexa-top-2000-domains.txt',
+            'data/cache-hit.txt',
+            'data/cache-miss.txt',
+            'data/cache-mix.txt'
+           ]
+          )
       ],
 
       # py2exe specific garbarge below.
