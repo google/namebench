@@ -160,14 +160,17 @@ class NameServers(list):
     self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
     self.system_nameservers = util.InternalNameServers()
-    for (ip, name) in nameservers:
-      self.AddServer(ip, name, is_custom=True, is_preferred=True)
+    if nameservers:
+      for (ip, name) in nameservers:
+        self.AddServer(ip, name, is_custom=True, is_preferred=True)
 
-    for (ip, name) in global_servers:
-      self.AddServer(ip, name, is_global=True, is_preferred=True)
+    if global_servers:
+      for (ip, name) in global_servers:
+        self.AddServer(ip, name, is_global=True, is_preferred=True)
 
-    for (ip, name) in regional_servers:
-      self.AddServer(ip, name)
+    if regional_servers:
+      for (ip, name) in regional_servers:
+        self.AddServer(ip, name)
 
     if include_internal:
       for ip in self.system_nameservers:
@@ -366,10 +369,9 @@ class NameServers(list):
       self.DisableUnwantedServers(target_count=int(len(self) * FIRST_CUT_MULTIPLIER),
                                   delete_unwanted=True)
 
-#    for ns in self.SortByFastest():
-#      print "%s: %s" % (ns, ns.check_average)
     self.RunHealthCheckThreads(primary_checks)
-    self._DemoteSecondaryGlobalNameServers()
+    if len(self.enabled) > self.num_servers:
+      self._DemoteSecondaryGlobalNameServers()
     self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
                                 delete_unwanted=True)
     if not cached:
