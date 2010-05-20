@@ -359,16 +359,15 @@ class ReportGenerator(object):
     return index
     
   def _GetPlatform(self):
-    if os.path.exists('/usr/sbin/sw_vers') or os.path.exists('/usr/sbin/system_profiler'):
-      platform = 'Mac OS X'
-    else:
-      platform = platform.system()
-      
-    if platform == 'Linux':
+    my_platform = platform.system()
+    if my_platform == 'Darwin':
+      if os.path.exists('/usr/sbin/sw_vers') or os.path.exists('/usr/sbin/system_profiler'):
+        my_platform = 'Mac OS X'    
+    if my_platform == 'Linux':
       distro = platform.dist()[0]
       if distro:
-        platform = 'Linux (%s)' % distro
-    return platform
+        my_platform = 'Linux (%s)' % distro
+    return my_platform
     
   def _CreateSharingData(self):
     config = dict(self.FilteredConfig())
