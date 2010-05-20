@@ -166,7 +166,8 @@ class controller(NSWindowController, base_ui.BaseUI):
 
     self.spinner.stopAnimation_(self)
     self.button.setEnabled_(True)
-    pool.release()
+    # This seems weird, but recommended by http://pyobjc.sourceforge.net/documentation/pyobjc-core/intro.html
+    del pool
 
   def displayError(self, msg, details):
     """Display an alert drop-down message"""
