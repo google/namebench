@@ -88,6 +88,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
   def __init__(self, supplied_ns, global_ns, regional_ns, options, data_source=None, master=None,
                backup_notifier=None):
     threading.Thread.__init__(self)
+    self.SetupDataStructures()
     self.status_callback = self.msg
     self.data_src = data_source
     self.backup_notifier = backup_notifier
@@ -150,10 +151,9 @@ class MainWindow(Frame, base_ui.BaseUI):
   def __init__(self, master, options, supplied_ns, global_ns, regional_ns, version=None):
     """TODO(tstromberg): Remove duplication from NameBenchGui class."""
     Frame.__init__(self)
+    self.SetupDataStructures()
     self.master = master
     self.options = options
-
-    self.SetupDataStructures()
     self.supplied_ns = supplied_ns
     self.global_ns = global_ns
     self.regional_ns = regional_ns
@@ -230,8 +230,10 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     share_button = Checkbutton(inner_frame, text="Make anonymized results publically available (help speed up the internet!)",
                                variable=self.share_results)
-    share_button.grid(row=5, columnspan=2, sticky=W)
+    # TODO(tstromberg): Remove when legal is happy.
+    share_button.configure(state=DISABLED)
 
+    share_button.grid(row=5, columnspan=2, sticky=W)
 
     if sys.platform[:3] == 'win':
       seperator_width = 470
@@ -257,7 +259,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     mode_choices = ["Fast", "Slow (for unstable routers)"]
     health_performance = OptionMenu(inner_frame, self.health_performance, *mode_choices)
-    health_performance.configure(width=28)
+    health_performance.configure(width=27)
     health_performance.grid(row=11, column=1, sticky=W)
     self.health_performance.set(mode_choices[0])
 
@@ -337,8 +339,8 @@ class MainWindow(Frame, base_ui.BaseUI):
 
   def ProcessForm(self):
     """Read form and populate instance variables."""
-    self.supplied_ns = self.nameserver_form.get()
 
+    self.supplied_ns = util.ExtractIPTuplesFromString(self.nameserver_form.get())
     if not self.use_global.get():
       self.global_ns = []
     if not self.use_regional.get():
@@ -347,8 +349,12 @@ class MainWindow(Frame, base_ui.BaseUI):
     if 'Slow' in self.health_performance.get():
        self.options.health_thread_count = 10
 
+      
     self.options.query_count = self.query_count.get()
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.get())
     self.options.enable_censorship_checks = self.use_censor_checks.get()
     self.options.upload_results = self.share_results.get()
+    # TODO(tstromberg): Remove once legal is happy.
+    if 'share' in self.nameserver_form.get():
+      self.options.upload_results = True
     
