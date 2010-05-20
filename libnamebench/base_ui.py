@@ -184,10 +184,18 @@ class BaseUI(object):
       self.csv_path = self.options_csv_file
     else:
       self.csv_path = GenerateOutputFilename('csv')
+    
 
     if self.options.upload_results:
-      self.UpdateStatus('Uploading results to %s' % self.options.site_url)
+      # This is for debugging and transparency only. 
+      self.json_path = GenerateOutputFilename('json')
+      self.UpdateStatus('Saving anonymized JSON to %s' % self.json_path)
       json_data = self.reporter.CreateJsonData()
+      f = open(self.json_path, 'w')
+      f.write(json_data)
+      f.close()
+
+      self.UpdateStatus('Uploading results to %s' % self.options.site_url)
       connector = site_connector.SiteConnector(self.options)
       self.url, self.share_state = connector.UploadJsonResults(json_data, hide_results=self.options.hide_results)
       if self.url:
