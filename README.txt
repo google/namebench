@@ -1,24 +1,35 @@
-An experiment in benchmarking DNS name services. This tool is designed to help
-you as a user determine what name services are the best to use for an
-individual machine.
+Are you a power-user with 5 minutes to spare? Do you want a faster internet
+experience?
+
+Try out namebench. It hunts down the fastest DNS servers available for your
+computer to use. namebench runs a fair and thorough benchmark using your web
+browser history, tcpdump output, or standardized datasets in order to
+provide an individualized recommendation. namebench is completely free and
+does not modify your system in any way. This project began as a 20% project
+at Google.
+
+namebench runs on Mac OS X, Windows, and UNIX, and is available with a
+graphical user interface as well as a command-line interface. 
 
 Requirements:
 
-  * Python 2.4 - 2.6. If you are using Mac OS X or UNIX, this is
+  * Python 2.4 - 2.6. If you are using Mac OS X or Linux, this is
     built-in. Otherwise, visit http://www.python.org/
+
+--[ quick use guide ]---------------------------------------------------------
+
+namebench comes with two interfaces: a simple graphical interface, and a
+more advanced command-line interface. If you have downloaded the versions
+for Mac OS X and Windows, you will get the graphical interface by default.
 
 Most people will simply want to run this software with no arguments:
 
   ./namebench.py
 
-If you want to install this tool permanently, you can use:
+On UNIX, if you have python-tk installed, a graphical interface will pop up.
+If you would like to force use of the command-line, use -x:
 
-  sudo python setup.py install
-
-namebench will test the nameservers your machine is currently using, plus
-the popular global DNS services, and the best 4-6 additional name servers
-that it can find for you. It will output some text-graphs and URL's for more
-a more detailed performance analysis of each nameserver.
+  ./namebench.py -x
 
 If you want to specify an additional set of name services, simply add the IP
 to the command-line, or edit namebench.cfg:
@@ -29,10 +40,12 @@ to the command-line, or edit namebench.cfg:
 
 namebench includes some wonderful third party software:
 
- * dnspython 1.7.1 (http://www.dnspython.org/)
+ * dnspython 1.8.0 (http://www.dnspython.org/)
+ * httplib2 0.6.0 (http://code.google.com/p/httplib2/)
  * graphy 1.0 (http://graphy.googlecode.com/)
  * jinja2 2.2.1 (http://jinja.pocoo.org/2/)
  * python 2.5 pkg_resources (http://www.python.org/) 
+ * simplejson 2.1.1 (http://code.google.com/p/simplejson/)
  * Crystal SVG icons (http://www.everaldo.com/crystal/)
 
 For licensing information, see the LICENSE file within the appropriate
@@ -50,119 +63,161 @@ Options:
                         Config file to use.
   -o OUTPUT_FILE, --output=OUTPUT_FILE
                         Filename to write output to
-  -f OUTPUT_FORMAT, --format=OUTPUT_FORMAT
-                        Output format for file (ascii, html)
+  -t TEMPLATE, --template=TEMPLATE
+                        Template to use for output generation (ascii, html,
+                        resolv.conf)
   -c CSV_FILE, --csv_output=CSV_FILE
-                        Filename to write CSV output to
-  -j THREAD_COUNT, --threads=THREAD_COUNT
-                        # of threads to use
+                        Filename to write query details to (CSV)
+  -j HEALTH_THREAD_COUNT, --health_threads=HEALTH_THREAD_COUNT
+                        # of health check threads to use
+  -J BENCHMARK_THREAD_COUNT, --benchmark_threads=BENCHMARK_THREAD_COUNT
+                        # of benchmark threads to use
+  -P PING_TIMEOUT, --ping_timeout=PING_TIMEOUT
+                        # of seconds ping requests timeout in.
   -y TIMEOUT, --timeout=TIMEOUT
                         # of seconds general requests timeout in.
   -Y HEALTH_TIMEOUT, --health_timeout=HEALTH_TIMEOUT
                         health check timeout (in seconds)
-  -d DATA_FILE, --datafile=DATA_FILE
-                        File containing a list of domain names to query.
-  -i IMPORT_FILE, --import=IMPORT_FILE
-                        Import history from an external application (chrome,
-                        chromium, epiphany, firefox, internet_explorer, opera,
-                        safari, squid)
+  -i INPUT_SOURCE, --input=INPUT_SOURCE
+                        Import hostnames from an filename or application
+                        (alexa, cachehit, cachemiss, cachemix, camino, chrome,
+                        chromium, epiphany, firefox, flock, galeon, icab,
+                        internet_explorer, konqueror, midori, omniweb, opera,
+                        safari, seamonkey, squid, sunrise)
   -I, --invalidate_cache
                         Force health cache to be invalidated
-  -t TEST_COUNT, --tests=TEST_COUNT
+  -q QUERY_COUNT, --query_count=QUERY_COUNT
                         Number of queries per run.
   -m SELECT_MODE, --select_mode=SELECT_MODE
                         Selection algorithm to use (weighted, random, chunk)
   -s NUM_SERVERS, --num_servers=NUM_SERVERS
                         Number of nameservers to include in test
-  -S, --no_regional     Disable regional_ns servers
+  -S, --system_only     Only test the currently configured system
+  - nameservers.
+  -w, --open_webbrowser
+                        Opens the final report in your browser
+  -u, --upload_results  Upload anonmyized results to SITE_URLl (default:
+                        False)
+  -U SITE_URL, --site_url=SITE_URL
+                        URL to upload results to
+                        (http://namebench.appspot.com/)
+  -H, --hide_results    Upload results, but keep them hidden from indexes.
   -x, --no_gui          Disable GUI
+  -C, --enable-censorship-checks
+                        Enable censorship checks
+  -6, --ipv6_only       Only include IPv6 name servers
   -O, --only            Only test nameservers passed as arguments
 
 --[ sample output ]-------------------------------------------------------------
 
-namebench 0.6 - 20 threads, 40 tests, 2 runs
+namebench 1.3b1 - best history source (automatic) on 2010-05-27 08:34:46.585534
+threads=40/2 queries=250 runs=1 timeout=3.5 health_timeout=3.75 servers=11
 ------------------------------------------------------------------------------
-- Checking health of 872 nameservers (20 threads)
-  o N9UF-INFRA-3: NXDOMAIN Hijacking
-  o N9UF-INFRA-4: NXDOMAIN Hijacking
-  * Level 3 [4.2.2.1] is unhealthy: TestWwwGoogleComResponse <class 'dns.exception.Timeout'>
-  * Level 3-2 [4.2.2.2] is unhealthy: TestGoogleComResponse <class 'dns.exception.Timeout'>
-  o OpenDNS: NXDOMAIN Hijacking
-  o OpenDNS-2: NXDOMAIN Hijacking
-  o Louisiana DOE: www.google.com. may be hijacked, NXDOMAIN Hijacking
-  o N9UF-INFRA: NXDOMAIN Hijacking
-  o NTS-2: www.google.com. may be hijacked, NXDOMAIN Hijacking
-- Saving health status of 17 best servers to cache
-- Checking for slow replicas among 17 nameservers
+- Reading Top 2,000 Websites (Alexa): data/alexa-top-2000-domains.txt (0.7MB)
+- Reading Cache Latency Test (100% hit): data/cache-hit.txt (0.1MB)
+- Reading Cache Latency Test (100% miss): data/cache-miss.txt (0.1MB)
+- Reading Cache Latency Test (50% hit, 50% miss): data/cache-mix.txt (0.1MB)
+- Skipping /home/tstromberg/Library/Application Support/Chromium/Default/History (168d old)
+- Generating tests from Top 2,000 Websites (Alexa) (33575 records, selecting 250 automatic)
+- Selecting 250 out of 33542 sanitized records (weighted mode).
 
-Final list of nameservers to benchmark:
----------------------------------------
-  193.121.171.135 [SYS-193.121.171.135], health tests took 81.383ms
-  208.67.220.220 [OpenDNS], health tests took 284.045ms
-  208.67.222.222 [OpenDNS-2], health tests took 390.756ms
-  156.154.70.1 [UltraDNS], health tests took 669.783ms
-  156.154.71.1 [UltraDNS-2], health tests took 705.896ms
-  194.119.228.67 [Scarlet-1], health tests took 98.284ms
-  217.194.96.10 [PINS], health tests took 104.837ms
-  85.90.229.188 [Telecity-DNS], health tests took 112.477ms
-  217.64.240.4 [MACTelecom], health tests took 116.161ms
-  81.171.102.14 [EWEKA-2], health tests took 120.566ms
-  213.138.110.132 [Planetsky], health tests took 122.058ms
-  80.249.115.194 [ip69-ns2], health tests took 128.801ms
-  212.30.96.123 [N9UF], health tests took 129.791ms
+- Checking query interception status...
+- Checking connection quality: 1/3...3/3
+- Congestion level is 36.88X (check duration: 1475.29ms)
+- Applied 4.50X timeout multiplier due to congestion: 2.2 ping, 3.5 standard, 16.9 health.
+- Checking latest sanity reference
+- Checking nameserver health (4040 servers)
+- Building initial DNS cache for 4040 nameservers (40 threads)
+- Checking nameserver availability (40 threads): ............
+- 4040 of 4040 tested name servers are available
+- Running initial health checks on 404 servers (35 threads): ............
+- 245 of 404 tested name servers are healthy
+- Making UltraDNS-2 [udns4tcam] the primary anycast - faster than UltraDNS [udns5abld] by 9.07ms
+- Making OpenDNS-2 [2.lon] the primary anycast - faster than OpenDNS [2.lon] by 58.92ms
+- Making DynGuide [ig-02-ams] the primary anycast - faster than DynGuide-2 [ec-02-spl] by 11.34ms
+- Picking 16 secondary servers to use (8 nearest, 8 fastest)
+- Waiting for wildcard cache queries from 22 servers (22 threads): 0/22............22/22
+- Waiting 4s for TTL's to decrement.
+- Running cache-sharing checks on 22 servers (40 threads): ............
+- Disabling Localhost IPv4 [anodized] - slower replica of Internal 10-1 [anodized] by 23.5ms.
+- Picking 6 secondary servers to use (3 nearest, 3 fastest)
+- Benesol BE [85.158.210.68] appears to be the nearest regional (10.46ms)
+- Running final health checks on 11 servers (11 threads): 0/11.......11/11
 
-* Benchmarking 13 nameservers with 40 records each (1 of 2)..............
-* Benchmarking 13 nameservers with 40 records each (2 of 2)..............
-
-Overall Mean Request Duration (in milliseconds):
+Final list of nameservers considered:
 ------------------------------------------------------------------------------
-UltraDNS        ############ 63
-Scarlet-1       ############# 68
-OpenDNS         ################ 85
-UltraDNS-2      ################## 92
-OpenDNS-2       ################## 93
-MACTelecom      ################### 97
-ip69-ns2        ################### 101
-N9UF            ##################### 108
-Telecity-DNS    ##################### 108
-Planetsky       ########################## 135
-PINS            ########################## 136
-EWEKA-2         ########################### 144
-SYS-193.121.171 ####################################################### 288
+4.2.2.5         Genuity BAK        29  ms | 
+194.74.65.68    BT-6 GB            30  ms | 
+208.67.222.222  OpenDNS-2          31  ms | www.google.com is hijacked: google.navigation.opendns.com
+195.99.66.220   EU BT AMS NL       34  ms | 
+156.154.71.1    UltraDNS-2         41  ms | NXDOMAIN Hijacking
+193.74.208.65   Scarlet-0 BE       45  ms | 
+8.8.4.4         Google Public DNS- 54  ms | (excluded: Shares-cache with current primary DNS server)
+8.8.8.8         Google Public DNS  57  ms | Replica of ::1, Replica of 10.0.0.1, Replica of 8.8.4.4
+216.146.35.35   DynGuide           62  ms | NXDOMAIN Hijacking
+82.146.118.12   Econoweb BE        63  ms | 
+212.71.8.11     EDPnet-2 BE-2      66  ms | 
+85.158.210.68   Benesol BE         82  ms | 
 
-Lowest latency for an individual query (in milliseconds):
-------------------------------------------------------------------------------
-Scarlet-1       ################## 9.64
-SYS-193.121.171 #################### 11.02
-MACTelecom      ####################### 12.19
-ip69-ns2        ########################## 14.22
-PINS            ########################### 14.52
-Planetsky       ############################ 15.20
-EWEKA-2         ############################# 15.96
-Telecity-DNS    ############################## 15.99
-UltraDNS        #################################### 19.55
-N9UF            ###################################### 20.46
-UltraDNS-2      ######################################### 22.16
-OpenDNS         ######################################### 22.47
-OpenDNS-2       ###################################################### 29.76
+- Sending 250 queries to 11 servers: ............
+- Error querying OpenDNS-2 [208.67.222.222]: www.360buy.com.: Timeout
+- Error querying Econoweb BE [82.146.118.12]: tieba.baidu.com.: Timeout
 
-Detailed Mean Request Duration Chart URL
-------------------------------------------------------------------------------
-http://chart.apis.google.com/chart?chxt=y%2Cx&chd=s%3ANSTXSafhdrep0%2CGDJINHEFJFSL5&chxp=0&chxr=1%2C15.5%2C320&chxtc=1%2C-900&chco=4684ee%2C00248e&chbh=a&chs=900x320&cht=bhg&chxl=0%3A%7CSYS-193.121.171.135%7CEWEKA-2%7CPINS%7CPlanetsky%7CTelecity-DNS%7CN9UF%7Cip69-ns2%7CMACTelecom%7COpenDNS-2%7CUltraDNS-2%7COpenDNS%7CScarlet-1%7CUltraDNS%7C1%3A%7C0%7C40%7C80%7C120%7C160%7C200%7C240%7C280%7C320&chdl=Run%201%7CRun%202
 
-Detailed Request Duration Distribution Chart URL
-------------------------------------------------------------------------------
-http://chart.apis.google.com/chart?cht=lxy&chs=700x428&chxt=x,y&chg=10,20&chxr=0,0,220|1,0,100&chd=t:0,9,9,10,10,10,11,11,13,15,18,50,63,72,75,130|0,1,11,30,39,48,53,64,69,73,76,80,84,88,91,95|0,4,5,5,5,6,7,8,8,10,11,13,14,17,48,51,71,91,126|0,1,8,15,33,39,43,51,55,59,63,66,70,74,78,81,85,89,93|0,10,10,11,11,12,12,12,15,16,16,17,51,66,78,85,129|0,1,9,33,38,43,49,53,56,60,66,70,74,78,81,85,89|0,7,8,8,9,9,11,11,13,14,16,21,27,46,54,67,78,97,121|0,1,6,18,25,31,38,41,46,51,56,60,64,68,71,75,79,83,86|0,6,6,6,7,7,7,8,9,9,12,13,14,15,22,44,51,67,74,95,119|0,1,5,11,21,25,31,35,40,44,48,53,56,60,64,68,71,75,79,83,86|0,7,7,8,8,8,9,10,10,11,16,24,48,56,71,83,86,89,121|0,1,8,18,24,29,34,38,41,45,49,53,56,60,64,69,73,76,80|0,6,7,7,7,8,8,8,10,11,12,13,15,18,22,47,49,56,63,78,98,124|0,1,8,14,21,25,31,35,39,43,48,51,55,59,63,66,70,74,78,81,85,89|0,7,8,8,9,9,10,11,12,13,18,27,49,56,61,68,78,87,96,127|0,1,11,19,23,28,31,35,39,45,49,53,56,60,64,68,71,75,79,83|0,10,11,11,12,14,14,14,15,15,15,19,22,26,33,44,52,78,86,136|0,1,5,10,14,18,24,44,53,59,63,66,70,74,78,81,85,89,93,96|0,5,9,14,17,44,54,57,60,67,70,72,89,119|0,1,5,9,13,16,20,24,28,33,36,40,44,48|0,14,14,14,14,15,15,16,17,17,18,19,19,20,21,23,25,28,33,58,85,207|0,1,5,13,24,29,36,40,45,49,53,56,60,65,69,73,76,80,85,89,93,96|0,9,10,10,11,11,11,12,13,14,16,23,48,72,81,89,133|0,1,16,26,30,39,51,56,60,64,68,71,75,79,83,86,90|0,7,7,8,8,8,10,11,12,13,16,19,23,30,50,58,80,93,114|0,1,10,20,25,30,34,40,44,49,53,56,60,64,68,71,75,79,83&chco=ff9900,3dbecc,ff3912,303030,4684ee,fae30a,cc3ebd,76cc3e,bdcc3e,ababab,e5a59e,9900ff,76dbf4&chdl=UltraDNS|Scarlet-1|UltraDNS-2|Telecity-DNS|MACTelecom|Planetsky|ip69-ns2|EWEKA-2|OpenDNS|SYS-193.121.171.135|OpenDNS-2|N9UF|PINS
-
-Recommended Configuration (fastest + nearest):
+Fastest individual response (in milliseconds):
 ----------------------------------------------
-nameserver 156.154.70.1    # UltraDNS
-nameserver 194.119.228.67  # Scarlet-1
-nameserver 193.121.171.135 # SYS-193.121.171.135
+Scarlet-0 BE     ##################### 10.71286
+Benesol BE       ###################### 11.12390
+EDPnet-2 BE-2    ###################### 11.39688
+Econoweb BE      ####################### 11.84607
+OpenDNS-2        ############################ 14.16492
+BT-6 GB          ############################ 14.27984
+Genuity BAK      ############################ 14.33086
+DynGuide         ################################# 17.08102
+EU BT AMS NL     ################################### 17.74192
+Google Public DN ######################################## 20.69783
+UltraDNS-2       ###################################################### 27.56095
 
+Mean response (in milliseconds):
+--------------------------------
+Google Public DN ########## 62.97
+BT-6 GB          ################### 123.89
+Scarlet-0 BE     #################### 127.88
+Genuity BAK      ####################### 150.14
+UltraDNS-2       ######################### 161.57
+OpenDNS-2        ############################ 182.91
+EU BT AMS NL     ############################# 192.26
+DynGuide         ############################### 205.30
+Benesol BE       ############################### 206.70
+EDPnet-2 BE-2    ################################## 227.69
+Econoweb BE      ##################################################### 355.61
+
+Response Distribution Chart URL (200ms):
+----------------------------------------
+http://chart.apis.google.com/chart?cht=lxy&chs=720x415&chxt=x,y&chg=10,20&chxr=0,0,200|1,0,100...
+
+Response Distribution Chart URL (Full):
+---------------------------------------
+http://chart.apis.google.com/chart?cht=lxy&chs=720x415&chxt=x,y&chg=10,20&chxr=0,0,3500|1,0,100...
+
+Recommended configuration (fastest + nearest):
+----------------------------------------------
+nameserver 8.8.8.8         # Google Public DNS  
+nameserver 193.74.208.65   # Scarlet-0 BE  
+nameserver 85.158.210.68   # Benesol BE  
+
+********************************************************************************
+In this test, Your current primary DNS server is Fastest  
+********************************************************************************
+
+- Saving report to /tmp/namebench_2010-05-27_0842.html
+- Saving detailed results to /tmp/namebench_2010-05-27_0842.csv
 
 
 --[ FAQ ]-----------------------------------------------------------------------
+
+See http://code.google.com/p/namebench/wiki/FAQ for more recent updates.
+
 1) What does 'NXDOMAIN Hijacking' mean?
 
   This means that the specific DNS server returns a false entry when a
