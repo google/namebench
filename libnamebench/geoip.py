@@ -69,12 +69,16 @@ def GetFromMaxmindJSAPI():
     return {}
 
 def GetGeoData():
+  """Get geodata from any means necessary. Sanitize as necessary."""
   try:
-    jsapi_data = GetFromGoogleLocAPI()
-    if jsapi_data:
-      return jsapi_data
-    else:
-      return GetFromMaxmindJSAPI()
+    json_data = GetFromGoogleLocAPI()
+    if not json_data:
+      json_data = GetFromMaxmindJSAPI()
+      
+    # Make our data less accurate. We don't need any more than that.
+    json_data['latitude'] = '%.3f' % float(json_data['latitude'])
+    json_data['longitude'] = '%.3f' % float(json_data['longitude'])
+    return json_data
   except:
     print "Failed to get Geodata: %s" % util.GetLastExceptionString()
     return {}

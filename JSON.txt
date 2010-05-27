@@ -2,13 +2,14 @@ namebench has an opt-in feature that enables users to upload and share results.
 This is a technical description to show exactly what data is communicated to
 the server via JSON.
 
-There is a fair bit of duplicated performance data. For instance, we upload the
-individual durations for each query, along with an average. For our own internal
-reporting, we have already generated each average, so why not upload it and save the
-server the processing time of calculating it? The same goes with duration min/max.
+Many performance numbers are duplicated within the submitted data. For
+instance, we upload the individual durations for each query, along with an
+average. This is done as a performance enhancement, since the client has 
+already calculated all of the averages, saving AppEngine from duplicating
+effort.
 
 -------------------------------------------------------------------------------
-# Lets start with the scariest number:
+# Lets start with the most interesting number from a privacy perspective:
 # 
 # The client_id is a simple signed integer, designed to detect subsequent runs
 # from the same user, so that the new runs can be hidden. To arrive at a unique
@@ -221,9 +222,14 @@ server the processing time of calculating it? The same goes with duration min/ma
    "geodata":{
       "city":"Manchester",
       "region_name":"New Hampshire",
+
+      # Whether or not we used Google (default) or Maxmind for GeoIP data.
       "source":"gloc",
-      "longitude":-71.454789000000005,
-      "latitude":42.995638999999997,
+
+      # The lat/long accuracy is reduced to only provide city-level
+      # accuracy, which is enough for us to keep up with city name changes.
+      "longitude":-71.454,
+      "latitude":42.995,
       "country_code":"US",
       "country_name":"United States"
    },
