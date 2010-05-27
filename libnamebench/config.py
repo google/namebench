@@ -89,9 +89,9 @@ def DefineAndParseOptions(filename):
   parser.add_option('-w', '--open_webbrowser', dest='open_webbrowser',
                     action='store_true', help='Opens the final report in your browser')
   parser.add_option('-u', '--upload_results', dest='upload_results',
-                    action='store_true', help='Upload anonmyized results to The Namebench Project')
+                    action='store_true', help='Upload anonmyized results to SITE_URLl (default: False)')
   parser.add_option('-U', '--site_url', dest='site_url',
-                    help='URL to communicate results to.')
+                    help='URL to upload results to (http://namebench.appspot.com/)')
   parser.add_option('-H', '--hide_results', dest='hide_results', action='store_true',
                     help='Upload results, but keep them hidden from indexes.')
   parser.add_option('-x', '--no_gui', dest='no_gui',

@@ -230,9 +230,6 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     share_button = Checkbutton(inner_frame, text="Make anonymized results publically available (help speed up the internet!)",
                                variable=self.share_results)
-    # TODO(tstromberg): Remove when legal is happy.
-    share_button.configure(state=DISABLED)
-
     share_button.grid(row=5, columnspan=2, sticky=W)
 
     if sys.platform[:3] == 'win':
@@ -354,7 +351,3 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.get())
     self.options.enable_censorship_checks = self.use_censor_checks.get()
     self.options.upload_results = self.share_results.get()
-    # TODO(tstromberg): Remove once legal is happy.
-    if 'share' in self.nameserver_form.get():
-      self.options.upload_results = True
-    

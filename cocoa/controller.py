@@ -117,10 +117,6 @@ class controller(NSWindowController, base_ui.BaseUI):
       self.UpdateStatus('Not using regional')
       self.regional_ns = []
 
-    # TODO(tstromberg): Remove this easter-egg once legal is happy.
-    if 'share' in self.nameserver_form.stringValue():
-      self.options.upload_results = True
-
     if int(self.enable_sharing.stringValue()):
       self.options.upload_results = True
 
@@ -198,6 +194,3 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.data_source.removeAllItems()
     self.data_source.addItemsWithTitles_(self.data_src.ListSourceTitles())
     
-    # TODO(tstromberg): Remove this once legal is happy.
-    self.enable_sharing.setEnabled_(False)
-
