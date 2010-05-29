@@ -21,27 +21,18 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 from objc import YES, NO, IBAction, IBOutlet
 from Foundation import *
 from AppKit import *
-import datetime
-import operator
-import urllib
-import time
-import webbrowser
-import tempfile
 import traceback
 import sys
 import os
-import re
 
-import third_party
+from libnamebench import addr_util
 from libnamebench import base_ui
-from libnamebench import benchmark
 from libnamebench import config
 from libnamebench import conn_quality
-from libnamebench import data_sources
 from libnamebench import nameserver_list
-from libnamebench import selectors
 from libnamebench import util
 from libnamebench import version
+
 
 class controller(NSWindowController, base_ui.BaseUI):
   """Controller class associated with the main window."""
@@ -60,7 +51,7 @@ class controller(NSWindowController, base_ui.BaseUI):
   button = IBOutlet()
 
   def awakeFromNib(self):
-    """Initializes our class, called automatically by Cocoa"""
+    """Initializes our class, called automatically by Cocoa."""
     self.SetupDataStructures()
     NSLog("pwd: %s" % os.getcwd())
     NSLog('argv[0]: %s' % sys.argv[0])
@@ -129,7 +120,7 @@ class controller(NSWindowController, base_ui.BaseUI):
 
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.titleOfSelectedItem())
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
-    self.preferred.extend(util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
+    self.preferred.extend(addr_util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     self.options.query_count = int(self.query_count.stringValue())
     self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.input_source, self.options.select_mode, self.options.query_count, self.options.run_count))
 
@@ -175,7 +166,7 @@ class controller(NSWindowController, base_ui.BaseUI):
 
   def setFormDefaults(self):
     """Set up the form with sane initial values."""
-    nameservers_string = ', '.join(util.InternalNameServers())
+    nameservers_string = ', '.join(nameserver_list.InternalNameServers())
     self.nameserver_form.setStringValue_(nameservers_string)
     self.query_count.setStringValue_(self.options.query_count)
     self.query_count.setStringValue_(self.options.query_count)
