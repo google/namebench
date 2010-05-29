@@ -218,7 +218,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     if sys.platform[:3] == 'win':
       seperator_width = 490
     else:
-      seperator_width = 550
+      seperator_width = 565
 
     bold_font = tkFont.Font(font=status['font'])
     bold_font['weight'] = 'bold'
