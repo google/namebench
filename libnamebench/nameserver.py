@@ -266,7 +266,8 @@ class NameServer(health_checks.NameServerHealthChecks):
       else:
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)
 
-    if fatal:
+    # Fatal doesn't count for system & preferred nameservers.
+    if fatal and not (self.is_system or self.is_preferred):
       self.disabled = message
     elif self.failed_test_count >= max_count:
       self.disabled = "Failed %s tests, last: %s" % (self.failed_test_count, message)
