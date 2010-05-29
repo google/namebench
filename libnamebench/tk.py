@@ -257,7 +257,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     censorship_button.grid(row=6, columnspan=2, sticky=W)
 
     share_button = Checkbutton(inner_frame,
-                               text='Make anonymized results publically available (help speed up the internet!)',
+                               text='Upload and share your anonymized results (help speed up the internet!)',
                                variable=self.share_results)
 
     # Old versions of Tk do not support two-dimensional padding.
