@@ -218,7 +218,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     if sys.platform[:3] == 'win':
       seperator_width = 490
     else:
-      seperator_width = 565
+      seperator_width = 585
 
     bold_font = tkFont.Font(font=status['font'])
     bold_font['weight'] = 'bold'
@@ -322,9 +322,9 @@ class MainWindow(Frame, base_ui.BaseUI):
       m = global_message_queue.get()
       if m.error:
         self.ErrorPopup(m.message, m.error)
-      elif not m.enable_button:
+      elif m.enable_button == False:
         self.UpdateRunState(running=True)
-      elif m.enable_button:
+      elif m.enable_button == True:
         self.UpdateRunState(running=False)
       self.UpdateStatus(m.message, count=m.count, total=m.total, error=m.error, debug=m.debug)
 
