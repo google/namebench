@@ -103,7 +103,7 @@ class NameBenchCli(base_ui.BaseUI):
   def Execute(self):
     """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.input_source or 'best history source',
+          (self.version, self.options.input_source or 'best source',
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s/%s queries=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.health_thread_count, self.options.benchmark_thread_count,
