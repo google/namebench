@@ -104,7 +104,10 @@ class NameServerHealthChecks(object):
   def TestBindVersion(self):
     """Test for BIND version. This acts as a pretty decent ping."""
     (unused_response, duration, error_msg) = self.RequestVersion()
-    return (False, error_msg, duration)
+    # Sometimes nameservers aren't able to respond to this request in a way that
+    # dnspython likes.
+    is_broken = False
+    return (is_broken, error_msg, duration)
 
   def TestNodeId(self):
     """Get the current node id."""
@@ -131,11 +134,21 @@ class NameServerHealthChecks(object):
       error_msg = 'NXDOMAIN Hijacking' + warning_suffix
 
     return (is_broken, error_msg, duration)
+    
+  def TestRootNsResponse(self):
+    is_broken = False
+    error_msg = None
+    (response, duration, error_msg) = self.TimedRequest('NS', '.')
+    if not response:
+      is_broken = True
+      if not error_msg:
+        error_msg = 'No response'
+    return (is_broken, error_msg, duration)
 
   def TestWwwNegativeResponse(self):
     return self.TestNegativeResponse(prefix='www')
 
-  def TestRootServerResponse(self):
+  def TestARootServerResponse(self):
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
 
   def TestPortBehavior(self, tries=0):
@@ -240,11 +253,13 @@ class NameServerHealthChecks(object):
   def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):
     """Qualify a nameserver to see if it is any good."""
 
+    is_fatal = False
     if fast_check:
-      tests = [(self.TestBindVersion, [])]
+      tests = [(self.TestRootNsResponse, [])]
+      is_fatal = True
       sanity_checks = []
     elif final_check:
-      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, []), (self.TestNodeId, [])]
+      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, []), (self.TestNodeId, []), (self.TestBindVersion, [])]
     elif port_check:
       tests = [(self.TestPortBehavior, []), (self.TestNodeId, [])]
     else:
@@ -266,7 +281,7 @@ class NameServerHealthChecks(object):
 
       self.checks.append((test_name, is_broken, warning, duration))
       if is_broken:
-        self.AddFailure('%s: %s' % (test_name, warning))
+        self.AddFailure('%s: %s' % (test_name, warning), fatal=is_fatal)
       if warning:
         # Special case for NXDOMAIN de-duplication
         if not ('NXDOMAIN' in warning and 'NXDOMAIN Hijacking' in self.warnings):

@@ -16,6 +16,7 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import datetime
 import operator
 import os
 import pickle
@@ -380,9 +381,9 @@ class NameServers(list):
                (len(self), self.thread_count))
 
     # If we have a lot of nameservers, make a first cut.
-    if len(self) > (self.num_servers / FIRST_CUT_MULTIPLIER):
+    if len(self) > len(self.enabled) * FIRST_CUT_MULTIPLIER:
       self.PingNameServers()
-      self.DisableUnwantedServers(target_count=int(len(self) * FIRST_CUT_MULTIPLIER),
+      self.DisableUnwantedServers(target_count=int(len(self.enabled) * FIRST_CUT_MULTIPLIER),
                                   delete_unwanted=True)
 
     self.RunHealthCheckThreads(primary_checks)
@@ -597,6 +598,7 @@ class NameServers(list):
 
   def PingNameServers(self):
     """Quickly ping nameservers to see which are available."""
+    start = datetime.datetime.now()
     try:
       results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self.enabled))
     except ThreadFailure:
@@ -614,8 +616,9 @@ class NameServers(list):
       results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
     if self.enabled:
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-      self.msg('%s of %s tested name servers are available' %
-               (len(self.enabled), len(self)))
+      self.msg('%s of %s servers are available (duration: %s)' %
+               (len(self.enabled), len(self), datetime.datetime.now() - start))
+    
     return results
 
   def RunHealthCheckThreads(self, checks):
