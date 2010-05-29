@@ -235,7 +235,7 @@ class NameServerHealthChecks(object):
                                 timeout=self.health_timeout * CENSORSHIP_TIMEOUT_MULTIPLIER)
       warning = result[1]
       if warning:
-        self.warnings.add(warning)
+        self.AddWarning(warning)
 
   def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):
     """Qualify a nameserver to see if it is any good."""
@@ -270,7 +270,7 @@ class NameServerHealthChecks(object):
       if warning:
         # Special case for NXDOMAIN de-duplication
         if not ('NXDOMAIN' in warning and 'NXDOMAIN Hijacking' in self.warnings):
-          self.warnings.add(warning)
+          self.AddWarning(warning)
       if self.disabled:
         break
 

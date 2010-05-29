@@ -56,6 +56,7 @@ else:
 MAX_NORMAL_FAILURES = 2
 MAX_SYSTEM_FAILURES = 7
 MAX_PREFERRED_FAILURES = 5
+MAX_WARNINGS = 7
 
 FAILURE_PRONE_RATE = 10
 
@@ -247,7 +248,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.failure_count = 0
     self.error_map = {}
 
-  def AddFailure(self, message):
+  def AddFailure(self, message, fatal=False):
     """Add a failure for this nameserver. This will effectively disable it's use."""
     if self.is_system:
       max_count = MAX_SYSTEM_FAILURES
@@ -265,8 +266,15 @@ class NameServer(health_checks.NameServerHealthChecks):
       else:
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)
 
-    if self.failed_test_count >= max_count:
+    if fatal:
+      self.disabled = message
+    elif self.failed_test_count >= max_count:
       self.disabled = "Failed %s tests, last: %s" % (self.failed_test_count, message)
+      
+  def AddWarning(self, message):
+    self.warnings.add(message)
+    if len(self.warnings) >= MAX_WARNINGS:
+      self.AddFailure('Too many warnings (%s), probably broken.' % len(self.warnings), fatal=True)
 
   def CreateRequest(self, record, request_type, return_type):
     """Function to work around any dnspython make_query quirks."""
