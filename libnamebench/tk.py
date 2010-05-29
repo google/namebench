@@ -220,7 +220,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     ns_label.grid(row=0, columnspan=2, sticky=W)
     ns_label['font'] = bold_font
 
-    nameservers = Entry(inner_frame, bg='white', textvariable=self.nameserver_form, width=80)
+    nameservers = Entry(inner_frame, bg='white', textvariable=self.nameserver_form, width=72)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(nameserver_list.InternalNameServers()))
 
@@ -236,21 +236,26 @@ class MainWindow(Frame, base_ui.BaseUI):
     regional_button.grid(row=3, columnspan=2, sticky=W)
     regional_button.toggle()
 
+    if sys.platform[:3] == 'win':
+      seperator_width = 370
+    else:
+      seperator_width = 385
+    separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
+    separator.grid(row=4, padx=5, pady=5, columnspan=2)
+
+    ds_label = Label(inner_frame, text='Options')
+    ds_label.grid(row=5, column=0, sticky=W)
+    ds_label['font'] = bold_font
+
     censorship_button = Checkbutton(inner_frame, text='Include censorship checks',
                                     variable=self.use_censor_checks)
-    censorship_button.grid(row=4, columnspan=2, sticky=W)
+    censorship_button.grid(row=6, columnspan=2, sticky=W)
 
     share_button = Checkbutton(inner_frame,
                                text='Make anonymized results publically available (help speed up the internet!)',
                                variable=self.share_results)
-    share_button.grid(row=5, columnspan=2, sticky=W)
+    share_button.grid(row=7, columnspan=2, sticky=W)
 
-    if sys.platform[:3] == 'win':
-      seperator_width = 470
-    else:
-      seperator_width = 585
-    separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
-    separator.grid(row=6, padx=5, pady=5, columnspan=2)
 
     loc_label = Label(inner_frame, text='Your location')
     loc_label.grid(row=10, column=0, sticky=W)
@@ -263,13 +268,13 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.DiscoverLocation()
     location_choices = [self.country, '(Other)']
     location = OptionMenu(inner_frame, self.location, *location_choices)
-    location.configure(width=40)
+    location.configure(width=28)
     location.grid(row=11, column=0, sticky=W)
     self.location.set(location_choices[0])
 
-    mode_choices = ['Fast', 'Slow (for unstable routers)']
+    mode_choices = ['Fast', 'Slow (unstable network)']
     health_performance = OptionMenu(inner_frame, self.health_performance, *mode_choices)
-    health_performance.configure(width=15)
+    health_performance.configure(width=17)
     health_performance.grid(row=11, column=1, sticky=W)
     self.health_performance.set(mode_choices[0])
 
@@ -278,13 +283,13 @@ class MainWindow(Frame, base_ui.BaseUI):
     ds_label['font'] = bold_font
 
     numqueries_label = Label(inner_frame, text='Number of queries')
-    numqueries_label.grid(row=12, column=1, sticky=W)
+    numqueries_label.grid(row=12, column=1, sticky=W)    
     numqueries_label['font'] = bold_font
 
     self.LoadDataSources()
     source_titles = self.data_src.ListSourceTitles()
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
-    data_source.configure(width=40)
+    data_source.configure(width=30)
     data_source.grid(row=13, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
