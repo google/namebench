@@ -5,11 +5,14 @@
 
     Jinja test functions. Used with the "is" operator.
 
-    :copyright: (c) 2009 by the Jinja Team.
+    :copyright: (c) 2010 by the Jinja Team.
     :license: BSD, see LICENSE for more details.
 """
 import re
 from jinja2.runtime import Undefined
+
+# nose, nothing here to test
+__test__ = False
 
 
 number_re = re.compile(r'^-?\d+(\.\d+)?$')

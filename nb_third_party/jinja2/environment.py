@@ -5,9 +5,10 @@
 
     Provides a class that holds runtime and parsing time options.
 
-    :copyright: (c) 2009 by the Jinja Team.
+    :copyright: (c) 2010 by the Jinja Team.
     :license: BSD, see LICENSE for more details.
 """
+import os
 import sys
 from jinja2 import nodes
 from jinja2.defaults import *
@@ -16,9 +17,10 @@ from jinja2.parser import Parser
 from jinja2.optimizer import optimize
 from jinja2.compiler import generate
 from jinja2.runtime import Undefined, new_context
-from jinja2.exceptions import TemplateSyntaxError
+from jinja2.exceptions import TemplateSyntaxError, TemplateNotFound, \
+     TemplatesNotFound
 from jinja2.utils import import_string, LRUCache, Markup, missing, \
-     concat, consume, internalcode
+     concat, consume, internalcode, _encode_filename
 
 
 # for direct template usage we have up to ten living environments
@@ -151,13 +153,20 @@ class Environment(object):
             undefined values in the template.
 
         `finalize`
-            A callable that finalizes the variable.  Per default no finalizing
-            is applied.
+            A callable that can be used to process the result of a variable
+            expression before it is output.  For example one can convert
+            `None` implicitly into an empty string here.
 
         `autoescape`
-            If set to true the XML/HTML autoescaping feature is enabled.
-            For more details about auto escaping see
-            :class:`~jinja2.utils.Markup`.
+            If set to true the XML/HTML autoescaping feature is enabled by
+            default.  For more details about auto escaping see
+            :class:`~jinja2.utils.Markup`.  As of Jinja 2.4 this can also
+            be a callable that is passed the template name and has to
+            return `True` or `False` depending on autoescape should be
+            enabled by default.
+
+            .. versionchanged:: 2.4
+               `autoescape` can now be a function
 
         `loader`
             The template loader for this environment.
@@ -288,8 +297,8 @@ class Environment(object):
                 loader=missing, cache_size=missing, auto_reload=missing,
                 bytecode_cache=missing):
         """Create a new overlay environment that shares all the data with the
-        current environment except of cache and the overriden attributes.
-        Extensions cannot be removed for a overlayed environment.  A overlayed
+        current environment except of cache and the overridden attributes.
+        Extensions cannot be removed for an overlayed environment.  An overlayed
         environment automatically gets all the extensions of the environment it
         is linked to plus optional extra extensions.
 
@@ -324,6 +333,11 @@ class Environment(object):
         return _environment_sanity_check(rv)
 
     lexer = property(get_lexer, doc="The lexer for this environment.")
+
+    def iter_extensions(self):
+        """Iterates over the extensions by priority."""
+        return iter(sorted(self.extensions.values(),
+                           key=lambda x: x.priority))
 
     def getitem(self, obj, argument):
         """Get an item or attribute of an object but prefer the item."""
@@ -373,9 +387,7 @@ class Environment(object):
 
     def _parse(self, source, name, filename):
         """Internal parsing function used by `parse` and `compile`."""
-        if isinstance(filename, unicode):
-            filename = filename.encode('utf-8')
-        return Parser(self, source, name, filename).parse()
+        return Parser(self, source, name, _encode_filename(filename)).parse()
 
     def lex(self, source, name=None, filename=None):
         """Lex the given sourcecode and return a generator that yields
@@ -400,7 +412,7 @@ class Environment(object):
         because there you usually only want the actual source tokenized.
         """
         return reduce(lambda s, e: e.preprocess(s, name, filename),
-                      self.extensions.itervalues(), unicode(source))
+                      self.iter_extensions(), unicode(source))
 
     def _tokenize(self, source, name, filename=None, state=None):
         """Called by the parser to do the preprocessing and filtering
@@ -408,14 +420,15 @@ class Environment(object):
         """
         source = self.preprocess(source, name, filename)
         stream = self.lexer.tokenize(source, name, filename, state)
-        for ext in self.extensions.itervalues():
+        for ext in self.iter_extensions():
             stream = ext.filter_stream(stream)
             if not isinstance(stream, TokenStream):
                 stream = TokenStream(stream, name, filename)
         return stream
 
     @internalcode
-    def compile(self, source, name=None, filename=None, raw=False):
+    def compile(self, source, name=None, filename=None, raw=False,
+                defer_init=False):
         """Compile a node or template source code.  The `name` parameter is
         the load name of the template after it was joined using
         :meth:`join_path` if necessary, not the filename on the file system.
@@ -427,6 +440,13 @@ class Environment(object):
         parameter is `True` the return value will be a string with python
         code equivalent to the bytecode returned otherwise.  This method is
         mainly used internally.
+
+        `defer_init` is use internally to aid the module code generator.  This
+        causes the generated code to be able to import without the global
+        environment variable to be set.
+
+        .. versionadded:: 2.4
+           `defer_init` parameter added.
         """
         source_hint = None
         try:
@@ -435,13 +455,14 @@ class Environment(object):
                 source = self._parse(source, name, filename)
             if self.optimized:
                 source = optimize(source, self)
-            source = generate(source, self, name, filename)
+            source = generate(source, self, name, filename,
+                              defer_init=defer_init)
             if raw:
                 return source
             if filename is None:
                 filename = '<template>'
-            elif isinstance(filename, unicode):
-                filename = filename.encode('utf-8')
+            else:
+                filename = _encode_filename(filename)
             return compile(source, filename, 'exec')
         except TemplateSyntaxError:
             exc_info = sys.exc_info()
@@ -473,7 +494,7 @@ class Environment(object):
         >>> env.compile_expression('var', undefined_to_none=False)()
         Undefined
 
-        **new in Jinja 2.1**
+        .. versionadded:: 2.1
         """
         parser = Parser(self, source, state='variable')
         exc_info = None
@@ -483,6 +504,7 @@ class Environment(object):
                 raise TemplateSyntaxError('chunk after expression',
                                           parser.stream.current.lineno,
                                           None, None)
+            expr.set_environment(self)
         except TemplateSyntaxError:
             exc_info = sys.exc_info()
         if exc_info is not None:
@@ -490,6 +512,114 @@ class Environment(object):
         body = [nodes.Assign(nodes.Name('result', 'store'), expr, lineno=1)]
         template = self.from_string(nodes.Template(body, lineno=1))
         return TemplateExpression(template, undefined_to_none)
+
+    def compile_templates(self, target, extensions=None, filter_func=None,
+                          zip='deflated', log_function=None,
+                          ignore_errors=True, py_compile=False):
+        """Compiles all the templates the loader can find, compiles them
+        and stores them in `target`.  If `zip` is `None`, instead of in a
+        zipfile, the templates will be will be stored in a directory.
+        By default a deflate zip algorithm is used, to switch to
+        the stored algorithm, `zip` can be set to ``'stored'``.
+
+        `extensions` and `filter_func` are passed to :meth:`list_templates`.
+        Each template returned will be compiled to the target folder or
+        zipfile.
+
+        By default template compilation errors are ignored.  In case a
+        log function is provided, errors are logged.  If you want template
+        syntax errors to abort the compilation you can set `ignore_errors`
+        to `False` and you will get an exception on syntax errors.
+
+        If `py_compile` is set to `True` .pyc files will be written to the
+        target instead of standard .py files.
+
+        .. versionadded:: 2.4
+        """
+        from jinja2.loaders import ModuleLoader
+
+        if log_function is None:
+            log_function = lambda x: None
+
+        if py_compile:
+            import imp, struct, marshal
+            py_header = imp.get_magic() + \
+                u'\xff\xff\xff\xff'.encode('iso-8859-15')
+
+        def write_file(filename, data, mode):
+            if zip:
+                info = ZipInfo(filename)
+                info.external_attr = 0755 << 16L
+                zip_file.writestr(info, data)
+            else:
+                f = open(os.path.join(target, filename), mode)
+                try:
+                    f.write(data)
+                finally:
+                    f.close()
+
+        if zip is not None:
+            from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED, ZIP_STORED
+            zip_file = ZipFile(target, 'w', dict(deflated=ZIP_DEFLATED,
+                                                 stored=ZIP_STORED)[zip])
+            log_function('Compiling into Zip archive "%s"' % target)
+        else:
+            if not os.path.isdir(target):
+                os.makedirs(target)
+            log_function('Compiling into folder "%s"' % target)
+
+        try:
+            for name in self.list_templates(extensions, filter_func):
+                source, filename, _ = self.loader.get_source(self, name)
+                try:
+                    code = self.compile(source, name, filename, True, True)
+                except TemplateSyntaxError, e:
+                    if not ignore_errors:
+                        raise
+                    log_function('Could not compile "%s": %s' % (name, e))
+                    continue
+
+                filename = ModuleLoader.get_module_filename(name)
+
+                if py_compile:
+                    c = compile(code, _encode_filename(filename), 'exec')
+                    write_file(filename + 'c', py_header +
+                               marshal.dumps(c), 'wb')
+                    log_function('Byte-compiled "%s" as %s' %
+                                 (name, filename + 'c'))
+                else:
+                    write_file(filename, code, 'w')
+                    log_function('Compiled "%s" as %s' % (name, filename))
+        finally:
+            if zip:
+                zip_file.close()
+
+        log_function('Finished compiling templates')
+
+    def list_templates(self, extensions=None, filter_func=None):
+        """Returns a list of templates for this environment.  This requires
+        that the loader supports the loader's
+        :meth:`~BaseLoader.list_templates` method.
+
+        If there are other files in the template folder besides the
+        actual templates, the returned list can be filtered.  There are two
+        ways: either `extensions` is set to a list of file extensions for
+        templates, or a `filter_func` can be provided which is a callable that
+        is passed a template name and should return `True` if it should end up
+        in the result list.
+
+        If the loader does not support that, a :exc:`TypeError` is raised.
+        """
+        x = self.loader.list_templates()
+        if extensions is not None:
+            if filter_func is not None:
+                raise TypeError('either extensions or filter_func '
+                                'can be passed, but not both')
+            filter_func = lambda x: '.' in x and \
+                                    x.rsplit('.', 1)[1] in extensions
+        if filter_func is not None:
+            x = filter(filter_func, x)
+        return x
 
     def handle_exception(self, exc_info=None, rendered=False, source_hint=None):
         """Exception handling helper.  This is used internally to either raise
@@ -526,6 +656,20 @@ class Environment(object):
         return template
 
     @internalcode
+    def _load_template(self, name, globals):
+        if self.loader is None:
+            raise TypeError('no loader for this environment specified')
+        if self.cache is not None:
+            template = self.cache.get(name)
+            if template is not None and (not self.auto_reload or \
+                                         template.is_up_to_date):
+                return template
+        template = self.loader.load(self, name, globals)
+        if self.cache is not None:
+            self.cache[name] = template
+        return template
+
+    @internalcode
     def get_template(self, name, parent=None, globals=None):
         """Load a template from the loader.  If a loader is configured this
         method ask the loader for the template and returns a :class:`Template`.
@@ -537,22 +681,58 @@ class Environment(object):
 
         If the template does not exist a :exc:`TemplateNotFound` exception is
         raised.
+
+        .. versionchanged:: 2.4
+           If `name` is a :class:`Template` object it is returned from the
+           function unchanged.
         """
-        if self.loader is None:
-            raise TypeError('no loader for this environment specified')
+        if isinstance(name, Template):
+            return name
         if parent is not None:
             name = self.join_path(name, parent)
+        return self._load_template(name, self.make_globals(globals))
 
-        if self.cache is not None:
-            template = self.cache.get(name)
-            if template is not None and (not self.auto_reload or \
-                                         template.is_up_to_date):
-                return template
+    @internalcode
+    def select_template(self, names, parent=None, globals=None):
+        """Works like :meth:`get_template` but tries a number of templates
+        before it fails.  If it cannot find any of the templates, it will
+        raise a :exc:`TemplatesNotFound` exception.
 
-        template = self.loader.load(self, name, self.make_globals(globals))
-        if self.cache is not None:
-            self.cache[name] = template
-        return template
+        .. versionadded:: 2.3
+
+        .. versionchanged:: 2.4
+           If `names` contains a :class:`Template` object it is returned
+           from the function unchanged.
+        """
+        if not names:
+            raise TemplatesNotFound(message=u'Tried to select from an empty list '
+                                            u'of templates.')
+        globals = self.make_globals(globals)
+        for name in names:
+            if isinstance(name, Template):
+                return name
+            if parent is not None:
+                name = self.join_path(name, parent)
+            try:
+                return self._load_template(name, globals)
+            except TemplateNotFound:
+                pass
+        raise TemplatesNotFound(names)
+
+    @internalcode
+    def get_or_select_template(self, template_name_or_list,
+                               parent=None, globals=None):
+        """Does a typecheck and dispatches to :meth:`select_template`
+        if an iterable of template names is given, otherwise to
+        :meth:`get_template`.
+
+        .. versionadded:: 2.3
+        """
+        if isinstance(template_name_or_list, basestring):
+            return self.get_template(template_name_or_list, parent, globals)
+        elif isinstance(template_name_or_list, Template):
+            return template_name_or_list
+        return self.select_template(template_name_or_list, parent, globals)
 
     def from_string(self, source, globals=None, template_class=None):
         """Load a template from a string.  This parses the source given and
@@ -629,16 +809,31 @@ class Template(object):
         """Creates a template object from compiled code and the globals.  This
         is used by the loaders and environment to create a template object.
         """
-        t = object.__new__(cls)
         namespace = {
-            'environment':          environment,
-            '__jinja_template__':   t
+            'environment':  environment,
+            '__file__':     code.co_filename
         }
         exec code in namespace
+        rv = cls._from_namespace(environment, namespace, globals)
+        rv._uptodate = uptodate
+        return rv
+
+    @classmethod
+    def from_module_dict(cls, environment, module_dict, globals):
+        """Creates a template object from a module.  This is used by the
+        module loader to create a template object.
+
+        .. versionadded:: 2.4
+        """
+        return cls._from_namespace(environment, module_dict, globals)
+
+    @classmethod
+    def _from_namespace(cls, environment, namespace, globals):
+        t = object.__new__(cls)
         t.environment = environment
         t.globals = globals
         t.name = namespace['name']
-        t.filename = code.co_filename
+        t.filename = namespace['__file__']
         t.blocks = namespace['blocks']
 
         # render function and module
@@ -647,7 +842,11 @@ class Template(object):
 
         # debug and loader helpers
         t._debug_info = namespace['debug_info']
-        t._uptodate = uptodate
+        t._uptodate = None
+
+        # store the reference
+        namespace['environment'] = environment
+        namespace['__jinja_template__'] = t
 
         return t
 
@@ -770,11 +969,18 @@ class TemplateModule(object):
         self.__dict__.update(context.get_exported())
         self.__name__ = template.name
 
-    __unicode__ = lambda x: concat(x._body_stream)
-    __html__ = lambda x: Markup(concat(x._body_stream))
+    def __html__(self):
+        return Markup(concat(self._body_stream))
 
     def __str__(self):
         return unicode(self).encode('utf-8')
+
+    # unicode goes after __str__ because we configured 2to3 to rename
+    # __unicode__ to __str__.  because the 2to3 tree is not designed to
+    # remove nodes from it, we leave the above __str__ around and let
+    # it override at runtime.
+    def __unicode__(self):
+        return concat(self._body_stream)
 
     def __repr__(self):
         if self.__name__ is None:

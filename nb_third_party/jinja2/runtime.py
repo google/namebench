@@ -5,13 +5,15 @@
 
     Runtime helpers.
 
-    :copyright: (c) 2009 by the Jinja Team.
+    :copyright: (c) 2010 by the Jinja Team.
     :license: BSD.
 """
 import sys
 from itertools import chain, imap
+from jinja2.nodes import EvalContext
 from jinja2.utils import Markup, partial, soft_unicode, escape, missing, \
-     concat, MethodType, FunctionType, internalcode, next
+     concat, MethodType, FunctionType, internalcode, next, \
+     object_type_repr
 from jinja2.exceptions import UndefinedError, TemplateRuntimeError, \
      TemplateNotFound
 
@@ -76,7 +78,7 @@ class TemplateReference(object):
 
     def __getitem__(self, name):
         blocks = self.__context.blocks[name]
-        wrap = self.__context.environment.autoescape and \
+        wrap = self.__context.eval_ctx.autoescape and \
                Markup or (lambda x: x)
         return BlockReference(name, self.__context, blocks, 0)
 
@@ -106,13 +108,14 @@ class Context(object):
     method that doesn't fail with a `KeyError` but returns an
     :class:`Undefined` object for missing variables.
     """
-    __slots__ = ('parent', 'vars', 'environment', 'exported_vars', 'name',
-                 'blocks', '__weakref__')
+    __slots__ = ('parent', 'vars', 'environment', 'eval_ctx', 'exported_vars',
+                 'name', 'blocks', '__weakref__')
 
     def __init__(self, environment, parent, name, blocks):
         self.parent = parent
-        self.vars = vars = {}
+        self.vars = {}
         self.environment = environment
+        self.eval_ctx = EvalContext(self.environment, name)
         self.exported_vars = set()
         self.name = name
 
@@ -174,6 +177,8 @@ class Context(object):
         if isinstance(__obj, _context_function_types):
             if getattr(__obj, 'contextfunction', 0):
                 args = (__self,) + args
+            elif getattr(__obj, 'evalcontextfunction', 0):
+                args = (__self.eval_ctx,) + args
             elif getattr(__obj, 'environmentfunction', 0):
                 args = (__self.environment,) + args
         return __obj(*args, **kwargs)
@@ -182,6 +187,7 @@ class Context(object):
         """Internal helper function to create a derived context."""
         context = new_context(self.environment, self.name, {},
                               self.parent, True, None, locals)
+        context.eval_ctx = self.eval_ctx
         context.blocks.update((k, list(v)) for k, v in self.blocks.iteritems())
         return context
 
@@ -252,7 +258,7 @@ class BlockReference(object):
     @internalcode
     def __call__(self):
         rv = concat(self._stack[self._depth](self._context))
-        if self._context.environment.autoescape:
+        if self._context.eval_ctx.autoescape:
             rv = Markup(rv)
         return rv
 
@@ -301,7 +307,8 @@ class LoopContext(object):
 
     # a nifty trick to enhance the error message if someone tried to call
     # the the loop without or with too many arguments.
-    __call__ = loop; del loop
+    __call__ = loop
+    del loop
 
     @property
     def length(self):
@@ -416,7 +423,7 @@ class Undefined(object):
     __slots__ = ('_undefined_hint', '_undefined_obj', '_undefined_name',
                  '_undefined_exception')
 
-    def __init__(self, hint=None, obj=None, name=None, exc=UndefinedError):
+    def __init__(self, hint=None, obj=missing, name=None, exc=UndefinedError):
         self._undefined_hint = hint
         self._undefined_obj = obj
         self._undefined_name = name
@@ -428,16 +435,16 @@ class Undefined(object):
         `UndefinedError` on call.
         """
         if self._undefined_hint is None:
-            if self._undefined_obj is None:
+            if self._undefined_obj is missing:
                 hint = '%r is undefined' % self._undefined_name
             elif not isinstance(self._undefined_name, basestring):
-                hint = '%r object has no element %r' % (
-                    self._undefined_obj.__class__.__name__,
+                hint = '%s has no element %r' % (
+                    object_type_repr(self._undefined_obj),
                     self._undefined_name
                 )
             else:
-                hint = '%r object has no attribute %r' % (
-                    self._undefined_obj.__class__.__name__,
+                hint = '%r has no attribute %r' % (
+                    object_type_repr(self._undefined_obj),
                     self._undefined_name
                 )
         else:
@@ -454,6 +461,10 @@ class Undefined(object):
     def __str__(self):
         return unicode(self).encode('utf-8')
 
+    # unicode goes after __str__ because we configured 2to3 to rename
+    # __unicode__ to __str__.  because the 2to3 tree is not designed to
+    # remove nodes from it, we leave the above __str__ around and let
+    # it override at runtime.
     def __unicode__(self):
         return u''
 
@@ -488,10 +499,10 @@ class DebugUndefined(Undefined):
 
     def __unicode__(self):
         if self._undefined_hint is None:
-            if self._undefined_obj is None:
+            if self._undefined_obj is missing:
                 return u'{{ %s }}' % self._undefined_name
             return '{{ no such element: %s[%r] }}' % (
-                self._undefined_obj.__class__.__name__,
+                object_type_repr(self._undefined_obj),
                 self._undefined_name
             )
         return u'{{ undefined value printed: %s }}' % self._undefined_hint
@@ -517,8 +528,8 @@ class StrictUndefined(Undefined):
     UndefinedError: 'foo' is undefined
     """
     __slots__ = ()
-    __iter__ = __unicode__ = __len__ = __nonzero__ = __eq__ = __ne__ = \
-        Undefined._fail_with_undefined_error
+    __iter__ = __unicode__ = __str__ = __len__ = __nonzero__ = __eq__ = \
+        __ne__ = Undefined._fail_with_undefined_error
 
 
 # remove remaining slots attributes, after the metaclass did the magic they

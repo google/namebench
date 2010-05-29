@@ -5,7 +5,7 @@
 
     Utility functions.
 
-    :copyright: (c) 2009 by the Jinja Team.
+    :copyright: (c) 2010 by the Jinja Team.
     :license: BSD, see LICENSE for more details.
 """
 import re
@@ -72,23 +72,28 @@ except NameError:
         return x.next()
 
 
-# ironpython without stdlib doesn't have keyword
-try:
-    from keyword import iskeyword as is_python_keyword
-except ImportError:
-    _py_identifier_re = re.compile(r'^[a-zA-Z_][a-zA-Z0-9]*$')
-    def is_python_keyword(name):
-        if _py_identifier_re.search(name) is None:
-            return False
-        try:
-            exec name + " = 42"
-        except SyntaxError:
-            return False
-        return True
+# if this python version is unable to deal with unicode filenames
+# when passed to encode we let this function encode it properly.
+# This is used in a couple of places.  As far as Jinja is concerned
+# filenames are unicode *or* bytestrings in 2.x and unicode only in
+# 3.x because compile cannot handle bytes
+if sys.version_info < (3, 0):
+    def _encode_filename(filename):
+        if isinstance(filename, unicode):
+            return filename.encode('utf-8')
+        return filename
+else:
+    def _encode_filename(filename):
+        assert filename is None or isinstance(filename, str), \
+            'filenames must be strings'
+        return filename
+
+from keyword import iskeyword as is_python_keyword
 
 
 # common types.  These do exist in the special types module too which however
-# does not exist in IronPython out of the box.
+# does not exist in IronPython out of the box.  Also that way we don't have
+# to deal with implementation specific stuff here
 class _C(object):
     def method(self): pass
 def _func():
@@ -119,6 +124,19 @@ def contextfunction(f):
             return sorted(context.exported_vars)
     """
     f.contextfunction = True
+    return f
+
+
+def evalcontextfunction(f):
+    """This decoraotr can be used to mark a function or method as an eval
+    context callable.  This is similar to the :func:`contextfunction`
+    but instead of passing the context, an evaluation context object is
+    passed.  For more information about the eval context, see
+    :ref:`eval-context`.
+
+    .. versionadded:: 2.4
+    """
+    f.evalcontextfunction = True
     return f
 
 
@@ -198,15 +216,31 @@ def import_string(import_name, silent=False):
             raise
 
 
-def open_if_exists(filename, mode='r'):
+def open_if_exists(filename, mode='rb'):
     """Returns a file descriptor for the filename if that file exists,
     otherwise `None`.
     """
     try:
-        return file(filename, mode)
+        return open(filename, mode)
     except IOError, e:
         if e.errno not in (errno.ENOENT, errno.EISDIR):
             raise
+
+
+def object_type_repr(obj):
+    """Returns the name of the object's type.  For some recognized
+    singletons the name of the object is returned instead. (For
+    example for `None` and `Ellipsis`).
+    """
+    if obj is None:
+        return 'None'
+    elif obj is Ellipsis:
+        return 'Ellipsis'
+    if obj.__class__.__module__ == '__builtin__':
+        name = obj.__class__.__name__
+    else:
+        name = obj.__class__.__module__ + '.' + obj.__class__.__name__
+    return '%s object' % name
 
 
 def pformat(obj, verbose=False):
@@ -268,7 +302,7 @@ def urlize(text, trim_url_limit=None, nofollow=False):
 def generate_lorem_ipsum(n=5, html=True, min=20, max=100):
     """Generate some lorem impsum for the template."""
     from jinja2.constants import LOREM_IPSUM_WORDS
-    from random import choice, random, randrange
+    from random import choice, randrange
     words = LOREM_IPSUM_WORDS.split()
     result = []
 
@@ -506,8 +540,8 @@ class _MarkupEscapeHelper(object):
         self.obj = obj
 
     __getitem__ = lambda s, x: _MarkupEscapeHelper(s.obj[x])
-    __unicode__ = lambda s: unicode(escape(s.obj))
     __str__ = lambda s: str(escape(s.obj))
+    __unicode__ = lambda s: unicode(escape(s.obj))
     __repr__ = lambda s: str(escape(repr(s.obj)))
     __int__ = lambda s: int(s.obj)
     __float__ = lambda s: float(s.obj)
@@ -628,7 +662,11 @@ class LRUCache(object):
         self._wlock.acquire()
         try:
             if key in self._mapping:
-                self._remove(key)
+                try:
+                    self._remove(key)
+                except ValueError:
+                    # __getitem__ is not locked, it might happen
+                    pass
             elif len(self._mapping) == self.capacity:
                 del self._mapping[self._popleft()]
             self._append(key)
