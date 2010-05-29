@@ -18,12 +18,12 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 
-from objc import YES, NO, IBAction, IBOutlet
+import os
+import sys
 from Foundation import *
 from AppKit import *
 import traceback
-import sys
-import os
+from objc import IBAction, IBOutlet
 
 from libnamebench import addr_util
 from libnamebench import base_ui
@@ -53,12 +53,9 @@ class controller(NSWindowController, base_ui.BaseUI):
   def awakeFromNib(self):
     """Initializes our class, called automatically by Cocoa."""
     self.SetupDataStructures()
-    NSLog("pwd: %s" % os.getcwd())
-    NSLog('argv[0]: %s' % sys.argv[0])
     self.resource_dir = os.path.join(os.getcwd(), 'namebench.app', 'Contents', 'Resources')
-    
+
     conf_file = util.FindDataFile('config/namebench.cfg')
-    NSLog("Using configuration: %s" % conf_file)
     (self.options, self.supplied_ns, self.global_ns, self.regional_ns) = config.GetConfiguration(filename=conf_file)
     # TODO(tstromberg): Consider moving this into a thread for faster loading.
     self.UpdateStatus('Discovering sources')
@@ -98,7 +95,7 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.UpdateStatus('Processing form inputs')
     self.preferred = self.supplied_ns
     self.include_internal = False
-    
+
     if not int(self.include_global.stringValue()):
       self.UpdateStatus('Not using global')
       self.global_ns = []
@@ -122,7 +119,6 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.UpdateStatus('Supplied servers: %s' % self.nameserver_form.stringValue())
     self.preferred.extend(addr_util.ExtractIPTuplesFromString(self.nameserver_form.stringValue()))
     self.options.query_count = int(self.query_count.stringValue())
-    self.UpdateStatus("Source %s, mode %s, %s tests, %s runs" % (self.options.input_source, self.options.select_mode, self.options.query_count, self.options.run_count))
 
   def benchmarkThread(self):
     """Run the benchmarks, designed to be run in a thread."""
@@ -157,7 +153,7 @@ class controller(NSWindowController, base_ui.BaseUI):
     del pool
 
   def displayError(self, msg, details):
-    """Display an alert drop-down message"""
+    """Display an alert drop-down message."""
     NSLog("ERROR: %s - %s" % (msg, details))
     alert = NSAlert.alloc().init()
     alert.setMessageText_(msg)
@@ -184,4 +180,4 @@ class controller(NSWindowController, base_ui.BaseUI):
 
     self.data_source.removeAllItems()
     self.data_source.addItemsWithTitles_(self.data_src.ListSourceTitles())
-    
+
