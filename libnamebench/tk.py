@@ -61,8 +61,10 @@ def AddMsg(message, master=None, backup_notifier=None, **kwargs):
         global_last_message = new_message
       # Tk thread-safety workaround #1
       except TclError:
-        print 'First TCL Error:'
-        traceback.print_exc()
+        # If we aren't thread safe, we already assume this won't work.
+        if not THREAD_UNSAFE_TK:
+          print 'First TCL Error:'
+          traceback.print_exc()
         try:
           backup_notifier(-1)
           THREAD_UNSAFE_TK = 1
