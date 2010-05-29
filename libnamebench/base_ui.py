@@ -184,7 +184,10 @@ class BaseUI(object):
 
       self.UpdateStatus('Uploading results to %s' % self.options.site_url)
       connector = site_connector.SiteConnector(self.options)
-      self.url, self.share_state = connector.UploadJsonResults(json_data, hide_results=self.options.hide_results)
+      self.url, self.share_state = connector.UploadJsonResults(
+          json_data,
+          hide_results=self.options.hide_results
+      )
 
       if self.url:
         self.UpdateStatus('Your sharing URL: %s (%s)' % (self.url, self.share_state))

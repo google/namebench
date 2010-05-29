@@ -18,23 +18,23 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
 import os
+import Queue
 import sys
 import threading
 import tkFont
-import traceback
-import Queue
+# Wildcard imports are evil.
 from Tkinter import *
 import tkMessageBox
+import traceback
 
 import base_ui
 import conn_quality
-import data_sources
 import nameserver_list
-import selectors
 import util
 
 THREAD_UNSAFE_TK = 0
 LOG_FILE_PATH = base_ui.GenerateOutputFilename('log')
+
 
 def closedWindowHandler():
   print 'Au revoir, mes amis!'
@@ -43,13 +43,14 @@ def closedWindowHandler():
 global_message_queue = Queue.Queue()
 global_last_message = None
 
+
 def AddMsg(message, master=None, backup_notifier=None, **kwargs):
   """Add a message to the global queue for output."""
   global global_message_queue
   global global_last_message
   global THREAD_UNSAFE_TK
 
-  new_message = Message(message, **kwargs)
+  new_message = StatusMessage(message, **kwargs)
   if new_message != global_last_message:
     global_message_queue.put(new_message)
 
@@ -59,20 +60,22 @@ def AddMsg(message, master=None, backup_notifier=None, **kwargs):
         global_last_message = new_message
       # Tk thread-safety workaround #1
       except TclError:
-        print "First TCL Error:"
-        traceback.print_exc()          
+        print 'First TCL Error:'
+        traceback.print_exc()
         try:
           backup_notifier(-1)
           THREAD_UNSAFE_TK = 1
         except:
-          print "Backup notifier failure:"
+          print 'Backup notifier failure:'
           traceback.print_exc()
 
-class Message(object):
+
+class StatusMessage(object):
   """Messages to be passed from to the main thread from children.
 
   Used to avoid thread issues inherent with Tk.
   """
+
   def __init__(self, message, error=False, count=False, total=False,
                enable_button=None, debug=False):
     self.message = message
@@ -81,6 +84,7 @@ class Message(object):
     self.debug = debug
     self.total = total
     self.enable_button = enable_button
+
 
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
@@ -130,6 +134,7 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
 
 class NameBenchGui(object):
   """The main GUI."""
+
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
     self.options = options
     self.supplied_ns = supplied_ns
@@ -139,7 +144,8 @@ class NameBenchGui(object):
 
   def Execute(self):
     self.root = Tk()
-    app = MainWindow(self.root, self.options, self.supplied_ns, self.global_ns, self.regional_ns, self.version)
+    app = MainWindow(self.root, self.options, self.supplied_ns, self.global_ns,
+                     self.regional_ns, self.version)
     app.DrawWindow()
     self.root.bind('<<msg>>', app.MessageHandler)
     self.root.mainloop()
@@ -161,7 +167,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     try:
       self.log_file = open(LOG_FILE_PATH, 'w')
     except:
-      print "Failed to open %s for write" % LOG_FILEPATH
+      print 'Failed to open %s for write' % LOG_FILE_PATH
     self.master.protocol('WM_DELETE_WINDOW', closedWindowHandler)
 
   def UpdateStatus(self, message, count=None, total=None, error=None, debug=False):
@@ -176,7 +182,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     else:
       state = message
 
-    print "> %s" % str(state)
+    print '> %s' % str(state)
     try:
       self.log_file.write('%s: %s\r\n' % (datetime.datetime.now(), state))
       self.log_file.flush()
@@ -198,7 +204,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.use_censor_checks = IntVar()
     self.share_results = IntVar()
 
-    self.master.title("namebench")
+    self.master.title('namebench')
     outer_frame = Frame(self.master)
     outer_frame.grid(row=0, padx=16, pady=16)
     inner_frame = Frame(outer_frame, relief=GROOVE, bd=2, padx=12, pady=12)
@@ -209,26 +215,32 @@ class MainWindow(Frame, base_ui.BaseUI):
     bold_font = tkFont.Font(font=status['font'])
     bold_font['weight'] = 'bold'
 
-    ns_label = Label(inner_frame, text="Nameservers")
+    ns_label = Label(inner_frame, text='Nameservers')
     ns_label.grid(row=0, columnspan=2, sticky=W)
     ns_label['font'] = bold_font
 
-    nameservers = Entry(inner_frame, bg="white", textvariable=self.nameserver_form, width=80)
+    nameservers = Entry(inner_frame, bg='white', textvariable=self.nameserver_form, width=80)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(util.InternalNameServers()))
 
-    global_button = Checkbutton(inner_frame, text="Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS, etc.)", variable=self.use_global)
+    global_button = Checkbutton(inner_frame,
+                                text='Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS, etc.)',
+                                variable=self.use_global)
     global_button.grid(row=2, columnspan=2, sticky=W)
     global_button.toggle()
 
-    regional_button = Checkbutton(inner_frame, text="Include best available regional DNS services", variable=self.use_regional)
+    regional_button = Checkbutton(inner_frame,
+                                  text='Include best available regional DNS services',
+                                  variable=self.use_regional)
     regional_button.grid(row=3, columnspan=2, sticky=W)
     regional_button.toggle()
 
-    censorship_button = Checkbutton(inner_frame, text="Include censorship checks", variable=self.use_censor_checks)
+    censorship_button = Checkbutton(inner_frame, text='Include censorship checks',
+                                    variable=self.use_censor_checks)
     censorship_button.grid(row=4, columnspan=2, sticky=W)
 
-    share_button = Checkbutton(inner_frame, text="Make anonymized results publically available (help speed up the internet!)",
+    share_button = Checkbutton(inner_frame,
+                               text='Make anonymized results publically available (help speed up the internet!)',
                                variable=self.share_results)
     share_button.grid(row=5, columnspan=2, sticky=W)
 
@@ -239,32 +251,32 @@ class MainWindow(Frame, base_ui.BaseUI):
     separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
     separator.grid(row=6, padx=5, pady=5, columnspan=2)
 
-    loc_label = Label(inner_frame, text="Your location")
+    loc_label = Label(inner_frame, text='Your location')
     loc_label.grid(row=10, column=0, sticky=W)
     loc_label['font'] = bold_font
 
-    run_count_label = Label(inner_frame, text="Health Check Performance")
+    run_count_label = Label(inner_frame, text='Health Check Performance')
     run_count_label.grid(row=10, column=1, sticky=W)
     run_count_label['font'] = bold_font
 
     self.DiscoverLocation()
-    location_choices = [self.country, "(Other)"]
+    location_choices = [self.country, '(Other)']
     location = OptionMenu(inner_frame, self.location, *location_choices)
     location.configure(width=40)
     location.grid(row=11, column=0, sticky=W)
     self.location.set(location_choices[0])
 
-    mode_choices = ["Fast", "Slow (for unstable routers)"]
+    mode_choices = ['Fast', 'Slow (for unstable routers)']
     health_performance = OptionMenu(inner_frame, self.health_performance, *mode_choices)
     health_performance.configure(width=27)
     health_performance.grid(row=11, column=1, sticky=W)
     self.health_performance.set(mode_choices[0])
 
-    ds_label = Label(inner_frame, text="Query Data Source")
+    ds_label = Label(inner_frame, text='Query Data Source')
     ds_label.grid(row=12, column=0, sticky=W)
     ds_label['font'] = bold_font
 
-    numqueries_label = Label(inner_frame, text="Number of queries")
+    numqueries_label = Label(inner_frame, text='Number of queries')
     numqueries_label.grid(row=12, column=1, sticky=W)
     numqueries_label['font'] = bold_font
 
@@ -275,8 +287,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     data_source.grid(row=13, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
-
-    query_count = Entry(inner_frame, bg="white", textvariable=self.query_count)
+    query_count = Entry(inner_frame, bg='white', textvariable=self.query_count)
     query_count.grid(row=13, column=1, sticky=W, padx=4)
     self.query_count.set(self.options.query_count)
 
@@ -286,23 +297,25 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.UpdateRunState(running=False)
     self.UpdateStatus('namebench %s is ready!' % self.version)
 
-  def MessageHandler(self, event):
+  def MessageHandler(self, unused_event):
     """Pinged when there is a new message in our queue to handle."""
     while global_message_queue.qsize():
-      msg = global_message_queue.get()
-      if msg.error:
-        self.ErrorPopup(msg.message, msg.error)
-      elif msg.enable_button == False:
+      m = global_message_queue.get()
+      if m.error:
+        self.ErrorPopup(m.message, m.error)
+      elif not m.enable_button:
         self.UpdateRunState(running=True)
-      elif msg.enable_button == True:
+      elif m.enable_button:
         self.UpdateRunState(running=False)
-      self.UpdateStatus(msg.message, count=msg.count, total=msg.total, error=msg.error, debug=msg.debug)
+      self.UpdateStatus(m.message, count=m.count, total=m.total, error=m.error, debug=m.debug)
 
   def ErrorPopup(self, title, message):
-    print "Showing popup: %s" % title
+    print 'Showing popup: %s' % title
     tkMessageBox.showerror(str(title), str(message), master=self.master)
 
   def UpdateRunState(self, running=True):
+    """Update the run state of the window, using nasty threading hacks."""
+
     global THREAD_UNSAFE_TK
     # try/except blocks added to work around broken Tcl/Tk libraries
     # shipped with Fedora 11 (not thread-safe).
@@ -344,9 +357,8 @@ class MainWindow(Frame, base_ui.BaseUI):
       self.regional_ns = []
 
     if 'Slow' in self.health_performance.get():
-       self.options.health_thread_count = 10
+      self.options.health_thread_count = 10
 
-      
     self.options.query_count = self.query_count.get()
     self.options.input_source = self.data_src.ConvertSourceTitleToType(self.data_source.get())
     self.options.enable_censorship_checks = self.use_censor_checks.get()

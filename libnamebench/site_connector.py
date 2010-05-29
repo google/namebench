@@ -31,12 +31,14 @@ RETRY_WAIT = 15
 
 
 class SiteConnector(object):
+  """Methods that connect to the results site."""
 
   def __init__(self, config):
     self.config = config
     self.url = self.config.site_url.rstrip('/')
 
   def GetIndexHosts(self):
+    """Get a list of 'index' hosts for standardized testing."""
     url = self.url + '/index_hosts'
     h = httplib2.Http(tempfile.gettempdir(), timeout=10)
     content = None
@@ -74,19 +76,19 @@ class SiteConnector(object):
           print '    * %s' % note
         return (''.join((self.url, data['url'])), data['state'])
       except:
-        print "ERROR in RESPONSE for %s: [%s]:\n  %s" % (url, resp, content)
+        print 'ERROR in RESPONSE for %s: [%s]:\n  %s' % (url, resp, content)
         if not fail_quickly:
-          print ""
-          print "(sleeping %ss before trying again)" % RETRY_WAIT
+          print ''
+          print '(sleeping %ss before trying again)' % RETRY_WAIT
           time.sleep(RETRY_WAIT)
           self.UploadJsonResults(json_data, hide_results=hide_results, fail_quickly=True)
         else:
-          print "DATA SENT:"
+          print 'DATA SENT:'
           print post_data
           return (False, 'error')
     # See http://code.google.com/p/httplib2/issues/detail?id=62
     except AttributeError:
-      print "%s refused connection" % url
+      print '%s refused connection' % url
     return (False, 'error')
 
   def _CalculateDuplicateCheckId(self):

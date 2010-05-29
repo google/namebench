@@ -17,13 +17,8 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import math
-import re
-import util
 import os.path
-import socket
 import sys
-import traceback
-import zlib
 
 
 def CalculateListAverage(values):
@@ -31,6 +26,7 @@ def CalculateListAverage(values):
   if not values:
     return 0
   return sum(values) / float(len(values))
+
 
 def DrawTextBar(value, max_value, max_width=53):
   """Return a simple ASCII bar graph, making sure it fits within max_width.
@@ -51,18 +47,29 @@ def DrawTextBar(value, max_value, max_width=53):
 def SecondsToMilliseconds(seconds):
   return seconds * 1000
 
-def SplitSequence(seq, size):
-  """Recipe From http://code.activestate.com/recipes/425397/
 
-  Modified to not return blank values."""
+def SplitSequence(seq, size):
+  """Split a list.
+
+  Args:
+    seq: sequence
+    size: int
+
+  Returns:
+    New list.
+
+  Recipe From http://code.activestate.com/recipes/425397/ (Modified to not return blank values)
+  """
   newseq = []
   splitsize = 1.0/size*len(seq)
   for i in range(size):
     newseq.append(seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
 
-  return  [ x for x in newseq if x ]
+  return  [x for x in newseq if x]
+
 
 def FindDataFile(filename):
+  """Find a datafile, searching various relative and OS paths."""
   filename = os.path.expanduser(filename)
   if os.path.exists(filename):
     return filename
@@ -82,19 +89,20 @@ def FindDataFile(filename):
                   '/etc/namebench',
                   '/usr/share/namebench',
                   '/usr/namebench']
-  for dir in reversed(sys.path):
-    other_places.append(dir)
-    other_places.append(os.path.join(dir, 'namebench'))
+  for directory in reversed(sys.path):
+    other_places.append(directory)
+    other_places.append(os.path.join(directory, 'namebench'))
 
   for place in other_places:
     path = os.path.join(place, filename)
     if os.path.exists(path):
       return path
 
-  print "I could not find your beloved '%s'. Tried:" % filename
+  print 'I could not find "%s". Tried:' % filename
   for path in other_places:
-    print "  %s" % path
+    print '  %s' % path
   return filename
+
 
 def GetLastExceptionString():
   """Get the last exception and return a good looking string for it."""

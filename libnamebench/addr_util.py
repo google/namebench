@@ -18,22 +18,18 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import math
 import re
-import util
-import os.path
-import socket
-import sys
-import traceback
 import zlib
 
 # TODO(tstromberg): Find a way to combine the following two regexps.
 
 # Used to decide whether or not to benchmark a name
-INTERNAL_RE = re.compile('^0|\.pro[md]z*\.|\.corp|\.bor|\.hot$|internal|dmz|\._[ut][dc]p\.|intra|\.\w$|\.\w{5,}$', re.IGNORECASE)
+INTERNAL_RE = re.compile('^0|\.pro[md]z*\.|\.corp|\.bor|\.hot$|internal|dmz|'
+                         '\._[ut][dc]p\.|intra|\.\w$|\.\w{5,}$', re.IGNORECASE)
 
 # Used to decide if a hostname should be censored later.
-PRIVATE_RE = re.compile('^\w+dc\.|^\w+ds\.|^\w+sv\.|^\w+nt\.|\.corp|internal|intranet|\.local', re.IGNORECASE)
+PRIVATE_RE = re.compile('^\w+dc\.|^\w+ds\.|^\w+sv\.|^\w+nt\.|\.corp|internal|'
+                        'intranet|\.local', re.IGNORECASE)
 
 # ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
 FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
@@ -50,11 +46,14 @@ def ExtractIPsFromString(ip_string):
   ips.extend(re.findall('\d+\.\d+\.\d+\.+\d+', ip_string))
   return ips
 
+
 def ExtractIPTuplesFromString(ip_string):
+  """Return a list of (ip, name) tuples for use by NameServer class."""
   ip_tuples = []
   for ip in ExtractIPsFromString(ip_string):
-      ip_tuples.append((ip,ip))
+    ip_tuples.append((ip, ip))
   return ip_tuples
+
 
 def IsPrivateHostname(hostname):
   """Basic matching to determine if the hostname is likely to be 'internal'."""
@@ -63,20 +62,30 @@ def IsPrivateHostname(hostname):
   else:
     return False
 
+
 def IsLoopbackIP(ip):
   """Boolean check to see if an IP is private or not.
 
-  Returns: Number of bits that should be preserved.
+  Args:
+    ip: str
+
+  Returns:
+    Boolean
   """
   if ip.startswith('127.') or ip == '::1':
     return True
   else:
     return False
 
+
 def IsPrivateIP(ip):
   """Boolean check to see if an IP is private or not.
 
-  Returns: Number of bits that should be preserved.
+  Args:
+    ip: str
+
+  Returns:
+    Number of bits that should be preserved (int, or None)
   """
   if re.match('^10\.', ip):
     return 1
@@ -87,12 +96,14 @@ def IsPrivateIP(ip):
   else:
     return None
 
+
 def MaskIPBits(ip, use_bits):
   """Mask an IP, but still keep a meaningful checksum."""
   ip_parts = ip.split('.')
   checksum = zlib.crc32(''.join(ip_parts[use_bits:]))
   masked_ip = '.'.join(ip_parts[0:use_bits])
-  return masked_ip + ".x-" + str(checksum)[-4:]
+  return masked_ip + '.x-' + str(checksum)[-4:]
+
 
 def MaskPrivateHost(ip, hostname, name):
   """Mask unnamed private IP's."""
@@ -103,14 +114,14 @@ def MaskPrivateHost(ip, hostname, name):
 
   use_bits = IsPrivateIP(ip)
   if use_bits:
-    ip = MaskIPBits(ip, use_bits)
+    masked_ip = MaskIPBits(ip, use_bits)
     hostname = 'internal.ip'
   elif IsPrivateHostname(hostname):
-    ip = MaskIPBits(ip, 2)
+    masked_ip = MaskIPBits(ip, 2)
     hostname = 'internal.name'
 
   if 'SYS-' in name:
-    name = "SYS-%s" % ip
+    name = 'SYS-%s' % masked_ip
   else:
     name = ''
-  return (ip, hostname, name)
+  return (masked_ip, hostname, name)
