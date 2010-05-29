@@ -213,6 +213,11 @@ class MainWindow(Frame, base_ui.BaseUI):
     status = Label(outer_frame, text='...', textvariable=self.status)
     status.grid(row=15, sticky=W, column=0)
 
+    if sys.platform[:3] == 'win':
+      seperator_width = 490
+    else:
+      seperator_width = 550
+
     bold_font = tkFont.Font(font=status['font'])
     bold_font['weight'] = 'bold'
 
@@ -220,7 +225,9 @@ class MainWindow(Frame, base_ui.BaseUI):
     ns_label.grid(row=0, columnspan=2, sticky=W)
     ns_label['font'] = bold_font
 
-    nameservers = Entry(inner_frame, bg='white', textvariable=self.nameserver_form, width=72)
+    nameservers = Entry(inner_frame, bg='white',
+                        textvariable=self.nameserver_form,
+                        width=80)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
     self.nameserver_form.set(', '.join(nameserver_list.InternalNameServers()))
 
@@ -236,10 +243,6 @@ class MainWindow(Frame, base_ui.BaseUI):
     regional_button.grid(row=3, columnspan=2, sticky=W)
     regional_button.toggle()
 
-    if sys.platform[:3] == 'win':
-      seperator_width = 370
-    else:
-      seperator_width = 385
     separator = Frame(inner_frame, height=2, width=seperator_width, bd=1, relief=SUNKEN)
     separator.grid(row=4, padx=5, pady=5, columnspan=2)
 
@@ -266,15 +269,20 @@ class MainWindow(Frame, base_ui.BaseUI):
     run_count_label['font'] = bold_font
 
     self.DiscoverLocation()
+    self.LoadDataSources()
+    source_titles = self.data_src.ListSourceTitles()
+    left_dropdown_width = max([len(x) for x in source_titles]) - 3
+
     location_choices = [self.country, '(Other)']
     location = OptionMenu(inner_frame, self.location, *location_choices)
-    location.configure(width=28)
+    location.configure(width=left_dropdown_width)
     location.grid(row=11, column=0, sticky=W)
     self.location.set(location_choices[0])
 
     mode_choices = ['Fast', 'Slow (unstable network)']
+    right_dropdown_width = max([len(x) for x in mode_choices]) - 3
     health_performance = OptionMenu(inner_frame, self.health_performance, *mode_choices)
-    health_performance.configure(width=17)
+    health_performance.configure(width=right_dropdown_width)
     health_performance.grid(row=11, column=1, sticky=W)
     self.health_performance.set(mode_choices[0])
 
@@ -286,15 +294,14 @@ class MainWindow(Frame, base_ui.BaseUI):
     numqueries_label.grid(row=12, column=1, sticky=W)    
     numqueries_label['font'] = bold_font
 
-    self.LoadDataSources()
-    source_titles = self.data_src.ListSourceTitles()
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)
-    data_source.configure(width=30)
+    data_source.configure(width=left_dropdown_width)
     data_source.grid(row=13, column=0, sticky=W)
     self.data_source.set(source_titles[0])
 
     query_count = Entry(inner_frame, bg='white', textvariable=self.query_count)
     query_count.grid(row=13, column=1, sticky=W, padx=4)
+    query_count.configure(width=right_dropdown_width)
     self.query_count.set(self.options.query_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
