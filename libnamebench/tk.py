@@ -257,7 +257,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     share_button = Checkbutton(inner_frame,
                                text='Make anonymized results publically available (help speed up the internet!)',
                                variable=self.share_results)
-    share_button.grid(row=7, columnspan=2, sticky=W)
+    share_button.grid(row=7, columnspan=2, sticky=W, pady=[0,10])
 
 
     loc_label = Label(inner_frame, text='Your location')
@@ -301,7 +301,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     query_count = Entry(inner_frame, bg='white', textvariable=self.query_count)
     query_count.grid(row=13, column=1, sticky=W, padx=4)
-    query_count.configure(width=right_dropdown_width)
+    query_count.configure(width=right_dropdown_width + 6)
     self.query_count.set(self.options.query_count)
 
     self.button = Button(outer_frame, command=self.StartJob)
