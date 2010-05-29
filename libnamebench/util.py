@@ -16,9 +16,11 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import datetime
 import math
 import os.path
 import sys
+import tempfile
 
 
 def CalculateListAverage(values):
@@ -102,6 +104,22 @@ def FindDataFile(filename):
   for path in other_places:
     print '  %s' % path
   return filename
+
+def GenerateOutputFilename(extension):
+  """Generate a decent default output filename for a given extensio."""
+
+  # used for resolv.conf
+  if '.' in extension:
+    filename = extension
+  else:
+    output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
+                                                              '%Y-%m-%d %H%M')
+    output_base = output_base.replace(':', '').replace(' ', '_')
+    filename = '.'.join((output_base, extension))
+
+  output_dir = tempfile.gettempdir()
+  return os.path.join(output_dir, filename)
+    
 
 
 def GetLastExceptionString():

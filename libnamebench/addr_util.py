@@ -115,13 +115,16 @@ def MaskPrivateHost(ip, hostname, name):
   use_bits = IsPrivateIP(ip)
   if use_bits:
     masked_ip = MaskIPBits(ip, use_bits)
-    hostname = 'internal.ip'
+    masked_hostname = 'internal.ip'
   elif IsPrivateHostname(hostname):
     masked_ip = MaskIPBits(ip, 2)
-    hostname = 'internal.name'
+    masked_hostname = 'internal.name'
+  else:
+    masked_ip = ip
+    masked_hostname = hostname
 
   if 'SYS-' in name:
-    name = 'SYS-%s' % masked_ip
+    masked_name = 'SYS-%s' % masked_ip
   else:
-    name = ''
-  return (masked_ip, hostname, name)
+    masked_name = ''
+  return (masked_ip, masked_hostname, masked_name)

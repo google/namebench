@@ -19,7 +19,6 @@ import datetime
 import operator
 import os.path
 import platform
-import tempfile
 
 # external dependencies (from third_party)
 import jinja2
@@ -160,21 +159,6 @@ class ReportGenerator(object):
       textbar = util.DrawTextBar(overall_mean, max_result)
       chart.append((ns.name, textbar, overall_mean))
     return chart
-
-  def GenerateOutputFilename(self, template):
-    """Generate a decent default output filename for a template."""
-
-    # used for resolv.conf
-    if '.' in template:
-      filename = template
-    else:
-      output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
-                                                                '%Y-%m-%d %H%M')
-      output_base = output_base.replace(':', '').replace(' ', '_')
-      filename = '.'.join((output_base, template))
-
-    output_dir = tempfile.gettempdir()
-    return os.path.join(output_dir, filename)
 
   def CreateReport(self, format='ascii', output_fp=None, csv_path=None,
                    sharing_url=None, sharing_state=None):

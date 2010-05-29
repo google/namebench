@@ -24,6 +24,7 @@ import geoip
 import nameserver_list
 import reporter
 import site_connector
+import util
 
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
@@ -166,16 +167,16 @@ class BaseUI(object):
     if self.options.output_file:
       self.report_path = self.options.output_file
     else:
-      self.report_path = self.reporter.GenerateOutputFilename(self.options.template)
+      self.report_path = util.GenerateOutputFilename(self.options.template)
 
     if self.options.csv_file:
       self.csv_path = self.options_csv_file
     else:
-      self.csv_path = self.reporter.GenerateOutputFilename('csv')
+      self.csv_path = util.GenerateOutputFilename('csv')
 
     if self.options.upload_results:
       # This is for debugging and transparency only.
-      self.json_path = self.reporter.GenerateOutputFilename('json')
+      self.json_path = util.GenerateOutputFilename('js')
       self.UpdateStatus('Saving anonymized JSON to %s' % self.json_path)
       json_data = self.reporter.CreateJsonData()
       f = open(self.json_path, 'w')

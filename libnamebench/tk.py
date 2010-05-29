@@ -27,13 +27,14 @@ from Tkinter import *
 import tkMessageBox
 import traceback
 
+import addr_util
 import base_ui
 import conn_quality
 import nameserver_list
 import util
 
 THREAD_UNSAFE_TK = 0
-LOG_FILE_PATH = base_ui.GenerateOutputFilename('log')
+LOG_FILE_PATH = util.GenerateOutputFilename('log')
 
 
 def closedWindowHandler():
@@ -221,7 +222,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     nameservers = Entry(inner_frame, bg='white', textvariable=self.nameserver_form, width=80)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
-    self.nameserver_form.set(', '.join(util.InternalNameServers()))
+    self.nameserver_form.set(', '.join(nameserver_list.InternalNameServers()))
 
     global_button = Checkbutton(inner_frame,
                                 text='Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS, etc.)',
@@ -268,7 +269,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
     mode_choices = ['Fast', 'Slow (for unstable routers)']
     health_performance = OptionMenu(inner_frame, self.health_performance, *mode_choices)
-    health_performance.configure(width=27)
+    health_performance.configure(width=15)
     health_performance.grid(row=11, column=1, sticky=W)
     self.health_performance.set(mode_choices[0])
 
@@ -350,7 +351,7 @@ class MainWindow(Frame, base_ui.BaseUI):
   def ProcessForm(self):
     """Read form and populate instance variables."""
 
-    self.supplied_ns = util.ExtractIPTuplesFromString(self.nameserver_form.get())
+    self.supplied_ns = addr_util.ExtractIPTuplesFromString(self.nameserver_form.get())
     if not self.use_global.get():
       self.global_ns = []
     if not self.use_regional.get():
