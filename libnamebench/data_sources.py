@@ -119,8 +119,12 @@ class DataSources(object):
     """Return a list of sources in title + count format."""
     titles = []
     seen_synthetic = False
+    seen_organic = False
     for (unused_type, name, is_synthetic, count) in self.ListSourcesWithDetails():
-      if is_synthetic and not seen_synthetic:
+      if not is_synthetic:
+        seen_organic = True
+      
+      if is_synthetic and seen_organic and not seen_synthetic:
         titles.append('-' * 36)
         seen_synthetic = True
       titles.append('%s (%s)' % (name, count))
