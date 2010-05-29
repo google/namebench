@@ -19,24 +19,22 @@ import datetime
 import operator
 import os.path
 import platform
+import tempfile
 
 # external dependencies (from third_party)
-try:
-  import third_party
-except ImportError:
-  pass
-
 import jinja2
 import simplejson
 
+import addr_util
 import charts
 import nameserver
-import selectors
-import util
+import nameserver_list
 import url_map
+import util
 
 # Only bother showing a percentage if we have this many tests.
 MIN_RELEVANT_COUNT = 50
+
 
 class ReportGenerator(object):
   """Generate reports - ASCII, HTML, etc."""
@@ -46,9 +44,12 @@ class ReportGenerator(object):
     """Constructor.
 
     Args:
+      config: A dictionary of configuration information.
       nameservers: A list of nameserver objects to include in the report.
       results: A dictionary of results from Benchmark.Run()
       index: A dictionary of results for index hosts.
+      geodata: A dictionary of geographic information.
+      status_callback: where to send msg() calls.
     """
     self.nameservers = nameservers
     self.results = results
@@ -67,7 +68,7 @@ class ReportGenerator(object):
     """Process all runs for all hosts, yielding an average for each host."""
     if len(self.results) in self.cached_averages:
       return self.cached_averages[len(self.results)]
-    
+
     records = []
     for ns in self.results:
       if ns.disabled:
@@ -89,7 +90,7 @@ class ReportGenerator(object):
       (fastest, slowest) = self.FastestAndSlowestDurationForNameServer(ns)
 
       records.append((ns, overall_average, run_averages, fastest, slowest,
-                     failure_count, nx_count, total_count))
+                      failure_count, nx_count, total_count))
     self.cached_averages[len(self.results)] = records
     return self.cached_averages[len(self.results)]
 
@@ -98,10 +99,10 @@ class ReportGenerator(object):
 
     fastest_duration = 2**32
     slowest_duration = -1
-    
+
     durations = []
     for test_run_results in self.results[ns]:
-      for (host, req_type, duration, response, error_msg) in test_run_results:
+      for (unused_host, unused_type, duration, response, unused_error) in test_run_results:
         durations.append(duration)
         if response and response.answer:
           if duration < fastest_duration:
@@ -123,15 +124,18 @@ class ReportGenerator(object):
     return sorted(fastest, key=operator.itemgetter(1))
 
   def BestOverallNameServer(self):
+    """Return the best nameserver we found."""
+
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
-    hosts = [ x[0] for x in sorted_averages ]
-    for host in [ x[0] for x in sorted_averages ]:
+    hosts = [x[0] for x in sorted_averages]
+    for host in hosts:
       if not host.is_failure_prone:
         return host
     # return something if none of them are good.
     return hosts[0]
 
   def NearestNameServers(self, count=2):
+    """Return the nameservers with the least latency."""
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
     return [x[0] for x in min_responses][0:count]
@@ -147,6 +151,7 @@ class ReportGenerator(object):
     return chart
 
   def _MeanRequestAsciiChart(self):
+    """Creates an ASCII Chart of Mean Response Time."""
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     max_result = sorted_averages[-1][1]
     chart = []
@@ -156,8 +161,36 @@ class ReportGenerator(object):
       chart.append((ns.name, textbar, overall_mean))
     return chart
 
+  def GenerateOutputFilename(self, template):
+    """Generate a decent default output filename for a template."""
+
+    # used for resolv.conf
+    if '.' in template:
+      filename = template
+    else:
+      output_base = 'namebench_%s' % datetime.datetime.strftime(datetime.datetime.now(),
+                                                                '%Y-%m-%d %H%M')
+      output_base = output_base.replace(':', '').replace(' ', '_')
+      filename = '.'.join((output_base, template))
+
+    output_dir = tempfile.gettempdir()
+    return os.path.join(output_dir, filename)
+
   def CreateReport(self, format='ascii', output_fp=None, csv_path=None,
                    sharing_url=None, sharing_state=None):
+    """Create a Report in a given format.
+
+    Args:
+      format: string (ascii, html, etc.) which defines what template to load.
+      output_fp: A File object to send the output to (optional)
+      csv_path: A string pathname to the CSV output to link to (optional)
+      sharing_url: A string URL where the results have been shared to. (optional)
+      sharing_state: A string showing what the shared result state is (optional)
+
+    Returns:
+      A rendered template (string)
+    """
+
     # First generate all of the charts necessary.
     if format == 'ascii':
       lowest_latency = self._LowestLatencyAsciiChart()
@@ -172,8 +205,9 @@ class ReportGenerator(object):
     min_duration_url = charts.MinimumDurationBarGraph(self.FastestNameServerResult())
     distribution_url_200 = charts.DistributionLineGraph(self.DigestedResults(),
                                                         scale=200)
-    distribution_url = charts.DistributionLineGraph(self.DigestedResults(), scale=self.config.timeout * 1000)
-    
+    distribution_url = charts.DistributionLineGraph(self.DigestedResults(),
+                                                    scale=self.config.timeout * 1000)
+
     # Now generate all of the required textual information.
     ns_summary = self._GenerateNameServerSummary()
     best_ns = self.BestOverallNameServer()
@@ -192,10 +226,10 @@ class ReportGenerator(object):
         if ns_record == ns_summary[0]:
           compare_reference = ns_record
           compare_title = 'N/A'
-          compare_subtitle = ''        
+          compare_subtitle = ''
         elif len(ns_record['durations'][0]) >= MIN_RELEVANT_COUNT:
           compare_reference = ns_record
-          compare_title = "%0.1f%%" % ns_summary[0]['diff']
+          compare_title = '%0.1f%%' % ns_summary[0]['diff']
           compare_subtitle = 'Faster'
         else:
           compare_subtitle = 'Too few tests (needs %s)' % (MIN_RELEVANT_COUNT)
@@ -213,10 +247,16 @@ class ReportGenerator(object):
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
+    sys_nameservers = nameserver_list.InternalNameServers()
+    if sys_nameservers:
+      system_primary = sys_nameservers[0]
+    else:
+      system_primary = None
+
     rendered = template.render(
-        best_ns = best_ns,
-        system_primary = util.InternalNameServers()[0],
-        timestamp = datetime.datetime.now(),
+        best_ns=best_ns,
+        system_primary=system_primary,
+        timestamp=datetime.datetime.now(),
         lowest_latency=lowest_latency,
         version=self.config.version,
         compare_subtitle=compare_subtitle,
@@ -242,7 +282,7 @@ class ReportGenerator(object):
 
   def FilteredConfig(self):
     """Generate a watered down config listing for our report."""
-    keys = [x for x in dir(self.config) if not x.startswith('_') and x != 'config' and x != 'site_url' ]
+    keys = [x for x in dir(self.config) if not x.startswith('_') and x not in ('config', 'site_url')]
     config_items = []
     for key in keys:
       value = getattr(self.config, key)
@@ -260,11 +300,11 @@ class ReportGenerator(object):
         durations += [x[2] for x in test_run_results]
       duration_data.append((ns, durations))
     return duration_data
-    
+
   def _GenerateNameServerSummary(self):
     if self.cached_summary:
       return self.cached_summary
-    
+
     nsdata = {}
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     placed_at = -1
@@ -278,44 +318,44 @@ class ReportGenerator(object):
       fake_position += 1
 
       nsdata[ns] = {
-        'ip': ns.ip,
-        'name': ns.name,
-        'hostname': ns.hostname,
-        'version': ns.version,
-        'node_ids': list(ns.node_ids),
-        'sys_position': ns.system_position,
-        'is_failure_prone': ns.is_failure_prone,
-        'duration_min': ns.fastest_check_duration,
-        'is_global': ns.is_global,
-        'is_regional': ns.is_regional,
-        'is_custom': ns.is_custom,
-        'is_reference': False,
-        'is_disabled': bool(ns.disabled),
-        'check_average': ns.check_average,
-        'error_count': ns.error_count,
-        'timeout_count': ns.timeout_count,
-        'notes':  url_map.CreateNoteUrlTuples(ns.notes),
-        'port_behavior': ns.port_behavior,
-        'position': fake_position
+          'ip': ns.ip,
+          'name': ns.name,
+          'hostname': ns.hostname,
+          'version': ns.version,
+          'node_ids': list(ns.node_ids),
+          'sys_position': ns.system_position,
+          'is_failure_prone': ns.is_failure_prone,
+          'duration_min': ns.fastest_check_duration,
+          'is_global': ns.is_global,
+          'is_regional': ns.is_regional,
+          'is_custom': ns.is_custom,
+          'is_reference': False,
+          'is_disabled': bool(ns.disabled),
+          'check_average': ns.check_average,
+          'error_count': ns.error_count,
+          'timeout_count': ns.timeout_count,
+          'notes': url_map.CreateNoteUrlTuples(ns.notes),
+          'port_behavior': ns.port_behavior,
+          'position': fake_position
       }
 
     # Fill the scores in.
-    for (ns, avg, run_averages, fastest, slowest, failure_count, nx_count, total_count) in sorted_averages:
+    for (ns, unused_avg, run_averages, fastest, slowest, unused_failures, nx_count, unused_total) in sorted_averages:
       placed_at += 1
-      
+
       durations = []
-      for test_run in self.results[ns]:
+      for _ in self.results[ns]:
         durations.append([x[2] for x in self.results[ns][0]])
 
       nsdata[ns].update({
-        'position': placed_at,
-        'overall_average': util.CalculateListAverage(run_averages),
-        'averages': run_averages,
-        'duration_min': fastest,
-        'duration_max': slowest,
-        'nx_count': nx_count,
-        'durations': durations,
-        'index': self._GenerateIndexSummary(ns),
+          'position': placed_at,
+          'overall_average': util.CalculateListAverage(run_averages),
+          'averages': run_averages,
+          'duration_min': fastest,
+          'duration_max': slowest,
+          'nx_count': nx_count,
+          'durations': durations,
+          'index': self._GenerateIndexSummary(ns),
       })
       # Determine which nameserver to refer to for improvement scoring
       if not ns.disabled:
@@ -323,29 +363,30 @@ class ReportGenerator(object):
           reference = ns
         elif not fastest_nonglobal and not ns.is_global:
           fastest_nonglobal = ns
-      
+
     # If no reference was found, use the fastest non-global nameserver record.
     if not reference:
       if fastest_nonglobal:
         reference = fastest_nonglobal
       else:
-        # The second ns. 
+        # The second ns.
         reference = sorted_averages[1][0]
 
     # Update the improvement scores for each nameserver.
-    for ns in nsdata:      
+    for ns in nsdata:
       if nsdata[ns]['ip'] != nsdata[reference]['ip']:
         if 'overall_average' in nsdata[ns]:
-          nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] / nsdata[ns]['overall_average']) - 1) * 100
+          nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] /
+                                 nsdata[ns]['overall_average']) - 1) * 100
       else:
         nsdata[ns]['is_reference'] = True
-      
+
 #      print "--- DEBUG: %s ---" % ns
 #      print nsdata[ns]
 #      if 'index' in nsdata[ns]:
 #        print "index length: %s" % len(nsdata[ns]['index'])
 #      print ""
-      
+
     self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
     return self.cached_summary
 
@@ -355,20 +396,21 @@ class ReportGenerator(object):
     if ns in self.index:
       for host, req_type, duration, response, unused_x in self.index[ns]:
         answer_count, ttl = self._ResponseToCountTtlText(response)[0:2]
-        index.append((host, req_type, duration, answer_count, ttl, nameserver.ResponseToAscii(response)))
+        index.append((host, req_type, duration, answer_count, ttl,
+                      nameserver.ResponseToAscii(response)))
     return index
-    
+
   def _GetPlatform(self):
     my_platform = platform.system()
     if my_platform == 'Darwin':
       if os.path.exists('/usr/sbin/sw_vers') or os.path.exists('/usr/sbin/system_profiler'):
-        my_platform = 'Mac OS X'    
+        my_platform = 'Mac OS X'
     if my_platform == 'Linux':
       distro = platform.dist()[0]
       if distro:
         my_platform = 'Linux (%s)' % distro
     return my_platform
-    
+
   def _CreateSharingData(self):
     config = dict(self.FilteredConfig())
     config['platform'] = self._GetPlatform()
@@ -376,15 +418,17 @@ class ReportGenerator(object):
     # Purge sensitive information (be aggressive!)
     purged_rows = []
     for row in self._GenerateNameServerSummary():
-      purged_row = dict(row)      
-      purged_row['ip'], purged_row['hostname'], purged_row['name'] = util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
-      if util.IsPrivateIP(row['ip']) or util.IsLoopbackIP(row['ip']) or util.IsPrivateHostname(row['hostname']):
-        purged_row['node_ids'] = []
-        purged_row['version'] = None
-      purged_rows.append(purged_row)
-      
+      # This will be our censored record.
+      p = dict(row)
+      p['ip'], p['hostname'], p['name'] = addr_util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
+      if (addr_util.IsPrivateIP(row['ip']) or addr_util.IsLoopbackIP(row['ip'])
+          or addr_util.IsPrivateHostname(row['hostname'])):
+        p['node_ids'] = []
+        p['version'] = None
+      purged_rows.append(p)
+
     return {'config': config, 'nameservers': purged_rows, 'geodata': self.geodata}
-    
+
   def CreateJsonData(self):
     sharing_data = self._CreateSharingData()
     return simplejson.dumps(sharing_data)
@@ -409,7 +453,6 @@ class ReportGenerator(object):
       answer_text = nameserver.ResponseToAscii(response)
     return (answer_count, ttl, answer_text)
 
-
   def SaveResultsToCsv(self, filename):
     """Write out a CSV file with detailed results on each request.
 
@@ -419,19 +462,19 @@ class ReportGenerator(object):
     Sample output:
     nameserver, test_number, test, type, duration, answer_count, ttl
     """
-    self.msg("Opening %s for write" % filename, debug=True)
+    self.msg('Opening %s for write' % filename, debug=True)
     csv_file = open(filename, 'w')
     output = csv.writer(csv_file)
     output.writerow(['IP', 'Name', 'Test_Num', 'Record',
                      'Record_Type', 'Duration', 'TTL', 'Answer_Count',
                      'Response'])
     for ns in self.results:
-      self.msg("Saving detailed data for %s" % ns, debug=True)
+      self.msg('Saving detailed data for %s' % ns, debug=True)
       for (test_run, test_results) in enumerate(self.results[ns]):
         for (record, req_type, duration, response, error_msg) in test_results:
           (answer_count, ttl, answer_text) = self._ResponseToCountTtlText(response)
           output.writerow([ns.ip, ns.name, test_run, record, req_type, duration,
                            ttl, answer_count, answer_text, error_msg])
     csv_file.close()
-    self.msg("%s saved." % filename, debug=True)
-    
+    self.msg('%s saved.' % filename, debug=True)
+

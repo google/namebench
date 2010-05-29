@@ -20,11 +20,12 @@ import random
 MAX_REPEAT = 3
 
 TYPES = {
-  'automatic': 'Pick the most appropriate selector type for the data source',
-  'weighted': 'Chooses based on a weighted distribution, preferring entries in the top of the list',
-  'random': 'Random selection, including repeats.',
-  'chunk': 'Chooses a random contiguous segment of entries'
+    'automatic': 'Pick the most appropriate selector type for the data source',
+    'weighted': 'Chooses based on a weighted distribution, preferring entries in the top of the list',
+    'random': 'Random selection, including repeats.',
+    'chunk': 'Chooses a random contiguous segment of entries'
 }
+
 
 def MaxRepeatCount(elements, count):
   # Avoid stalling out looking for the one unique choice
@@ -37,7 +38,8 @@ def MaxRepeatCount(elements, count):
 def GetTypes():
   """Return a tuple of type names with a description."""
   return sorted(TYPES.keys())
-  
+
+
 def WeightedDistribution(elements, count):
   """Given a set of elements, return a weighted distribution back.
 
@@ -85,6 +87,7 @@ def ChunkSelect(elements, count):
     return elements
   start = random.randint(0, len(elements) - count)
   return elements[start:start + count]
+
 
 def RandomSelect(elements, count, include_duplicates=False):
   picks = []

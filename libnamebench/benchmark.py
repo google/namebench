@@ -20,16 +20,15 @@ Designed to assist system administrators in selection and prioritization.
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import Queue
 import random
 import threading
 import time
-import Queue
 
-import selectors
-import util
 
 class BenchmarkThreads(threading.Thread):
   """Benchmark multiple nameservers in parallel."""
+
   def __init__(self, input_queue, results_queue):
     threading.Thread.__init__(self)
     self.input = input_queue
@@ -42,12 +41,13 @@ class BenchmarkThreads(threading.Thread):
         (ns, request_type, hostname) = self.input.get_nowait()
         # We've moved this here so that it's after all of the random selection goes through.
         if '__RANDOM__' in hostname:
-          hostname = hostname.replace('__RANDOM__', str(random.random() * random.randint(0,99999)))
+          hostname = hostname.replace('__RANDOM__', str(random.random() * random.randint(0, 99999)))
 
         (response, duration, error_msg) = ns.TimedRequest(request_type, hostname)
         self.results.put((ns, request_type, hostname, response, duration, error_msg))
       except Queue.Empty:
         return
+
 
 class Benchmark(object):
   """The main benchmarking class."""
@@ -60,6 +60,8 @@ class Benchmark(object):
       nameservers: a list of NameServerData objects
       run_count: How many test-runs to perform on each nameserver (int)
       query_count: How many DNS lookups to test in each test-run (int)
+      thread_count: How many benchmark threads to use (int)
+      status_callback: Where to send msg() updates to.
     """
     self.query_count = query_count
     self.run_count = run_count
@@ -74,10 +76,10 @@ class Benchmark(object):
 
   def _CheckForIndexHostsInResults(self, test_records):
     """Check if we have already tested index hosts.
-    
+
     Args:
-      List of tuples of test records (type, record)
-      
+      test_records: List of tuples of test records (type, record)
+
     Returns:
       A list of results that have already been tested
       A list of records that still need to be tested.
@@ -88,7 +90,7 @@ class Benchmark(object):
       matched = False
       for ns in self.results:
         for result in self.results[ns][0]:
-          hostname, request_type, duration, response, error_msg = result
+          hostname, request_type = result[0:2]
           if (request_type, hostname) == test:
             matched = True
             index_results.setdefault(ns, []).append(result)
@@ -99,11 +101,11 @@ class Benchmark(object):
     return (index_results, needs_test)
 
   def RunIndex(self, test_records):
-    """Run index tests using the same mechanism as a standard benchmark."""    
+    """Run index tests using the same mechanism as a standard benchmark."""
     if not test_records:
-      print "No records to test."
+      print 'No records to test.'
       return None
-    
+
     index_results, pending_tests = self._CheckForIndexHostsInResults(test_records)
     run_results = self._SingleTestRun(pending_tests)
     for ns in run_results:
@@ -112,24 +114,24 @@ class Benchmark(object):
 
   def Run(self, test_records=None):
     """Run all test runs for all nameservers."""
-    
+
     # We don't want to keep stats on how many queries timed out from previous runs.
     for ns in self.nameservers.enabled:
       ns.ResetErrorCounts()
-    
-    for test_run in range(self.run_count):
+
+    for _ in range(self.run_count):
       run_results = self._SingleTestRun(test_records)
       for ns in run_results:
         self.results.setdefault(ns, []).append(run_results[ns])
     return self.results
-    
+
   def _SingleTestRun(self, test_records):
     """Manage and execute a single test-run on all nameservers.
 
     We used to run all tests for a nameserver, but the results proved to be
     unfair if the bandwidth was suddenly constrained. We now run a test on
     each server before moving on to the next.
-    
+
     Args:
       test_records: a list of tuples in the form of (request_type, hostname)
 
@@ -159,8 +161,9 @@ class Benchmark(object):
         duration = ns.timeout * 1000
         errors.append((ns, error_msg))
       results.setdefault(ns, []).append((hostname, request_type, duration, response, error_msg))
+
     for (ns, error_msg) in errors:
-      self.msg("Error querying %s: %s" % (ns, error_msg))
+      self.msg('Error querying %s: %s' % (ns, error_msg))
     return results
 
   def _LaunchBenchmarkThreads(self, input_queue):

@@ -19,15 +19,16 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import ConfigParser
 import optparse
+import os.path
 import StringIO
 import tempfile
-import os.path
 
 # from third_party
 import httplib2
 
 import data_sources
 import util
+import addr_util
 import version
 
 SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/config/hostname_reference.cfg'
@@ -37,8 +38,9 @@ def GetConfiguration(filename='config/namebench.cfg'):
   """Get all of our configuration setup, args and config file."""
   (options, args) = DefineAndParseOptions(filename=filename)
   (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
-  supplied_ns = util.ExtractIPTuplesFromString(' '.join(args))
+  supplied_ns = addr_util.ExtractIPTuplesFromString(' '.join(args))
   return (configured_options, supplied_ns, global_ns, regional_ns)
+
 
 def DefineAndParseOptions(filename):
   """Get our option configuration setup.
@@ -46,7 +48,8 @@ def DefineAndParseOptions(filename):
   Args:
     filename: path to configuration (may be relative)
 
-  Returns: tuple of (OptionParser object, args)
+  Returns:
+    stuple of (OptionParser object, args)
   """
   ds = data_sources.DataSources()
   import_types = ds.ListSourceTypes()
@@ -85,11 +88,11 @@ def DefineAndParseOptions(filename):
   parser.add_option('-s', '--num_servers', dest='num_servers',
                     type='int', help='Number of nameservers to include in test')
   parser.add_option('-S', '--system_only', dest='system_only',
-                    action='store_true', help='Only test the currently configured system nameservers.')
+                    action='store_true', help='Only test current system nameservers.')
   parser.add_option('-w', '--open_webbrowser', dest='open_webbrowser',
                     action='store_true', help='Opens the final report in your browser')
   parser.add_option('-u', '--upload_results', dest='upload_results',
-                    action='store_true', help='Upload anonmyized results to SITE_URLl (default: False)')
+                    action='store_true', help='Upload anonymized results to SITE_URL (False)')
   parser.add_option('-U', '--site_url', dest='site_url',
                     help='URL to upload results to (http://namebench.appspot.com/)')
   parser.add_option('-H', '--hide_results', dest='hide_results', action='store_true',
@@ -107,6 +110,7 @@ def DefineAndParseOptions(filename):
                     help='Only test nameservers passed as arguments')
   return parser.parse_args()
 
+
 def GetLatestSanityChecks():
   """Get the latest copy of the sanity checks config."""
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
@@ -114,7 +118,7 @@ def GetLatestSanityChecks():
   use_config = None
   content = None
   try:
-    resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
+    unused_resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
   except:
     print '* Unable to fetch latest reference: %s' % util.GetLastExceptionString()
   http_config = ConfigParser.ConfigParser()
@@ -133,13 +137,15 @@ def GetLatestSanityChecks():
 
   if http_version_usable:
     if int(http_config.get('base', 'version')) > int(local_config.get('base', 'version')):
-      print "- Using %s" % SANITY_REFERENCE_URL
+      print '- Using %s' % SANITY_REFERENCE_URL
       use_config = http_config
 
   if not use_config:
     use_config = local_config
 
-  return (use_config.items('sanity'), use_config.items('sanity-secondary'), use_config.items('censorship'))
+  return (use_config.items('sanity'),
+          use_config.items('sanity-secondary'),
+          use_config.items('censorship'))
 
 
 def ProcessConfigurationFile(options):
@@ -152,6 +158,9 @@ def ProcessConfigurationFile(options):
     options: optparse.OptionParser() object
     global_ns: A list of global nameserver tuples.
     regional_ns: A list of regional nameservers tuples.
+
+  Raises:
+    ValueError: If we are unable to find a usable configuration file.
   """
   config = ConfigParser.ConfigParser()
   full_path = util.FindDataFile(options.config)
@@ -185,7 +194,7 @@ def ProcessConfigurationFile(options):
     value = getattr(options, key, None)
     if value:
       setattr(options, key, os.path.expanduser(value))
-      
+
   options.version = version.VERSION
-  
+
   return (options, global_ns, regional_ns)

@@ -18,20 +18,26 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import os.path
-import threading
 import subprocess
 import sys
 import traceback
 import webbrowser
-import time
 
 import util
+
 
 def output(string):
   print string
 
+
 def create_win32_http_cmd(url):
   """Create a command-line tuple to launch a web browser for a given URL.
+
+  Args:
+    url: string
+
+  Returns:
+    tuple of: (executable, arg1, arg2, ...)
 
   At the moment, this ignores all default arguments to the browser.
   TODO(tstromberg): Properly parse the command-line arguments.
@@ -39,11 +45,11 @@ def create_win32_http_cmd(url):
   browser_type = None
   try:
     key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
-                        'Software\Classes\http\shell\open\command')
+                          'Software\Classes\http\shell\open\command')
     browser_type = 'user'
   except WindowsError:
     key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                        'Software\Classes\http\shell\open\command')
+                          'Software\Classes\http\shell\open\command')
     browser_type = 'machine'
   except:
     return False
@@ -64,41 +70,13 @@ def create_win32_http_cmd(url):
   return (executable, url)
 
 
-if sys.platform[:3] == 'win':
-  import _winreg
-
-  class WindowsHttpDefault(webbrowser.BaseBrowser):
-    """Directly uses the Windows HTTP handler to open a web browser, which may
-       be different than what os.startfile outputs for local HTML files."""
-
-    def open(self, url, new=0, autoraise=1):
-      command_args = create_win32_http_cmd(url)
-      if not command_args:
-        output('$ Could not find HTTP handler')
-        return False
-
-      output("command_args:")
-      output(command_args)
-      # Avoid some unicode path issues by moving our current directory
-      old_pwd = os.getcwd()
-      os.chdir('C:\\')
-      try:
-        p = subprocess.Popen(command_args)
-        os.chdir(old_pwd)
-        return True
-      except:
-        traceback.print_exc()
-        output('$ Failed to run HTTP handler, trying next browser.')
-        os.chdir(old_pwd)
-        return False
-      
-        
-  webbrowser.register("windows-http", WindowsHttpDefault, update_tryorder=-1)
-
 def open(url):
+  """Opens a URL, overriding the normal webbrowser.open methods for sanity."""
+
   try:
     webbrowser.open(url, new=1, autoraise=True)
-  # If the user is missing the osascript binary - see http://code.google.com/p/namebench/issues/detail?id=88
+  # If the user is missing the osascript binary - see
+  # http://code.google.com/p/namebench/issues/detail?id=88
   except:
     output('Failed to open: [%s]: %s' % (url, util.GetLastExceptionString()))
     if os.path.exists('/usr/bin/open'):
@@ -106,7 +84,6 @@ def open(url):
         output('trying open: %s' % url)
         p = subprocess.Popen(('open', url))
         p.wait()
-        failed = False
       except:
         output('open did not seem to work: %s' % util.GetLastExceptionString())
     elif sys.platform[:3] == 'win':
@@ -116,3 +93,36 @@ def open(url):
         controller.open_new(url)
       except:
         output('WindowsController did not work: %s' % util.GetLastExceptionString())
+
+
+class WindowsHttpDefault(webbrowser.BaseBrowser):
+  """Provide an alternate open class for Windows user, using the http handler."""
+
+  def open(self, url, new=0, autoraise=1):
+    command_args = create_win32_http_cmd(url)
+    if not command_args:
+      output('$ Could not find HTTP handler')
+      return False
+
+    output('command_args:')
+    output(command_args)
+    # Avoid some unicode path issues by moving our current directory
+    old_pwd = os.getcwd()
+    os.chdir('C:\\')
+    try:
+      _unused = subprocess.Popen(command_args)
+      os.chdir(old_pwd)
+      return True
+    except:
+      traceback.print_exc()
+      output('$ Failed to run HTTP handler, trying next browser.')
+      os.chdir(old_pwd)
+      return False
+
+
+# *NOTE*: EVIL IMPORT SIDE EFFECTS AHEAD!
+#
+# If we are running on Windows, register the WindowsHttpDefault class.
+if sys.platform[:3] == 'win':
+  import _winreg
+  webbrowser.register('windows-http', WindowsHttpDefault, update_tryorder=-1)

@@ -21,15 +21,6 @@ import random
 import sys
 import time
 
-# See if a third_party library exists -- use it if so.
-try:
-  import third_party
-except ImportError:
-  pass
-
-import dns.reversename
-
-SANITY_CHECKS_URL='http://namebench.googlecode.com/svn/wiki/HostnameSanityChecks.wiki'
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 LIKELY_HIJACKS = ['www.google.com.', 'windowsupdate.microsoft.com.', 'www.paypal.com.']
 
@@ -41,33 +32,34 @@ MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 MAX_PORT_BEHAVIOR_TRIES = 2
 
+
 class NameServerHealthChecks(object):
   """Health checks for a nameserver."""
 
-  def TestAnswers(self, record_type, record, expected, fatal=True, timeout=None):
+  def TestAnswers(self, record_type, record, expected, critical=True, timeout=None):
     """Test to see that an answer returns correct IP's.
 
     Args:
       record_type: text record type for NS query (A, CNAME, etc)
       record: string to query for
       expected: tuple of strings expected in all answers
+      critical: If this query fails, should it count against the server.
+      timeout: timeout for query in seconds (int)
 
     Returns:
       (is_broken, error_msg, duration)
     """
     is_broken = False
-    response_text = None
     unmatched_answers = []
-    warning = None
     if not timeout:
       timeout = self.health_timeout
     (response, duration, error_msg) = self.TimedRequest(record_type, record, timeout)
     if not response:
       if not error_msg:
-        error_msg = "No response"
+        error_msg = 'No response'
       is_broken = True
     elif not response.answer:
-      if fatal:
+      if critical:
         is_broken = True
       # Avoid preferring broken DNS servers that respond quickly
       duration = self.health_timeout
@@ -86,7 +78,7 @@ class NameServerHealthChecks(object):
           if rdata.rdtype == 5:
             reply = str(rdata.target)
           # A Record
-          elif rdata.rdtype ==  1:
+          elif rdata.rdtype == 1:
             reply = str(rdata.address)
           else:
             continue
@@ -111,18 +103,17 @@ class NameServerHealthChecks(object):
 
   def TestBindVersion(self):
     """Test for BIND version. This acts as a pretty decent ping."""
-    (response, duration, error_msg) = self.RequestVersion()
+    (unused_response, duration, error_msg) = self.RequestVersion()
     return (False, error_msg, duration)
-    
+
   def TestNodeId(self):
-    """Get the current node id. This acts as a pretty decent ping."""
-    (response, duration, error_msg) = self.RequestNodeId()
+    """Get the current node id."""
+    self.RequestNodeId()
     return (False, False, 0.0)
-    
+
   def TestNegativeResponse(self, prefix=None):
     """Test for NXDOMAIN hijaaking."""
     is_broken = False
-    warning = None
     if prefix:
       hostname = prefix
       warning_suffix = ' (%s)' % prefix
@@ -131,25 +122,25 @@ class NameServerHealthChecks(object):
       warning_suffix = ''
     poison_test = '%s.nb%s.google.com.' % (hostname, random.random())
     (response, duration, error_msg) = self.TimedRequest('A', poison_test,
-                                                  timeout=self.health_timeout*2)
+                                                        timeout=self.health_timeout*2)
     if not response:
       if not error_msg:
-        error_msg = "No response"
+        error_msg = 'No response'
       is_broken = True
     elif response.answer:
       error_msg = 'NXDOMAIN Hijacking' + warning_suffix
 
     return (is_broken, error_msg, duration)
-  
+
   def TestWwwNegativeResponse(self):
     return self.TestNegativeResponse(prefix='www')
 
   def TestRootServerResponse(self):
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
-    
+
   def TestPortBehavior(self, tries=0):
     """This is designed to be called multiple times to retry bad results."""
-    
+
     if self.port_behavior:
       if 'UNKNOWN' not in self.port_behavior:
         return (False, None, 0)
@@ -164,19 +155,9 @@ class NameServerHealthChecks(object):
     if (not self.port_behavior or 'UNKNOWN' in self.port_behavior) and tries < MAX_PORT_BEHAVIOR_TRIES:
       time.sleep(1)
       return self.TestPortBehavior(tries=tries)
-    
+
 #    print "%s behavior: %s (tries=%s)" % (self, self.port_behavior, tries)
     return (False, None, 0)
-    
-  def StoreAnycastID(self):
-    if not self.is_global:
-      return (False, None, 0)
-
-      (response, duration, error_msg) = self.TimedRequest('TXT', 'version.bind.',
-                                                    timeout=self.ping_timeout,
-                                                    rdataclass='CHAOS')
-      return (error_msg, False, duration)
-      
 
   def StoreWildcardCache(self):
     """Store a set of wildcard records."""
@@ -189,14 +170,13 @@ class NameServerHealthChecks(object):
         self.AddFailure('Could not recursively query: %s' % ', '.join(attempted))
         return False
       domain = random.choice(WILDCARD_DOMAINS)
-      hostname = 'namebench%s.%s' % (random.randint(1,2**32), domain)
+      hostname = 'namebench%s.%s' % (random.randint(1, 2**32), domain)
       attempted.append(hostname)
-      (response, duration, exc) = self.TimedRequest('A', hostname, timeout=timeout)
+      response = self.TimedRequest('A', hostname, timeout=timeout)[0]
       if response and response.answer:
         self.cache_checks.append((hostname, response, self.timer()))
       else:
         sys.stdout.write('x')
-
 
   def TestSharedCache(self, other_ns):
     """Is this nameserver sharing a cache with another nameserver?
@@ -218,17 +198,17 @@ class NameServerHealthChecks(object):
       return False
 
     if not other_ns.cache_checks:
-      print "%s has no cache checks (disabling - how did this happen?)" % other_ns
+      print '%s has no cache checks (disabling - how did this happen?)' % other_ns
       other_ns.disabled = True
       return False
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
-      (response, duration, error_msg) = self.TimedRequest('A', ref_hostname, timeout=timeout)
+      response = self.TimedRequest('A', ref_hostname, timeout=timeout)[0]
       # Retry once - this *may* cause false positives however, as the TTL may be updated.
       if not response or not response.answer:
         sys.stdout.write('x')
-        (response, duration, error_msg) = self.TimedRequest('A', ref_hostname, timeout=timeout)
-        
+        response = self.TimedRequest('A', ref_hostname, timeout=timeout)[0]
+
       if response and response.answer:
         ref_ttl = ref_response.answer[0].ttl
         ttl = response.answer[0].ttl
@@ -247,15 +227,15 @@ class NameServerHealthChecks(object):
     return shared
 
   def CheckCensorship(self, tests):
-     """Check to see if results from a nameserver are being censored."""
-     for (check, expected) in tests:
-       (req_type, req_name) = check.split(' ')
-       expected_values = expected.split(',')
-       result = self.TestAnswers(req_type.upper(), req_name, expected_values,
-                                 timeout=self.health_timeout * CENSORSHIP_TIMEOUT_MULTIPLIER)
-       warning = result[1]
-       if warning:
-         self.warnings.add(warning)
+    """Check to see if results from a nameserver are being censored."""
+    for (check, expected) in tests:
+      (req_type, req_name) = check.split(' ')
+      expected_values = expected.split(',')
+      result = self.TestAnswers(req_type.upper(), req_name, expected_values,
+                                timeout=self.health_timeout * CENSORSHIP_TIMEOUT_MULTIPLIER)
+      warning = result[1]
+      if warning:
+        self.warnings.add(warning)
 
   def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):
     """Qualify a nameserver to see if it is any good."""

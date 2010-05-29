@@ -18,13 +18,13 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import operator
 import os
-import random
 import pickle
+import Queue
+import random
+import sys
+import tempfile
 import threading
 import time
-import tempfile
-import sys
-import Queue
 
 # 3rd party libraries
 import dns.resolver
@@ -47,13 +47,23 @@ MIN_HEALTHY_PERCENT = 10
 SLOW_MODE_THREAD_COUNT = 6
 
 # Windows behaves in unfortunate ways if too many threads are specified
-if sys.platform == "win32":
+if sys.platform == 'win32':
   MAX_SANE_THREAD_COUNT = 32
 else:
   MAX_SANE_THREAD_COUNT = 100
 
 # Slow down for these, as they are used for timing.
 MAX_INITIAL_HEALTH_THREAD_COUNT = 35
+
+
+def InternalNameServers():
+  """Return list of DNS server IP's used by the host."""
+  try:
+    return dns.resolver.Resolver().nameservers
+  except:
+    print "Unable to get list of internal DNS servers."
+    return []
+
 
 class OutgoingUdpInterception(Exception):
 
@@ -63,6 +73,7 @@ class OutgoingUdpInterception(Exception):
   def __str__(self):
     return repr(self.value)
 
+
 class TooFewNameservers(Exception):
 
   def __init__(self, value):
@@ -71,13 +82,16 @@ class TooFewNameservers(Exception):
   def __str__(self):
     return repr(self.value)
 
+
 class ThreadFailure(Exception):
 
   def __init__(self):
     pass
 
+
 class QueryThreads(threading.Thread):
   """Quickly see which nameservers are awake."""
+
   def __init__(self, input_queue, results_queue, action_type, checks=None):
     threading.Thread.__init__(self)
     self.input = input_queue
@@ -86,10 +100,8 @@ class QueryThreads(threading.Thread):
     self.checks = checks
     self.halt = False
 
-
   def stop(self):
     self.halt = True
-
 
   def run(self):
     """Iterate over the queue, processing each item."""
@@ -130,6 +142,7 @@ class QueryThreads(threading.Thread):
         else:
           raise ValueError('Invalid action type: %s' % self.action_type)
 
+
 class NameServers(list):
 
   def __init__(self, nameservers, global_servers=None, regional_servers=None,
@@ -159,7 +172,7 @@ class NameServers(list):
 
     self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
-    self.system_nameservers = util.InternalNameServers()
+    self.system_nameservers = InternalNameServers()
     if nameservers:
       for (ip, name) in nameservers:
         self.AddServer(ip, name, is_custom=True, is_preferred=True)
@@ -213,7 +226,9 @@ class NameServers(list):
     ns = nameserver.NameServer(ip, name=name, preferred=is_preferred)
     if self.ipv6_only and not ns.is_ipv6:
       return
-    
+
+    ns.is_custom = is_custom
+
     if ip in self.system_nameservers:
       ns.is_system = True
       ns.is_preferred = True
@@ -224,6 +239,7 @@ class NameServers(list):
     ns.is_regional = is_regional
     ns.timeout = self.timeout
     ns.ping_timeout = self.ping_timeout
+
     # Give them a little extra love for the road.
     if ns.is_system:
       ns.health_timeout = self.health_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
@@ -260,11 +276,11 @@ class NameServers(list):
 
   def ApplyCongestionFactor(self):
     # If we are only benchmarking one server, don't bother w/ congestion checking.
-    
+
     if len(self) == 1:
-      return    
+      return
     cq = conn_quality.ConnectionQuality(status_callback=self.status_callback)
-    (intercepted, congestion, multiplier) = cq.CheckConnectionQuality()[0:3]
+    (intercepted, unused_level, multiplier) = cq.CheckConnectionQuality()[0:3]
     if intercepted:
       raise OutgoingUdpInterception(
           'Your router or Internet Service Provider appears to be intercepting '
@@ -277,8 +293,8 @@ class NameServers(list):
 #      self.timeout *= multiplier
       self.health_timeout *= multiplier
       self.ping_timeout *= multiplier
-      self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f ping, %2.1f standard, %2.1f health.'
-               % (multiplier, self.ping_timeout, self.timeout, self.health_timeout))
+      self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f ping, %2.1f health.'
+               % (multiplier, self.ping_timeout, self.health_timeout))
 
   def InvokeSecondaryCache(self):
     """Delete secondary ips that do not exist in the cache file."""
@@ -310,13 +326,13 @@ class NameServers(list):
 
     # Magic secondary mixing algorithm:
     # - Half of them should be the "nearest" nameservers
-    # - Half of them should be the "fastest average" nameservers    
+    # - Half of them should be the "fastest average" nameservers
     preferred_count = len(self.enabled_preferred)
     secondaries_needed = target_count - preferred_count
     if secondaries_needed < 1 or not self.secondaries:
       return
     nearest_needed = int(secondaries_needed / 2.0)
-    
+
     if secondaries_needed < 50:
       self.msg("Picking %s secondary servers to use (%s nearest, %s fastest)" %
                (secondaries_needed, nearest_needed, secondaries_needed - nearest_needed))
@@ -324,7 +340,7 @@ class NameServers(list):
     # Phase two is picking the nearest secondary server
     secondaries_to_keep = []
     for ns in self.SortByNearest():
-      
+
       if not ns.is_preferred and not ns.disabled:
         if not secondaries_to_keep and secondaries_needed < 15:
           self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
@@ -401,7 +417,7 @@ class NameServers(list):
     # No sense in checking for duplicate warnings if we only have one server.
     if len(self.enabled) == 1:
       return
-  
+
     for ns in self.enabled:
       for warning in ns.warnings:
         seen_counts[warning] = seen_counts.get(warning, 0) + 1
@@ -424,9 +440,8 @@ class NameServers(list):
           self.msg('Making %s the primary anycast - faster than %s by %2.2fms' %
                    (faster_ns.name_and_node, ns.name_and_node, ns.check_average - faster_ns.check_average))
           ns.is_preferred = False
-#          ns.warnings.add('Alternate anycast address for %s' % provider)
         else:
-          seen[provider]=ns
+          seen[provider] = ns
 
   def _SecondaryCachePath(self):
     """Find a usable and unique location to store health results."""
@@ -470,10 +485,10 @@ class NameServers(list):
   def SortByNearest(self):
     """Return a list of healthy servers in fastest-first order."""
     return sorted(self, key=operator.attrgetter('fastest_check_duration'))
-  
+
   def ResetTestResults(self):
     """Reset the testng status of all disabled hosts."""
-    return [ ns.ResetTestStatus() for ns in self ]
+    return [ns.ResetTestStatus() for ns in self]
 
   def CheckCacheCollusion(self):
     """Mark if any nameservers share cache, especially if they are slower."""
@@ -484,7 +499,7 @@ class NameServers(list):
 
     test_combos = []
     good_nameservers = [x for x in self.SortByFastest() if not x.disabled]
-    for (index, ns) in enumerate(good_nameservers):
+    for ns in good_nameservers:
       for compare_ns in good_nameservers:
         if ns != compare_ns:
           test_combos.append((compare_ns, ns))
@@ -525,6 +540,14 @@ class NameServers(list):
       action_type: a string describing an action type to pass
       status_message: Status to show during updates.
       items: A list of items to pass to the queue
+      thread_count: How many threads to use (int)
+      kwargs: Arguments to pass to QueryThreads()
+
+    Returns:
+      results_queue: Results from the query tests.
+
+    Raises:
+      TooFewNameservers: If no tested nameservers are healthy.
     """
     threads = []
     input_queue = Queue.Queue()
@@ -540,15 +563,15 @@ class NameServers(list):
     if thread_count > len(items):
       thread_count = len(items)
 
-    status_message = status_message + ' (%s threads)' % thread_count
+    status_message += ' (%s threads)' % thread_count
 
     self.msg(status_message, count=0, total=len(items))
-    for thread_num in range(0, thread_count):
+    for _ in range(0, thread_count):
       thread = QueryThreads(input_queue, results_queue, action_type, **kwargs)
       try:
         thread.start()
       except:
-        self.msg("ThreadingError with %s threads: waiting for completion before retrying." % thread_count) 
+        self.msg("ThreadingError with %s threads: waiting for completion before retrying." % thread_count)
         for thread in threads:
           thread.stop()
           thread.join()
@@ -593,26 +616,26 @@ class NameServers(list):
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
       self.msg('%s of %s tested name servers are available' %
                (len(self.enabled), len(self)))
+    return results
 
   def RunHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    # Since we use this to decide which nameservers to include, cool down the thread
-    # count a bit. 
+
+    status_msg = 'Running initial health checks on %s servers' % len(self.enabled)
+
     if self.thread_count > MAX_INITIAL_HEALTH_THREAD_COUNT:
       thread_count = MAX_INITIAL_HEALTH_THREAD_COUNT
     else:
       thread_count = self.thread_count
 
     try:
-      results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
-                                         list(self.enabled), checks=checks, thread_count=thread_count)
+      results = self._LaunchQueryThreads('health', status_msg, list(self.enabled),
+                                         checks=checks, thread_count=thread_count)
     except ThreadFailure:
       self.msg("It looks like you couldn't handle %s threads, trying again with %s (slow)" % (thread_count, SLOW_MODE_THREAD_COUNT))
       self.thread_count = SLOW_MODE_THREAD_COUNT
       self.ResetTestResults()
       results = self._LaunchQueryThreads('ping', 'Checking nameserver availability', list(self))
-
-
 
     success_rate = (float(len(self.enabled)) / float(len(self))) * 100
     if success_rate < self.min_healthy_percent:
@@ -621,26 +644,31 @@ class NameServers(list):
       self.ResetTestResults()
       self.thread_count = SLOW_MODE_THREAD_COUNT
       time.sleep(5)
-      results = self._LaunchQueryThreads('health', 'Running initial health checks on %s servers' % len(self.enabled),
-                                         list(self.enabled), checks=checks, thread_count=thread_count)
+      results = self._LaunchQueryThreads('health', status_msg, list(self.enabled),
+                                         checks=checks, thread_count=thread_count)
     if self.enabled:
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
-      self.msg('%s of %s tested name servers are healthy' %
-               (len(self.enabled), len(self)))
-               
+      self.msg('%s of %s tested name servers are healthy' % (len(self.enabled), len(self)))
+
+    return results
+
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('final', 'Running final health checks on %s servers' % len(self.enabled), list(self.enabled), checks=checks)
+    status_msg = 'Running final health checks on %s servers' % len(self.enabled)
+    return self._LaunchQueryThreads('final', status_msg, list(self.enabled), checks=checks)
 
   def RunCensorshipCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""
-    results = self._LaunchQueryThreads('censorship', 'Running censorship checks on %s servers' % len(self.enabled), list(self.enabled), checks=checks)
+    status_msg = 'Running censorship checks on %s servers' % len(self.enabled)
+    return self._LaunchQueryThreads('censorship', status_msg, list(self.enabled), checks=checks)
 
   def RunPortBehaviorThreads(self):
     """Get port behavior data."""
-    results = self._LaunchQueryThreads('port_behavior', 'Running port behavior checks on %s servers' % len(self.enabled), list(self.enabled))
+    status_msg = 'Running port behavior checks on %s servers' % len(self.enabled)
+    return self._LaunchQueryThreads('port_behavior', status_msg, list(self.enabled))
 
   def RunWildcardStoreThreads(self):
     """Store a wildcard cache value for all nameservers (using threads)."""
-    results = self._LaunchQueryThreads('store_wildcards', 'Waiting for wildcard cache queries from %s servers' % len(self.enabled), list(self.enabled))
+    status_msg = 'Waiting for wildcard cache queries from %s servers' % len(self.enabled)
+    return self._LaunchQueryThreads('store_wildcards', status_msg, list(self.enabled))
 

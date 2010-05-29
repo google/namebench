@@ -26,11 +26,13 @@ import math
 import sys
 
 import base_ui
-import data_sources
-import nameserver_list
 import conn_quality
+import nameserver_list
+
 
 class NameBenchCli(base_ui.BaseUI):
+  """A command-line implementation of the namebench workflow."""
+
   def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
 
     self.options = options
@@ -123,9 +125,10 @@ class NameBenchCli(base_ui.BaseUI):
       self.PrepareNameServers()
       self.PrepareBenchmark()
       self.RunAndOpenReports()
-    except (nameserver_list.OutgoingUdpInterception, nameserver_list.TooFewNameservers,
-           conn_quality.OfflineConnection):
-      (exc_type, exception, tb) = sys.exc_info()
+    except (nameserver_list.OutgoingUdpInterception,
+            nameserver_list.TooFewNameservers,
+            conn_quality.OfflineConnection):
+      (exc_type, exception) = sys.exc_info()[0:2]
       self.UpdateStatus("%s - %s" % (exc_type, exception), error=True)
 
 

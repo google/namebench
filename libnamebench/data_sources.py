@@ -15,6 +15,7 @@
 
 """Provides data sources to use for benchmarking."""
 
+import ConfigParser
 import glob
 import os
 import os.path
@@ -23,18 +24,11 @@ import re
 import subprocess
 import sys
 import time
-import ConfigParser
-
-# See if a third_party library exists -- use it if so.
-try:
-  import third_party
-except ImportError:
-  pass
-
 
 # relative
-import util
+import addr_util
 import selectors
+import util
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:
 if sys.platform[:3] == 'win':
@@ -43,21 +37,19 @@ else:
   DEFAULT_TIMER = time.time
 
 GLOBAL_DATA_CACHE = {}
-INTERNAL_RE = re.compile('^0|\.pro[md]z*\.|\.corp|\.bor|\.hot$|internal|dmz|\._[ut][dc]p\.|intra|\.\w$|\.\w{5,}$')
-# ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
-FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
 
-IP_RE = re.compile('^[0-9.]+$')
-DEFAULT_CONFIG_PATH = "config/data_sources.cfg"
+DEFAULT_CONFIG_PATH = 'config/data_sources.cfg'
 MAX_NON_UNIQUE_RECORD_COUNT = 500000
 MAX_FILE_MTIME_AGE_DAYS = 45
 MIN_FILE_SIZE = 10000
 MIN_RECOMMENDED_RECORD_COUNT = 200
 MAX_FQDN_SYNTHESIZE_PERCENT = 4
 
+
 class DataSources(object):
+  """A collection of methods related to available hostname data sources."""
+
   def __init__(self, config_path=DEFAULT_CONFIG_PATH, status_callback=None):
-    global GLOBAL_DATA_CACHE
     self.source_cache = GLOBAL_DATA_CACHE
     self.source_config = {}
     self.status_callback = status_callback
@@ -70,19 +62,20 @@ class DataSources(object):
       print '- %s' % msg
 
   def _LoadConfigFromPath(self, path):
-    conf_file = util.FindDataFile('config/data_sources.cfg')
+    """Load a configuration file describing data sources that may be available."""
+    conf_file = util.FindDataFile(path)
     config = ConfigParser.ConfigParser()
     config.read(conf_file)
     for section in config.sections():
       if section not in self.source_config:
         self.source_config[section] = {
-          'name': None,
-          'search_paths': set(),
-          # Store whether or not this data source contains personal data
-          'full_hostnames': True,
-          'synthetic': False,
-          'include_duplicates': False,
-          'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
+            'name': None,
+            'search_paths': set(),
+            # Store whether or not this data source contains personal data
+            'full_hostnames': True,
+            'synthetic': False,
+            'include_duplicates': False,
+            'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
         }
 
       for (key, value) in config.items(section):
@@ -120,17 +113,17 @@ class DataSources(object):
                       self.source_config[source]['name'],
                       self.source_config[source]['synthetic'],
                       len(self.source_cache[source])))
-    return sorted(details, key=lambda x:(x[2], x[3] * -1))
+    return sorted(details, key=lambda x: (x[2], x[3] * -1))
 
   def ListSourceTitles(self):
     """Return a list of sources in title + count format."""
     titles = []
     seen_synthetic = False
-    for (source_type, name, is_synthetic, count) in self.ListSourcesWithDetails():
+    for (unused_type, name, is_synthetic, count) in self.ListSourcesWithDetails():
       if is_synthetic and not seen_synthetic:
         titles.append('-' * 36)
         seen_synthetic = True
-      titles.append("%s (%s)" % (name, count))
+      titles.append('%s (%s)' % (name, count))
     return titles
 
   def ConvertSourceTitleToType(self, detail):
@@ -153,16 +146,18 @@ class DataSources(object):
     return len(self.source_cache[source])
 
   def _CreateRecordsFromHostEntries(self, entries, include_duplicates=False):
-    """Create records from hosts, removing duplicate entries and IP's
+    """Create records from hosts, removing duplicate entries and IP's.
 
     Args:
-      A list of test-data entries.
+      entries: A list of test-data entries.
+      include_duplicates: Whether or not to filter duplicates (optional: False)
 
     Returns:
       A tuple of (filtered records, full_host_names (Boolean)
+
+    Raises:
+      ValueError: If no records could be grokked from the input.
     """
-    real_tld_re = re.compile('[a-z]{2,4}$')
-    internal_re = re.compile('^[\d:\.]+$')
     last_entry = None
 
     records = []
@@ -179,17 +174,16 @@ class DataSources(object):
         record_type = 'A'
         host = entry
 
-      if not IP_RE.match(host) and not INTERNAL_RE.search(host):
+      if not addr_util.IP_RE.match(host) and not addr_util.INTERNAL_RE.search(host):
         if not host.endswith('.'):
-          # For a short string like this, simple addition is 54% faster than formatting
-          host = host + '.'
+          host += '.'
         records.append((record_type, host))
 
-        if FQDN_RE.match(host):
+        if addr_util.FQDN_RE.match(host):
           full_host_count += 1
-      
-    if not len(records):
-      raise ValueError("No records could be created from: %s" % entries)
+
+    if not records:
+      raise ValueError('No records could be created from: %s' % entries)
 
     # Now that we've read everything, are we dealing with domains or full hostnames?
     full_host_percent = full_host_count / float(len(records)) * 100
@@ -200,7 +194,18 @@ class DataSources(object):
     return (records, full_host_names)
 
   def GetTestsFromSource(self, source, count=50, select_mode=None):
-    """Parse records from source, and returnrequest tuples to use for testing.
+    """Parse records from source, and return tuples to use for testing.
+
+    Args:
+      source: A source name (str) that has been configured.
+      count: Number of tests to generate from the source (int)
+      select_mode: automatic, weighted, random, chunk (str)
+
+    Returns:
+      A list of record tuples in the form of (req_type, hostname)
+
+    Raises:
+      ValueError: If no usable records are found from the data source.
 
     This is tricky because we support 3 types of input data:
 
@@ -210,9 +215,6 @@ class DataSources(object):
     """
     records = []
 
-    # Convert entries into tuples, determine if we are using full hostnames
-    full_host_count = 0
-    www_host_count = 0
     if source in self.source_config:
       include_duplicates = self.source_config[source].get('include_duplicates', False)
     else:
@@ -220,8 +222,8 @@ class DataSources(object):
 
     records = self._GetHostsFromSource(source)
     if not records:
-      raise ValueError("Unable to generate records from %s (nothing found)" % source)
-    
+      raise ValueError('Unable to generate records from %s (nothing found)' % source)
+
     self.msg('Generating tests from %s (%s records, selecting %s %s)'
              % (self.GetNameForSource(source), len(records), count, select_mode))
     (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records,
@@ -230,18 +232,19 @@ class DataSources(object):
     if select_mode in ('weighted', 'automatic', None):
       # If we are in include_duplicates mode (cachemiss, cachehit, etc.), we have different rules.
       if include_duplicates:
-        if count > len(records) :
+        if count > len(records):
           select_mode = 'random'
         else:
           select_mode = 'chunk'
       elif len(records) != len(set(records)):
         if select_mode == 'weighted':
-          self.msg('%s data contains duplicates, switching select_mode to random' % source)     
+          self.msg('%s data contains duplicates, switching select_mode to random' % source)
         select_mode = 'random'
       else:
         select_mode = 'weighted'
 
-    self.msg('Selecting %s out of %s sanitized records (%s mode).' % (count, len(records), select_mode))
+    self.msg('Selecting %s out of %s sanitized records (%s mode).' %
+             (count, len(records), select_mode))
     if select_mode == 'weighted':
       records = selectors.WeightedDistribution(records, count)
     elif select_mode == 'chunk':
@@ -249,18 +252,18 @@ class DataSources(object):
     elif select_mode == 'random':
       records = selectors.RandomSelect(records, count, include_duplicates=include_duplicates)
     else:
-      raise ValueError("No such final selection mode: %s" % select_mode)
-      
+      raise ValueError('No such final selection mode: %s' % select_mode)
+
     # For custom filenames
     if source not in self.source_config:
       self.source_config[source] = {'synthetic': True}
-    
+
     if are_records_fqdn:
       self.source_config[source]['full_hostnames'] = False
       self.msg('%s input appears to be predominantly domain names. Synthesizing FQDNs' % source)
       synthesized = []
       for (req_type, hostname) in records:
-        if not FQDN_RE.match(hostname):
+        if not addr_util.FQDN_RE.match(hostname):
           hostname = self._GenerateRandomHostname(hostname)
         synthesized.append((req_type, hostname))
       return synthesized
@@ -282,13 +285,15 @@ class DataSources(object):
   def _GetHostsFromSource(self, source, min_file_size=None, max_mtime_age_days=None):
     """Get data for a particular source. This needs to be fast.
 
-    We support 3 styles of files:
+    Args:
+      source: A configured source type (str)
+      min_file_size: What the minimum allowable file size is for this source (int)
+      max_mtime_age_days: Maximum days old the file can be for this source (int)
 
-    * One-per line list in form of record-type: host
-    * One-per line list of unique domains
-    * Any form with URL's.
+    Returns:
+      list of hostnames gathered from data source.
 
-    The results of this function get cached.
+    The results of this function are cached by source type.
     """
     if source in self.source_cache:
       return self.source_cache[source]
@@ -321,8 +326,8 @@ class DataSources(object):
     return parse_re.findall(open(path, 'rb').read())
 
   def _ExtractHostsFromPcapFile(self, path):
-    """Get a list of requests out of a pcap file (requires tcpdump)"""
-    self.msg("Extracting requests from pcap file using tcpdump")
+    """Get a list of requests out of a pcap file - requires tcpdump."""
+    self.msg('Extracting requests from pcap file using tcpdump')
     cmd = 'tcpdump -r %s -n port 53' % path
     pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
     parse_re = re.compile(' ([A-Z]+)\? ([\-\w\.]+)')
@@ -340,7 +345,7 @@ class DataSources(object):
     records = []
     domains_re = re.compile('^\w[\w\.-]+[a-zA-Z]$')
     requests_re = re.compile('^[A-Z]{1,4} \w[\w\.-]+\.$')
-    for line in open(path).readlines():
+    for line in open(path):
       if domains_re.match(line) or requests_re.match(line):
         records.append(line.rstrip())
     return records
@@ -354,7 +359,6 @@ class DataSources(object):
 
     search_paths = []
     environment_re = re.compile('%(\w+)%')
-
 
     # First get through resolving environment variables
     for path in self.source_config[source]['search_paths']:
@@ -385,12 +389,13 @@ class DataSources(object):
 
     return search_paths
 
-  def _FindBestFileForSource(self, source, min_file_size=None,
-                             max_mtime_age_days=None):
+  def _FindBestFileForSource(self, source, min_file_size=None, max_mtime_age_days=None):
     """Find the best file (newest over X size) to use for a given source type.
 
     Args:
       source: source type
+      min_file_size: What the minimum allowable file size is for this source (int)
+      max_mtime_age_days: Maximum days old the file can be for this source (int)
 
     Returns:
       A file path.
