@@ -176,6 +176,8 @@ class NameServers(list):
     self.system_nameservers = InternalNameServers()
     if nameservers:
       for (ip, name) in nameservers:
+        if (not name or name == ip) and ip in self.system_nameservers:
+          name = 'SYS-%s' % ip
         self.AddServer(ip, name, is_custom=True, is_preferred=True)
 
     if global_servers:
