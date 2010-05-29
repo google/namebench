@@ -130,7 +130,7 @@ class BaseUI(object):
     index = []
 
     if self.options.upload_results:
-      connector = site_connector.SiteConnector(self.options)
+      connector = site_connector.SiteConnector(self.options, status_callback=self.UpdateStatus)
       index_hosts = connector.GetIndexHosts()
       if index_hosts:
         index = self.bmark.RunIndex(index_hosts)
@@ -184,7 +184,7 @@ class BaseUI(object):
       f.close()
 
       self.UpdateStatus('Uploading results to %s' % self.options.site_url)
-      connector = site_connector.SiteConnector(self.options)
+      connector = site_connector.SiteConnector(self.options, status_callback=self.UpdateStatus)
       self.url, self.share_state = connector.UploadJsonResults(
           json_data,
           hide_results=self.options.hide_results
