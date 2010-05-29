@@ -259,8 +259,12 @@ class MainWindow(Frame, base_ui.BaseUI):
     share_button = Checkbutton(inner_frame,
                                text='Make anonymized results publically available (help speed up the internet!)',
                                variable=self.share_results)
-    share_button.grid(row=7, columnspan=2, sticky=W, pady=[0,10])
 
+    # Old versions of Tk do not support two-dimensional padding.
+    try:
+      share_button.grid(row=7, columnspan=2, sticky=W, pady=[0,10])
+    except TclError:
+      share_button.grid(row=7, columnspan=2, sticky=W)
 
     loc_label = Label(inner_frame, text='Your location')
     loc_label.grid(row=10, column=0, sticky=W)
