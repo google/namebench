@@ -20,9 +20,9 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import os
 import sys
+import traceback
 from Foundation import *
 from AppKit import *
-import traceback
 from objc import IBAction, IBOutlet
 
 from libnamebench import addr_util
@@ -32,6 +32,9 @@ from libnamebench import conn_quality
 from libnamebench import nameserver_list
 from libnamebench import util
 from libnamebench import version
+
+# How much room do we have in the UI for status messages?
+MAX_STATUS_LENGTH = 68
 
 
 class controller(NSWindowController, base_ui.BaseUI):
@@ -88,7 +91,8 @@ class controller(NSWindowController, base_ui.BaseUI):
     state = state.replace('%', '%%')
     print state
     NSLog(state)
-    self.status.setStringValue_(state)
+    
+    self.status.setStringValue_(state[0:MAX_STATUS_LENGTH])
 
   def ProcessForm(self):
     """Parse the form fields and populate class variables."""
@@ -154,7 +158,7 @@ class controller(NSWindowController, base_ui.BaseUI):
 
   def displayError(self, msg, details):
     """Display an alert drop-down message."""
-    NSLog("ERROR: %s - %s" % (msg, details))
+    NSLog('ERROR: %s - %s' % (msg, details))
     alert = NSAlert.alloc().init()
     alert.setMessageText_(msg)
     alert.setInformativeText_(details)
@@ -170,13 +174,13 @@ class controller(NSWindowController, base_ui.BaseUI):
     self.location.removeAllItems()
     if self.country:
       self.location.addItemWithTitle_(self.country)
-      self.location.addItemWithTitle_("(Other)")
+      self.location.addItemWithTitle_('(Other)')
     else:
-      self.location.addItemWithTitle_("(automatic)")
+      self.location.addItemWithTitle_('(automatic)')
 
     self.health_performance.removeAllItems()
-    self.health_performance.addItemWithTitle_("Fast")
-    self.health_performance.addItemWithTitle_("Slow (for unstable routers)")
+    self.health_performance.addItemWithTitle_('Fast')
+    self.health_performance.addItemWithTitle_('Slow (unstable network)')
 
     self.data_source.removeAllItems()
     self.data_source.addItemsWithTitles_(self.data_src.ListSourceTitles())
