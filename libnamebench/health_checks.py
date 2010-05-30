@@ -20,6 +20,9 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import random
 import sys
 import time
+import util
+
+from dns import rcode
 
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 LIKELY_HIJACKS = ['www.google.com.', 'windowsupdate.microsoft.com.', 'www.paypal.com.']
@@ -32,11 +35,12 @@ MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 MAX_PORT_BEHAVIOR_TRIES = 2
 
+FATAL_RCODES = ['REFUSED', 'NOTAUTH']
 
 class NameServerHealthChecks(object):
   """Health checks for a nameserver."""
 
-  def TestAnswers(self, record_type, record, expected, critical=True, timeout=None):
+  def TestAnswers(self, record_type, record, expected, critical=False, timeout=None):
     """Test to see that an answer returns correct IP's.
 
     Args:
@@ -54,51 +58,56 @@ class NameServerHealthChecks(object):
     if not timeout:
       timeout = self.health_timeout
     (response, duration, error_msg) = self.TimedRequest(record_type, record, timeout)
-    if not response:
+    if response:
+      response_code = rcode.to_text(response.rcode())
+      if response_code in FATAL_RCODES:
+        error_msg = 'Responded with: %s' % response_code     
+        if critical:
+          is_broken = True
+      elif not response.answer:
+        # Avoid preferring broken DNS servers that respond quickly
+        duration = util.SecondsToMilliseconds(self.health_timeout)
+        error_msg = 'No answer (%s): %s' % (response_code, record)
+        is_broken = True
+      else:
+        found_usable_record = False
+        for answer in response.answer:
+          if found_usable_record:
+            break
+
+          # Process the first sane rdata object available in the answers
+          for rdata in answer:
+            # CNAME
+            if rdata.rdtype == 5:
+              reply = str(rdata.target)
+            # A Record
+            elif rdata.rdtype == 1:
+              reply = str(rdata.address)
+            else:
+              continue
+
+            found_usable_record = True
+            found_match = False
+            for string in expected:
+              if reply.startswith(string) or reply.endswith(string):
+                found_match = True
+                break
+            if not found_match:
+              unmatched_answers.append(reply)
+
+        if unmatched_answers:
+          hijack_text = ', '.join(unmatched_answers).rstrip('.')
+          if record in LIKELY_HIJACKS:
+            error_msg = '%s is hijacked: %s' % (record.rstrip('.'), hijack_text)
+          else:
+            error_msg = '%s appears incorrect: %s' % (record.rstrip('.'), hijack_text)
+    else:
       if not error_msg:
         error_msg = 'No response'
       is_broken = True
-    elif not response.answer:
-      if critical:
-        is_broken = True
-      # Avoid preferring broken DNS servers that respond quickly
-      duration = self.health_timeout
-      error_msg = 'No answer for %s' % record
-    else:
-      unmatched_answers = []
-      found_usable_record = False
 
-      for answer in response.answer:
-        if found_usable_record:
-          break
-
-        # Process the first sane rdata object available in the answers
-        for rdata in answer:
-          # CNAME
-          if rdata.rdtype == 5:
-            reply = str(rdata.target)
-          # A Record
-          elif rdata.rdtype == 1:
-            reply = str(rdata.address)
-          else:
-            continue
-
-          found_usable_record = True
-          found_match = False
-          for string in expected:
-            if reply.startswith(string) or reply.endswith(string):
-              found_match = True
-              break
-          if not found_match:
-            unmatched_answers.append(reply)
-
-      if unmatched_answers:
-        hijack_text = ', '.join(unmatched_answers).rstrip('.')
-        if record in LIKELY_HIJACKS:
-          error_msg = '%s is hijacked: %s' % (record.rstrip('.'), hijack_text)
-        else:
-          error_msg = '%s appears incorrect: %s' % (record.rstrip('.'), hijack_text)
-
+    if is_broken:
+      print "%s is broken on %s (%s)" % (self, record, error_msg)
     return (is_broken, error_msg, duration)
 
   def TestBindVersion(self):
@@ -136,20 +145,32 @@ class NameServerHealthChecks(object):
     return (is_broken, error_msg, duration)
     
   def TestRootNsResponse(self):
+    """Test a . NS response.
+    
+    NOTE: This is a bad way to gauge performance of a nameserver, as the
+    response length varies between nameserver configurations.
+    """    
     is_broken = False
     error_msg = None
     (response, duration, error_msg) = self.TimedRequest('NS', '.')
     if not response:
+      response_code = None
       is_broken = True
       if not error_msg:
         error_msg = 'No response'
+    else:
+      response_code = rcode.to_text(response.rcode())
+      if response_code in FATAL_RCODES:
+        error_msg = response_code     
+        is_broken = True
+
     return (is_broken, error_msg, duration)
 
   def TestWwwNegativeResponse(self):
     return self.TestNegativeResponse(prefix='www')
 
   def TestARootServerResponse(self):
-    return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4')
+    return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4', critical=True)
 
   def TestPortBehavior(self, tries=0):
     """This is designed to be called multiple times to retry bad results."""
@@ -255,15 +276,16 @@ class NameServerHealthChecks(object):
 
     is_fatal = False
     if fast_check:
-      tests = [(self.TestRootNsResponse, [])]
+      tests = [(self.TestARootServerResponse, [])]
       is_fatal = True
       sanity_checks = []
     elif final_check:
-      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, []), (self.TestNodeId, []), (self.TestBindVersion, [])]
+      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, []), (self.TestNodeId, [])]
     elif port_check:
       tests = [(self.TestPortBehavior, []), (self.TestNodeId, [])]
     else:
-      tests = [(self.TestNegativeResponse, [])]
+      # Put the bind version here so that we have a great minimum latency measurement.
+      tests = [(self.TestNegativeResponse, []), (self.TestBindVersion, [])]
 
     if sanity_checks:
       for (check, expected_value) in sanity_checks:
