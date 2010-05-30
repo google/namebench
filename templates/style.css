@@ -6,15 +6,22 @@ body {
   background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#e5e5e5), to(#bbb), color-stop(.1,#666));
 }
 
+
+td {
+  font-size: x-small;
+}
+
+
 #container {
-  margin: 4px;
+  margin-top: 4px;
+  margin-bottom: 4px;
   margin-left: auto;
   margin-right: auto;
-  width: 950px;
+  width: 985px;
   background-color: #f5f5f5;
-  padding: 0.8em;
+  padding: 0.5em;
   padding-top: 1px;
-  border: 3px solid #666;
+  border: 2px solid #666;
   border-radius: .6em;
   -moz-border-radius: .6em;
   -webkit-border-radius: .6em;
@@ -76,6 +83,19 @@ table#nstable {
   vertical-align:  top;
 }
 
+#nstable td {
+  font-size: small;
+}
+
+#nstable td.name_cell {
+  font-size: x-small;
+}
+
+#nstable td.hostname_cell {
+  font-size: x-small;
+}
+
+
 .ip {
   margin-left: 1em;
   font-weight: bold;
@@ -90,7 +110,7 @@ table#nstable {
 ul.warnings {
   padding:  0;
   margin:  0;
-  margin-left: 0.4em;
+  margin-left: 0.em;
   list-style-position:  inside;
 }
 .warnings li {
@@ -160,6 +180,10 @@ ul.warnings {
   margin-top: 1em;
 }
 
+#recommended_config td {
+  font-size: medium;
+}
+
 .rec_name {
   margin-left:  8px;
   display:  inline;
@@ -184,9 +208,9 @@ ul.warnings {
   border:  9px solid #f00;
 }
 
-thead {
+#nstable thead td {
   font-weight:  bold;
-  font-size: 80%;
+  font-size: x-small;
 }
 
 h2:before {
@@ -240,4 +264,3 @@ a.info:hover span {
   background-color: #ffa;
   border: 1px solid #cc7;
 }
-

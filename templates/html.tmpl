@@ -50,7 +50,7 @@
   <td nowrap="nowrap">Diff</td>
 	<td nowrap="nowrap">Min</td>
 	<td nowrap="nowrap">Max</td>
-  <td nowrap="nowrap">TmOut</td>
+  <td nowrap="nowrap">TO</td>
   <td nowrap="nowrap">NX</td>
   <td>Notes</td>
 </tr>
@@ -59,16 +59,16 @@
 {% for row in ns_summary %}
 <tr class="{% if row.is_disabled %}disabled{% else %}normal{{ loop.cycle(' odd ', ' even')}}{% endif %}{% if row.sys_position == 0 %} primary_row{% endif %}{% if row.is_error_prone %} unhealthy_host{% endif %}">
 
-  <td><a href="http://www.google.com/search?q={{ row.ip}}" class="info">{{ row.ip }}{% if row.version %}<span>{{ row.version }}</span>{% endif %}</td>
-  <td>{{ row.name }}</td>
-  <td><a href="http://www.google.com/search?q={{ row.hostname}}" class="info">{{ row.hostname }}{% if row.node_ids %}<span>{% for node in row.node_ids %}{{ node }} {% endfor %}</span>{% endif %}</a></td>
+  <td class="ip_cell"><a href="http://www.google.com/search?q={{ row.ip}}" class="info">{{ row.ip }}{% if row.version %}<span>{{ row.version }}</span>{% endif %}</td>
+  <td class="name_cell">{{ row.name }}</td>
+  <td class="hostname_cell"><a href="http://www.google.com/search?q={{ row.hostname}}" class="info">{{ row.hostname }}{% if row.node_ids %}<span>{% for node in row.node_ids %}{{ node }} {% endfor %}</span>{% endif %}</a></td>
   <td>{% if row.overall_average %}{{ "%0.2f"|format(row.overall_average) }}{% else %}{{ "%0.2f"|format(row.check_average) }}{% endif %}</td>
   <td>{% if row.diff %}{{ "%0.1f"|format(row.diff) }}%{% endif %}</td>
   <td>{% if row.duration_min %}{{ "%0.1f"|format(row.duration_min) }}{% endif %}</td>
   <td>{% if row.duration_max %}{{ "%0.1f"|format(row.duration_max) }}{% endif %}</td>
   <td {% if row.timeout_count != 0 %}class="error_count"{% endif %}>{{ row.timeout_count }}</td>
   <td>{{ row.nx_count }}</td>
-  <td>
+  <td class="notes_cell">
   {% if row.notes %}
     <ul class="warnings">
       {% for note in row.notes %}
