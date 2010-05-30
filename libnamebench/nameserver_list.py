@@ -40,7 +40,8 @@ CACHE_VER = 4
 
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
-TOO_DISTANT_MULTIPLIER = 4.5
+TOO_DISTANT_MULTIPLIER = 5
+MAX_NEARBY_SERVERS = 400
 
 # If we can't ping more than this, go into slowmode.
 MIN_PINGABLE_PERCENT = 20
@@ -322,17 +323,20 @@ class NameServers(list):
       if ns.disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
         self.remove(ns)
 
-  def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER):
+  def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_NEARBY_SERVERS):
     """Disable servers who's fastest duration is multiplier * average of best 10."""
     
     self.RemoveBrokenServers(delete_unwanted=True)
     secondaries = self.secondaries
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in secondaries[:10]])
     cutoff = best_10 * multiplier
-    self.msg("Removing secondary nameservers slower than %0.2fms" % (cutoff))
-    for ns in secondaries:
+    self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
+    for idx, ns in enumerate(secondaries):
       if ns.fastest_check_duration > cutoff:
         self.remove(ns)
+        
+      if idx >= max_servers:
+        break
 #        print "DISTANT: Fastest: %0.2f Avg: %0.2f:  %s" % (ns.fastest_check_duration, ns.check_average, ns)
     
         
@@ -397,7 +401,8 @@ class NameServers(list):
                (len(self), self.thread_count))
 
     self.PingNameServers()
-    self.DisableDistantServers()
+    if len(self.enabled) > int(self.num_servers * NS_CACHE_SLACK):
+      self.DisableDistantServers()
     self.RunHealthCheckThreads(primary_checks)
     if len(self.enabled) > self.num_servers:
       self._DemoteSecondaryGlobalNameServers()
