@@ -385,6 +385,7 @@ class NameServers(list):
 
     self.PingNameServers()
     health_target_count = self.num_servers * TARGET_SERVER_CHECK_MULTIPLIER
+    self.msg('Target count: %s' % health_target_count)
     if len(self.enabled) > health_target_count:
       self.DisableUnwantedServers(target_count=health_target_count, delete_unwanted=True)
 
