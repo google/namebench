@@ -108,7 +108,6 @@ class BaseUI(object):
     else:
       self.UpdateStatus('Censorship checks enabled: %s found.' % len(censor_tests))
 
-    self.UpdateStatus('Checking nameserver health (%s servers)' % len(self.nameservers))
     self.nameservers.CheckHealth(primary_checks, secondary_checks, censor_tests=censor_tests)
 
   def PrepareBenchmark(self):
