@@ -37,10 +37,10 @@ import util
 NS_CACHE_SLACK = 2
 CACHE_VER = 4
 
-# How many nameservers get through the first ping to the health tests.
-TARGET_SERVER_CHECK_MULTIPLIER = 13.65
+
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
+TOO_DISTANT_MULTIPLIER = 4.5
 
 # If we can't ping more than this, go into slowmode.
 MIN_PINGABLE_PERCENT = 20
@@ -316,16 +316,29 @@ class NameServers(list):
             self.remove(ns)
     return cached
 
-  def DisableUnwantedServers(self, target_count=None, delete_unwanted=False):
-    """Given a target count, delete nameservers that we do not plan to test."""
-    if not target_count:
-      target_count = self.num_servers
-
-    for ns in list(self.SortByFastest()):
-      # If we have a specific target count to reach, we are in the first phase
-      # of narrowing down nameservers. Silently drop bad nameservers.
+  def RemoveBrokenServers(self, delete_unwanted=False):
+    """Quietly remove broken servers."""
+    for ns in list(self):
       if ns.disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
         self.remove(ns)
+
+  def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER):
+    """Disable servers who's fastest duration is multiplier * average of best 10."""
+    
+    self.RemoveBrokenServers(delete_unwanted=True)
+    secondaries = self.secondaries
+    best_10 = util.CalculateListAverage([x.fastest_check_duration for x in secondaries[:10]])
+    cutoff = best_10 * multiplier
+    print "best: %s cutoff: %s" % (best_10, cutoff)
+    for ns in secondaries:
+      if ns.fastest_check_duration > cutoff:
+        self.remove(ns)
+        print "DISTANT: Fastest: %0.2f Avg: %0.2f:  %s" % (ns.fastest_check_duration, ns.check_average, ns)
+    
+        
+  def DisableUnwantedServers(self, target_count, delete_unwanted=False):
+    """Given a target count, delete nameservers that we do not plan to test."""
+    self.RemoveBrokenServers(delete_unwanted)
 
     # Magic secondary mixing algorithm:
     # - Half of them should be the "nearest" nameservers
@@ -384,16 +397,11 @@ class NameServers(list):
                (len(self), self.thread_count))
 
     self.PingNameServers()
-    health_target_count = int(self.num_servers * TARGET_SERVER_CHECK_MULTIPLIER)
-    self.msg('Target count: %s' % health_target_count)
-    if len(self.enabled) > health_target_count:
-      self.DisableUnwantedServers(target_count=health_target_count, delete_unwanted=True)
-
+    self.DisableDistantServers()
     self.RunHealthCheckThreads(primary_checks)
     if len(self.enabled) > self.num_servers:
       self._DemoteSecondaryGlobalNameServers()
-    self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK),
-                                delete_unwanted=True)
+    self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK), delete_unwanted=True)
     if not cached:
       try:
         self._UpdateSecondaryCache(cpath)
@@ -402,7 +410,7 @@ class NameServers(list):
 
     if not self.skip_cache_collusion_checks:
       self.CheckCacheCollusion()
-    self.DisableUnwantedServers()
+    self.DisableUnwantedServers(self.num_servers)
 
     self.RunFinalHealthCheckThreads(secondary_checks)
     if censor_tests:
