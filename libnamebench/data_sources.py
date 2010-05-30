@@ -384,7 +384,7 @@ class DataSources(object):
         # a Local or Roaming keyword in path, add the other forms to the search
         # path.
         if sys.platform[:3] == 'win':
-          keywords = ('Local', 'Roaming')
+          keywords = ['Local', 'Roaming']
           for keyword in keywords:
             if keyword in path:
               replacement = keywords[keywords.index(keyword)-1]
