@@ -95,34 +95,36 @@ def open(url):
         output('WindowsController did not work: %s' % util.GetLastExceptionString())
 
 
-class WindowsHttpDefault(webbrowser.BaseBrowser):
-  """Provide an alternate open class for Windows user, using the http handler."""
-
-  def open(self, url, new=0, autoraise=1):
-    command_args = create_win32_http_cmd(url)
-    if not command_args:
-      output('$ Could not find HTTP handler')
-      return False
-
-    output('command_args:')
-    output(command_args)
-    # Avoid some unicode path issues by moving our current directory
-    old_pwd = os.getcwd()
-    os.chdir('C:\\')
-    try:
-      _unused = subprocess.Popen(command_args)
-      os.chdir(old_pwd)
-      return True
-    except:
-      traceback.print_exc()
-      output('$ Failed to run HTTP handler, trying next browser.')
-      os.chdir(old_pwd)
-      return False
-
-
 # *NOTE*: EVIL IMPORT SIDE EFFECTS AHEAD!
 #
 # If we are running on Windows, register the WindowsHttpDefault class.
 if sys.platform[:3] == 'win':
   import _winreg
+  
+  # We don't want to load this class by default, because Python 2.4 doesn't have BaseBrowser.
+  
+  class WindowsHttpDefault(webbrowser.BaseBrowser):
+    """Provide an alternate open class for Windows user, using the http handler."""
+
+    def open(self, url, new=0, autoraise=1):
+      command_args = create_win32_http_cmd(url)
+      if not command_args:
+        output('$ Could not find HTTP handler')
+        return False
+
+      output('command_args:')
+      output(command_args)
+      # Avoid some unicode path issues by moving our current directory
+      old_pwd = os.getcwd()
+      os.chdir('C:\\')
+      try:
+        _unused = subprocess.Popen(command_args)
+        os.chdir(old_pwd)
+        return True
+      except:
+        traceback.print_exc()
+        output('$ Failed to run HTTP handler, trying next browser.')
+        os.chdir(old_pwd)
+        return False
+
   webbrowser.register('windows-http', WindowsHttpDefault, update_tryorder=-1)
