@@ -90,7 +90,9 @@ class SiteConnector(object):
           print '    * %s' % note
         return (''.join((self.url, data['url'])), data['state'])
       except:
-        print 'ERROR in RESPONSE for %s: [%s]:\n  %s' % (url, resp, content)
+        self.msg('BAD RESPONSE from %s: [%s]:\n  %s' % (url, resp, content))
+        print "DATA:"
+        print post_data
     # See http://code.google.com/p/httplib2/issues/detail?id=62
     except AttributeError:
       self.msg('%s refused connection' % url)
