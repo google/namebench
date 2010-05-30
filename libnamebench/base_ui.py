@@ -127,8 +127,7 @@ class BaseUI(object):
     """Run the benchmark."""
     results = self.bmark.Run(self.test_records)
     index = []
-
-    if self.options.upload_results:
+    if self.options.upload_results in (1, True):
       connector = site_connector.SiteConnector(self.options, status_callback=self.UpdateStatus)
       index_hosts = connector.GetIndexHosts()
       if index_hosts:
@@ -173,7 +172,7 @@ class BaseUI(object):
     else:
       self.csv_path = util.GenerateOutputFilename('csv')
 
-    if self.options.upload_results:
+    if self.options.upload_results in (1, True):
       # This is for debugging and transparency only.
       self.json_path = util.GenerateOutputFilename('js')
       self.UpdateStatus('Saving anonymized JSON to %s' % self.json_path)
