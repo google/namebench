@@ -156,6 +156,9 @@ def _MakeCumulativeDistribution(run_data, x_chunk=1.5, percent_chunk=3.5):
   # TODO(tstromberg): Use a more efficient algorithm. Pop values out each iter?
   dist = []
   for (ns, results) in run_data:
+    if not results:
+      continue
+    
     host_dist = [(0, 0)]
     max_result = max(results)
     chunk_max = min(results)
@@ -230,7 +233,10 @@ def DistributionLineGraph(run_data, scale=None, sort_by=None):
   scale = max_value / 100.0
 
   for (ns, xy_pairs) in sorted(distribution, cmp=sort_by):
-    labels.append(urllib.quote_plus(ns.name))
+    if len(ns.name) > 1:
+      labels.append(urllib.quote_plus(ns.name))
+    else:
+      labels.append(urllib.quote_plus(ns.ip))
     x = []
     y = []
     for (percentage, duration) in xy_pairs:
