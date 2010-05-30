@@ -329,11 +329,11 @@ class NameServers(list):
     secondaries = self.secondaries
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in secondaries[:10]])
     cutoff = best_10 * multiplier
-    print "best: %s cutoff: %s" % (best_10, cutoff)
+    self.msg("Removing secondary nameservers slower than %0.2fms" % (cutoff))
     for ns in secondaries:
       if ns.fastest_check_duration > cutoff:
         self.remove(ns)
-        print "DISTANT: Fastest: %0.2f Avg: %0.2f:  %s" % (ns.fastest_check_duration, ns.check_average, ns)
+#        print "DISTANT: Fastest: %0.2f Avg: %0.2f:  %s" % (ns.fastest_check_duration, ns.check_average, ns)
     
         
   def DisableUnwantedServers(self, target_count, delete_unwanted=False):
@@ -373,10 +373,10 @@ class NameServers(list):
 
     for ns in self.secondaries:
       if ns not in secondaries_to_keep:
-        print "REMOVE: Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
+#        print "REMOVE: Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
         self.remove(ns)
-      else:
-        print "KEEP  : Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
+#      else:
+#        print "KEEP  : Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
 
   def CheckHealth(self, primary_checks, secondary_checks, cache_dir=None, censor_tests=None):
     """Filter out unhealthy or slow replica servers."""
