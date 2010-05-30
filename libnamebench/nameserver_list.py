@@ -38,7 +38,7 @@ NS_CACHE_SLACK = 2
 CACHE_VER = 4
 
 # How many nameservers get through the first ping to the health tests.
-FIRST_CUT_MULTIPLIER = 0.10
+TARGET_SERVER_CHECK_MULTIPLIER = 13.65
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
 
@@ -202,7 +202,7 @@ class NameServers(list):
 
   @property
   def secondaries(self):
-    return [x for x in self if not x.is_preferred]
+    return [x for x in self.SortByNearest() if not x.is_preferred]
 
   @property
   def enabled_secondaries(self):
@@ -348,21 +348,22 @@ class NameServers(list):
         if not secondaries_to_keep and secondaries_needed < 15:
           self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
         secondaries_to_keep.append(ns)
-#        print '| %s is near: %s (avg: %s)' % (ns, ns.fastest_check_duration, ns.check_average)
         if len(secondaries_to_keep) >= nearest_needed:
           break
 
     # Phase three is removing all of the slower secondary servers
     for ns in self.SortByFastest():
       if not ns.is_preferred and not ns.disabled and ns not in secondaries_to_keep:
-#        print '| %s is fast: %s (lowest: %s)' % (ns, ns.check_average, ns.fastest_check_duration)
         secondaries_to_keep.append(ns)
         if len(secondaries_to_keep) == secondaries_needed:
           break
 
     for ns in self.secondaries:
       if ns not in secondaries_to_keep:
+        print "REMOVE: Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
         self.remove(ns)
+      else:
+        print "KEEP  : Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
 
   def CheckHealth(self, primary_checks, secondary_checks, cache_dir=None, censor_tests=None):
     """Filter out unhealthy or slow replica servers."""
@@ -382,11 +383,10 @@ class NameServers(list):
       self.msg('Building initial DNS cache for %s nameservers (%s threads)' %
                (len(self), self.thread_count))
 
-    # If we have a lot of nameservers, make a first cut.
-    if len(self) > len(self.enabled) * FIRST_CUT_MULTIPLIER:
-      self.PingNameServers()
-      self.DisableUnwantedServers(target_count=int(len(self.enabled) * FIRST_CUT_MULTIPLIER),
-                                  delete_unwanted=True)
+    self.PingNameServers()
+    health_target_count = self.num_servers * TARGET_SERVER_CHECK_MULTIPLIER
+    if len(self.enabled) > health_target_count:
+      self.DisableUnwantedServers(target_count=health_target_count, delete_unwanted=True)
 
     self.RunHealthCheckThreads(primary_checks)
     if len(self.enabled) > self.num_servers:
