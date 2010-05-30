@@ -189,7 +189,8 @@ class NameServer(health_checks.NameServerHealthChecks):
     # We use a slightly different pattern here because we want to
     # append to our results each time this is called.
     self.RequestNodeId()
-    return self._node_ids
+    # Only return non-blank entries
+    return [x for x in self._node_ids if x]
 
   @property
   def partial_node_ids(self):
