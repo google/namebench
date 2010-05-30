@@ -106,8 +106,6 @@ class NameServerHealthChecks(object):
         error_msg = 'No response'
       is_broken = True
 
-    if is_broken:
-      print "%s is broken on %s (%s)" % (self, record, error_msg)
     return (is_broken, error_msg, duration)
 
   def TestBindVersion(self):
