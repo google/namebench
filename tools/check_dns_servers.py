@@ -25,7 +25,7 @@ sys.path.append('/Users/tstromberg/namebench')
 import third_party
 from libnamebench import nameserver_list
 from libnamebench import config
-from libnamebench import util
+from libnamebench import addr_util
 
 import check_nameserver_popularity
 
@@ -35,7 +35,7 @@ has_ip.extend([ x[0] for x in global_ns ])
 check_ns = []
 
 for line in sys.stdin:
-  ips = util.ExtractIPsFromString(line)
+  ips = addr_util.ExtractIPsFromString(line)
   for ip in ips:
     # disable IPV6 by default
     if ':' in ip:
