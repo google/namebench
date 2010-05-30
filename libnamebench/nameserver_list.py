@@ -40,7 +40,7 @@ CACHE_VER = 4
 
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
-TOO_DISTANT_MULTIPLIER = 5
+TOO_DISTANT_MULTIPLIER = 4.75
 MAX_NEARBY_SERVERS = 400
 
 # If we can't ping more than this, go into slowmode.
@@ -332,13 +332,8 @@ class NameServers(list):
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
     for idx, ns in enumerate(secondaries):
-      if ns.fastest_check_duration > cutoff:
-        self.remove(ns)
-        
-      if idx >= max_servers:
-        break
-#        print "DISTANT: Fastest: %0.2f Avg: %0.2f:  %s" % (ns.fastest_check_duration, ns.check_average, ns)
-    
+      if (ns.fastest_check_duration > cutoff) or idx > max_servers:
+        self.remove(ns)    
         
   def DisableUnwantedServers(self, target_count, delete_unwanted=False):
     """Given a target count, delete nameservers that we do not plan to test."""
