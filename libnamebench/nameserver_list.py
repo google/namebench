@@ -324,11 +324,12 @@ class NameServers(list):
         self.remove(ns)
 
   def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_NEARBY_SERVERS):
-    """Disable servers who's fastest duration is multiplier * average of best 10."""
+    """Disable servers who's fastest duration is multiplier * average of best 10 servers."""
     
     self.RemoveBrokenServers(delete_unwanted=True)
     secondaries = self.secondaries
-    best_10 = util.CalculateListAverage([x.fastest_check_duration for x in secondaries[:10]])
+    fastest = [x for x in self.SortByFastest() if not x.disabled ][:10]
+    best_10 = util.CalculateListAverage([x.fastest_check_duration for x in fastest])
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
     for idx, ns in enumerate(secondaries):
