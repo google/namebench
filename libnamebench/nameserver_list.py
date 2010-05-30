@@ -355,7 +355,7 @@ class NameServers(list):
     for ns in self.SortByFastest():
       if not ns.is_preferred and not ns.disabled and ns not in secondaries_to_keep:
         secondaries_to_keep.append(ns)
-        if len(secondaries_to_keep) == secondaries_needed:
+        if len(secondaries_to_keep) >= secondaries_needed:
           break
 
     for ns in self.secondaries:
@@ -384,7 +384,7 @@ class NameServers(list):
                (len(self), self.thread_count))
 
     self.PingNameServers()
-    health_target_count = self.num_servers * TARGET_SERVER_CHECK_MULTIPLIER
+    health_target_count = int(self.num_servers * TARGET_SERVER_CHECK_MULTIPLIER)
     self.msg('Target count: %s' % health_target_count)
     if len(self.enabled) > health_target_count:
       self.DisableUnwantedServers(target_count=health_target_count, delete_unwanted=True)
