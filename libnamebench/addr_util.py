@@ -96,7 +96,17 @@ def IsPrivateIP(ip):
   else:
     return None
 
-
+def MaskStringWithIPs(string):
+  """Mask all private IP addresses listed in a string."""
+  
+  ips = ExtractIPsFromString(string)
+  for ip in ips:
+    use_bits = IsPrivateIP(ip)
+    if use_bits:
+      masked_ip = MaskIPBits(ip, use_bits)
+      string = string.replace(ip, masked_ip)
+  return string
+    
 def MaskIPBits(ip, use_bits):
   """Mask an IP, but still keep a meaningful checksum."""
   ip_parts = ip.split('.')
@@ -131,3 +141,6 @@ def MaskPrivateHost(ip, hostname, name):
   else:
     masked_name = ''
   return (masked_ip, masked_hostname, masked_name)
+
+if __name__ == '__main__':
+  print MaskStringWithIPs('10.0.0.1 has a sharing relationship with 192.168.0.1 and 8.8.8.8')

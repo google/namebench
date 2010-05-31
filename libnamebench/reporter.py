@@ -404,6 +404,10 @@ class ReportGenerator(object):
     for row in self._GenerateNameServerSummary():
       # This will be our censored record.
       p = dict(row)
+      p['notes'] = []
+      for note in row['notes']:
+        p['notes'].append({'text': addr_util.MaskStringWithIPs(note['text']), 'url': note['url']})
+
       p['ip'], p['hostname'], p['name'] = addr_util.MaskPrivateHost(row['ip'], row['hostname'], row['name'])
       if (addr_util.IsPrivateIP(row['ip']) or addr_util.IsLoopbackIP(row['ip'])
           or addr_util.IsPrivateHostname(row['hostname'])):
