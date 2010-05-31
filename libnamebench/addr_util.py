@@ -110,6 +110,9 @@ def MaskPrivateHost(ip, hostname, name):
 
   # If we have a name not listed as SYS-x.x.x.x, then we're clear.
   if name and ip not in name:
+    # Even if we are listed (Internal 192-0-1 for instance), data can leak via hostname.
+    if IsPrivateIP(ip):
+      hostname = 'internal.ip'
     return (ip, hostname, name)
 
   use_bits = IsPrivateIP(ip)
