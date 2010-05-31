@@ -112,9 +112,8 @@ class NameServerHealthChecks(object):
     """Test for BIND version. This acts as a pretty decent ping."""
     (unused_response, duration, error_msg) = self.RequestVersion()
     # Sometimes nameservers aren't able to respond to this request in a way that
-    # dnspython likes.
-    is_broken = False
-    return (is_broken, error_msg, duration)
+    # dnspython likes. Lets just always call this one good and use it for latency.
+    return (False, None, duration)
 
   def TestNodeId(self):
     """Get the current node id."""
