@@ -29,15 +29,16 @@ from libnamebench import addr_util
 
 geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
-nameservers = global_ns + regional_ns
+cfg_nameservers = global_ns + regional_ns
+#cfg_nameservers = [('205.151.67.2', '205.151.67.2')]
 nameservers = nameserver_list.NameServers(
-    nameservers[1500:1600],
+    cfg_nameservers,
     timeout=30,
     health_timeout=30,
     threads=40,
     skip_cache_collusion_checks=True,
 )
-print nameservers.thread_count
+
 nameservers.PingNameServers()
 
 for ns in nameservers:
@@ -48,7 +49,7 @@ for ns in nameservers:
       details = geo_city.record_by_addr(ns.ip)
     except:
       pass
-  
+      
   if not details:
     details = {}
   city = details.get('city', '')
@@ -82,4 +83,5 @@ for ns in nameservers:
     note = '' 
 
   geo = '/'.join([x for x in [city, region, country] if x and not x.isdigit()])
-  print u"%-50.50s # %s, %s, %s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
+  entry = "%-50.50s # %s, %s, %s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
+  print entry.encode('utf-8')
