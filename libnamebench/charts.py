@@ -59,6 +59,9 @@ def _GoodTicks(max_value, tick_size=2.5, num_ticks=10.0):
       try_tick *= 2
     else:
       return int(round(try_tick))
+  # Fallback
+  print "Could not find good tick size for %s (size=%s, num=%s)" % (max_nalue, tick_size, num_ticks)
+  return int(max_value  / num_ticks)
 
 
 def _BarGraphHeight(bar_count):
