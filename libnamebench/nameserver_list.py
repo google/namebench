@@ -22,6 +22,7 @@ import os
 import pickle
 import Queue
 import random
+import subprocess
 import sys
 import tempfile
 import threading
@@ -32,6 +33,7 @@ import dns.resolver
 
 import conn_quality
 import nameserver
+import addr_util
 import util
 
 NS_CACHE_SLACK = 2
@@ -59,14 +61,29 @@ MAX_INITIAL_HEALTH_THREAD_COUNT = 35
 
 
 def InternalNameServers():
-  """Return list of DNS server IP's used by the host."""
+  """Return list of DNS server IP's used by the host via dnspython"""
   try:
-    return dns.resolver.Resolver().nameservers
+    servers = dns.resolver.Resolver().nameservers
   except:
     print "Unable to get list of internal DNS servers."
-    return []
+    servers = []
+    
+  # dnspython does not always get things right on Windows, particularly in
+  # versions with right-to-left languages. Fall back to ipconfig /all
+  if not servers and sys.platform[:3] == 'win':
+    return WinIpConfigNameServers()
+  return servers
 
-
+def WinIpConfigNameServers():
+  """Return a list of DNS servers via ipconfig (Windows only)"""
+  servers = []
+  output = subprocess.Popen(['ipconfig', '/all'], stdout=subprocess.PIPE).stdout.read()
+  for line in output.split('\r\n'):
+    if 'DNS Servers' in line:
+      print "ipconfig: %s" % line
+      servers.extend(addr_util.ExtractIPsFromString(line))
+  return servers
+      
 class OutgoingUdpInterception(Exception):
 
   def __init__(self, value):
