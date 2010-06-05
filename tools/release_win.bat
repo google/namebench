@@ -4,8 +4,7 @@ rem Requirements are 7-zip, py2exe, and FreeExtractor
 PATH=C:\python27;C:\python26;C:\progra~1\7-zip;C:\progra~2\7-zip;%PATH%
 
 rem ****** Clean out the old junk
-rmdir /q /s dist\*.*
-del /s /q dist\*.*
+del /s /f /q dist
 
 rem ****** Compile our executable and core zipfile
 python setup.py py2exe
