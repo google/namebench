@@ -197,8 +197,7 @@ class NameServerHealthChecks(object):
 
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
       if len(attempted) == MAX_STORE_ATTEMPTS:
-        self.disabled = True
-        self.AddFailure('Could not recursively query: %s' % ', '.join(attempted))
+        self.disabled = 'Unable to get uncached results for: %s' % ', '.join(attempted)
         return False
       domain = random.choice(WILDCARD_DOMAINS)
       hostname = 'namebench%s.%s' % (random.randint(1, 2**32), domain)
@@ -230,7 +229,7 @@ class NameServerHealthChecks(object):
 
     if not other_ns.cache_checks:
       print '%s has no cache checks (disabling - how did this happen?)' % other_ns
-      other_ns.disabled = True
+      other_ns.disabled = 'Unable to perform cache checks.'
       return False
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
