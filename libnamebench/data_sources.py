@@ -413,7 +413,12 @@ class DataSources(object):
         if min_file_size and os.path.getsize(filename) < min_file_size:
           self.msg('Skipping %s (only %sb)' % (filename, os.path.getsize(filename)))
         else:
-          found.append(filename)
+          try:
+            fp = open(filename, 'rb')
+            fp.close()
+            found.append(filename)
+          except IOError:
+            self.msg('Skipping %s (could not open)' % filename)
 
     if found:
       newest = sorted(found, key=os.path.getmtime)[-1]
