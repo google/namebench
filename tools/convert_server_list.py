@@ -17,7 +17,7 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-
+import re
 import sys
 import pygeoip
 sys.path.append('..')
@@ -27,45 +27,18 @@ from libnamebench import nameserver_list
 from libnamebench import config
 from libnamebench import addr_util
 
-import check_nameserver_popularity
-
+geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
-has_ip = [ x[0] for x in regional_ns ]
-has_ip.extend([ x[0] for x in global_ns ])
-check_ns = []
-
-for line in sys.stdin:
-  ips = addr_util.ExtractIPsFromString(line)
-  for ip in ips:
-    print ip
-    # disable IPV6 by default
-    if ':' in ip:
-      continue
-    if ip not in has_ip:
-      check_ns.append((ip, ip))
-
-if not check_ns:
-  print "no new servers to check"
-  sys.exit(1)
-else:
-  print "%s servers to check" % len(check_ns)
-print '-' * 80
-
+nameservers = global_ns + regional_ns
 nameservers = nameserver_list.NameServers(
-    check_ns,
-    timeout=8,
-    health_timeout=8,
-    threads=60,
+    nameservers[1500:1600],
+    timeout=30,
+    health_timeout=30,
+    threads=40,
     skip_cache_collusion_checks=True,
 )
-nameservers.min_healthy_percent = 0
-(primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
-try:
-  nameservers.CheckHealth(primary_checks, secondary_checks)
-except nameserver_list.TooFewNameservers:
-  pass
-print '-' * 80
-geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
+print nameservers.thread_count
+nameservers.PingNameServers()
 
 for ns in nameservers:
   if ':' in ns.ip:
@@ -75,15 +48,38 @@ for ns in nameservers:
       details = geo_city.record_by_addr(ns.ip)
     except:
       pass
-    
+  
   if not details:
     details = {}
   city = details.get('city', '')
+  if city:
+    city = city.decode('latin-1')
   country = details.get('country_name', '')
+  if country:
+    country = country.decode('latin-1')
+  latitude = details.get('latitude', '')
+  longitude = details.get('longitude', '')
   country_code = details.get('country_code', '')
   region = details.get('region_name', '')
-  results = check_nameserver_popularity.CheckPopularity(ns.ip)
-  urls = [ x['Url'] for x in results ]
-  if urls:   
-    print "%s=%s %s %s # %s: %s %s" % (ns.ip, ns.hostname, country_code, city, len(urls),
-                                       ns.warnings_comment, urls[:2])
+  if region:
+    region = region.decode('latin-1')
+  matches = re.search('[- ](\d+)', ns.name)
+  if matches:
+    instance = matches.group(1)
+    ns.name = re.sub('[- ]%s' % instance, '', ns.name)
+    main = u"%s=%s (%s)" % (ns.ip, ns.name, instance)
+  else:
+    main = u"%s=%s" % (ns.ip, ns.name)
+  if 'Responded with: REFUSED' in ns.warnings:
+    note = '_REFUSED_'
+  elif 'a.root-servers.net.: Timeout' in ns.warnings:
+    note = '_TIMEOUT_'
+  elif 'No answer (NOERROR): a.root-servers.net.' in ns.warnings:
+    note = '_NOANSWER_'
+  elif ns.warnings:
+    note = '_WARNING/%s_' % '/'.join(list(ns.warnings))
+  else:
+    note = '' 
+
+  geo = '/'.join([x for x in [city, region, country] if x and not x.isdigit()])
+  print u"%-50.50s # %s, %s, %s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
