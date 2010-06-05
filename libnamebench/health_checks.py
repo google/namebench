@@ -30,7 +30,7 @@ LIKELY_HIJACKS = ['www.google.com.', 'windowsupdate.microsoft.com.', 'www.paypal
 # How many checks to consider when calculating ns check_duration
 SHARED_CACHE_TIMEOUT_MULTIPLIER = 1.25
 ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
-CENSORSHIP_TIMEOUT_MULTIPLIER = 2
+CENSORSHIP_TIMEOUT = 30
 MAX_STORE_ATTEMPTS = 4
 TOTAL_WILDCARDS_TO_STORE = 2
 MAX_PORT_BEHAVIOR_TRIES = 2
@@ -262,7 +262,7 @@ class NameServerHealthChecks(object):
       (req_type, req_name) = check.split(' ')
       expected_values = expected.split(',')
       result = self.TestAnswers(req_type.upper(), req_name, expected_values,
-                                timeout=self.health_timeout * CENSORSHIP_TIMEOUT_MULTIPLIER)
+                                timeout=CENSORSHIP_TIMEOUT)
       warning = result[1]
       if warning:
         self.AddWarning(warning)
