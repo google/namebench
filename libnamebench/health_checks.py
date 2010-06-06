@@ -265,7 +265,7 @@ class NameServerHealthChecks(object):
                                 timeout=CENSORSHIP_TIMEOUT)
       warning = result[1]
       if warning:
-        self.AddWarning(warning)
+        self.AddWarning(warning, penalty=False)
 
   def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):
     """Qualify a nameserver to see if it is any good."""
