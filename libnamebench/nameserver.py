@@ -53,14 +53,7 @@ MAX_PREFERRED_FAILURES = 5
 MAX_WARNINGS = 7
 
 FAILURE_PRONE_RATE = 10
-BEST_TIMER_FUNCTION = _GetBestTimer()
 
-def _GetBestTimer():
-  """Pick the most accurate timer for a platform."""
-  if sys.platform[:3] == 'win' and not self._DoesClockGoBackwards():
-    return time.clock
-  else:
-    return time.time
     
 def _DoesClockGoBackwards():
   """Detect buggy Windows systems where time.clock goes backwards"""
@@ -72,6 +65,17 @@ def _DoesClockGoBackwards():
       return True
     reference = counter
   return False
+
+def _GetBestTimer():
+  """Pick the most accurate timer for a platform."""
+  if sys.platform[:3] == 'win' and not _DoesClockGoBackwards():
+    return time.clock
+  else:
+    return time.time
+
+
+# EVIL IMPORT-TIME SIDE EFFECT
+BEST_TIMER_FUNCTION = _GetBestTimer()
 
 
 def ResponseToAscii(response):
