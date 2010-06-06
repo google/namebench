@@ -61,8 +61,11 @@ def _GoodTicks(max_value, tick_size=2.5, num_ticks=10.0):
       return int(round(try_tick))
   # Fallback
   print "Could not find good tick size for %s (size=%s, num=%s)" % (max_value, tick_size, num_ticks)
-  return int(max_value  / num_ticks)
-
+  simple_value = int(max_value  / num_ticks)
+  if simple_value > 0:
+    return simple_value
+  else:
+    return 1
 
 def _BarGraphHeight(bar_count):
   # TODO(tstromberg): Fix hardcoding.
@@ -91,6 +94,10 @@ def PerRunDurationBarGraph(run_data, scale=None):
       runs[run_num].append(run_avg)
       if run_avg > max_run_avg:
         max_run_avg = run_avg
+
+  if max_run_avg < 0:
+    print "No decent data to graph: %s" % run_data
+    return None
 
   if not scale:
     scale = int(math.ceil(max_run_avg / 5) * 5)

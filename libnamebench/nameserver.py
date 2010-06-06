@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2009 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,13 +17,14 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-#if __name__ == '__main__':
-#  sys.path.append('..')
-
 import re
 import socket
 import sys
 import time
+
+
+if __name__ == '__main__':
+  sys.path.append('../nb_third_party')
 
 # external dependencies (from nb_third_party)
 import dns.exception
@@ -58,12 +60,14 @@ FAILURE_PRONE_RATE = 10
 def _DoesClockGoBackwards():
   """Detect buggy Windows systems where time.clock goes backwards"""
   reference = 0
-  for x in range(0, 1000):
+  print "Checking if time goes backwards..."
+  for x in range(0, 250):
     counter = time.clock()
     if counter < reference:
-      print "Clock went backwards by %sms" % counter - reference
+      print "Clock went backwards by %fms" % (counter - reference)
       return True
     reference = counter
+    time.sleep(random.random() / 100)
   return False
 
 def _GetBestTimer():
@@ -86,6 +90,15 @@ def ResponseToAscii(response):
     return ' -> '.join(answers).rstrip('"').lstrip('"')
   else:
     return dns.rcode.to_text(response.rcode())
+
+
+class BrokenSystemClock(Exception):
+  """Used if we detect errors with the system clock."""
+  def __init__(self, value):
+    self.value = value
+
+  def __str__(self):
+    return repr(self.value)
 
 
 class NameServer(health_checks.NameServerHealthChecks):
@@ -382,7 +395,11 @@ class NameServer(health_checks.NameServerHealthChecks):
     if error_msg:
       key = util.GetLastExceptionString()
       self.error_map[key] = self.error_map.setdefault(key, 0) + 1
-
+      
+    if duration < 0:
+      raise BrokenSystemClock('The time on your machine appears to be going backwards. '
+                              'We cannot accurately benchmark due to this error. '
+                              '(timer=%s, duration=%s)' % (self.timer, duration))
     return (response, util.SecondsToMilliseconds(duration), error_msg)
 
   def RequestVersion(self):
