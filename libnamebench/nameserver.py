@@ -17,6 +17,7 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import random
 import re
 import socket
 import sys
@@ -60,14 +61,14 @@ FAILURE_PRONE_RATE = 10
 def _DoesClockGoBackwards():
   """Detect buggy Windows systems where time.clock goes backwards"""
   reference = 0
-  print "Checking if time goes backwards..."
+  print "Checking if time.clock() goes backwards (broken hardware)..."
   for x in range(0, 250):
     counter = time.clock()
     if counter < reference:
       print "Clock went backwards by %fms" % (counter - reference)
       return True
     reference = counter
-    time.sleep(random.random() / 100)
+    time.sleep(random.random() / 500)
   return False
 
 def _GetBestTimer():
