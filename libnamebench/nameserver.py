@@ -62,7 +62,7 @@ def _DoesClockGoBackwards():
   """Detect buggy Windows systems where time.clock goes backwards"""
   reference = 0
   print "Checking if time.clock() goes backwards (broken hardware)..."
-  for x in range(0, 250):
+  for x in range(0, 200):
     counter = time.clock()
     if counter < reference:
       print "Clock went backwards by %fms" % (counter - reference)
