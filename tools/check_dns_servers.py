@@ -78,12 +78,29 @@ for ns in nameservers:
     
   if not details:
     details = {}
-  city = details.get('city', '')
-  country = details.get('country_name', '')
+  city = details.get('city', '').decode('latin-1')
+  latitude = details.get('latitude', '')
+  longitude = details.get('longitude', '')
+  country = details.get('country_name', '').decode('latin-1')
   country_code = details.get('country_code', '')
-  region = details.get('region_name', '')
+  region = details.get('region_name', '').decode('latin-1')
   results = check_nameserver_popularity.CheckPopularity(ns.ip)
   urls = [ x['Url'] for x in results ]
-  if urls:   
-    print "%s=%s %s %s # %s: %s %s" % (ns.ip, ns.hostname, country_code, city, len(urls),
-                                       ns.warnings_comment, urls[:2])
+  main = "%s=UNKNOWN" 
+
+  if 'Responded with: REFUSED' in ns.warnings:
+    note = '_REFUSED_'
+  elif 'a.root-servers.net.: Timeout' in ns.warnings:
+    note = '_TIMEOUT_'
+  elif 'No answer (NOERROR): a.root-servers.net.' in ns.warnings:
+    note = '_NOANSWER_'
+  elif ns.warnings:
+    note = '_WARNING/%s_' % '/'.join(list(ns.warnings))
+  else:
+    note = '' 
+
+  if urls:
+    note = note + ' '.join(urls[:2])
+  geo = '/'.join([x for x in [city, region, country_code] if x and not x.isdigit()])
+  entry = "%-52.52s # %s,%s,%s (%s) %s %s" % (main, ns.hostname, latitude, longitude, geo, note)
+  print entry.encode('utf-8')
