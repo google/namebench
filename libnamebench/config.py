@@ -20,6 +20,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import ConfigParser
 import optparse
 import os.path
+import re
 import StringIO
 import tempfile
 
@@ -114,17 +115,72 @@ def DefineAndParseOptions(filename):
 def GetLatestSanityChecks():
   return GetLatestConfig('config/hostname_reference.cfg')
 
+def GetLocalSanityChecks():
+  return _GetLocalConfig('config/hostname_reference.cfg')
+
 def GetNameServerList():
-  raw_data = GetLatestConfig('servers.cfg')
-  
-  
+  raw_data = GetLatestConfig('config/servers.cfg')
+
+def GetLocalNameServerList():
+  return _ParseNameServerListing(_GetLocalConfig('config/servers.cfg'))
+
+def _ParseNameServerListing(ns_config):
+  nameservers = {}
+  for label in ns_config:
+    for ip, desc in ns_config[label]:
+      # Convert IPv6 addresses back into a usable form.
+      ip = ip.replace('_', ':')
+      nameservers[ip] = _ParseServerValue(desc)
+      nameservers[ip]['labels'].add(label)
+  return nameservers
+
+def _GetLocalConfig(conf_file):
+  local_config = _ReadConfigFile(conf_file)
+  return _ExpandConfigSections(local_config)
+
+def _ReadConfigFile(conf_file):
+  ref_file = util.FindDataFile(conf_file)
+  local_config = ConfigParser.ConfigParser()
+  local_config.read(ref_file)
+  return local_config
+
+def _ParseServerValue(value):
+  """Why on earth did I make something so fugly."""
+  # Example:
+  # 129.250.35.251=NTT (2)    # y.ns.gin,39.569,-104.8582 (Englewood/CO/US)
+  if '#' in value:
+    name, comment = value.split('#')[0:2]
+  else:
+    name = value
+    comment = ''
+  name = name.rstrip()
+  matches = re.match('(.*?) \((\w+)\)', name)
+  if matches:
+    service, instance = matches.groups()
+  else:
+    service = name
+    instance = None
+
+  matches = re.search(',([-\.\d]+),([-\.\d]+) \(.*?(\w+)\)', comment)
+  if matches:
+    lat, lon, country_code = matches.groups()
+  else:
+    lat = lon = country_code = None
+
+  return {
+    'name': name,
+    'service': service,
+    'instance': instance,
+    'lat': lat,
+    'lon': lon,
+    'labels': set(),
+    'country_code': country_code
+  }
 
 def GetLatestConfig(conf_file):
   """Get the latest copy of the config file"""
 
-  ref_file = util.FindDataFile(conf_file)
-  local_config = ConfigParser.ConfigParser()
-  local_config.read(ref_file)
+  local_config = _ReadConfigFile(conf_file)
   download_latest = int(local_config.get('config', 'download_latest'))
   local_version = int(local_config.get('config', 'version'))
   
@@ -141,20 +197,19 @@ def GetLatestConfig(conf_file):
     print '* Unable to fetch remote %s: %s' % (conf_file, util.GetLastExceptionString())
     return _ExpandConfigSections(local_config)
 
-  if content and '[base]' in content:
+  if content and '[config]' in content:
     fp = StringIO.StringIO(content)
     try:
-      http_config.readfp(fp)
+      remote_config.readfp(fp)
     except:
       print '* Unable to read remote %s: %s' % (conf_file, util.GetLastExceptionString())
       return _ExpandConfigSections(local_config)
 
-  if int(http_config.get('config', 'version')) > local_version:
+  if int(remote_config.get('config', 'version')) > local_version:
     print '- Using %s' % url
     return _ExpandConfigSections(remote_config)
   else:
     return _ExpandConfigSections(local_config)
-
 
 def _ExpandConfigSections(config):
   return dict([ (y, config.items(y)) for y in config.sections() if y != 'config' ])
@@ -209,3 +264,6 @@ def ProcessConfigurationFile(options):
   options.version = version.VERSION
 
   return (options, global_ns, regional_ns)
+
+if __name__ == '__main__':
+  print GetLocalNameServerList()
