@@ -29,19 +29,18 @@ from libnamebench import addr_util
 
 import check_nameserver_popularity
 
-(options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
-has_ip = [ x[0] for x in regional_ns ]
-has_ip.extend([ x[0] for x in global_ns ])
+existing_nameservers = config.GetLocalNameServerList()
 check_ns = []
 
 for line in sys.stdin:
   ips = addr_util.ExtractIPsFromString(line)
   for ip in ips:
     print ip
-    # disable IPV6 by default
+    # disable IPV6 until we can improve our regular expression matching
     if ':' in ip:
       continue
-    if ip not in has_ip:
+
+    if ip not in existing_nameservers:
       check_ns.append((ip, ip))
 
 if not check_ns:
@@ -53,15 +52,15 @@ print '-' * 80
 
 nameservers = nameserver_list.NameServers(
     check_ns,
-    timeout=8,
-    health_timeout=8,
-    threads=60,
+    timeout=10,
+    health_timeout=10,
+    threads=100,
     skip_cache_collusion_checks=True,
 )
 nameservers.min_healthy_percent = 0
-(primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
+sanity_checks = config.GetLocalSanityChecks()
 try:
-  nameservers.CheckHealth(primary_checks, secondary_checks)
+  nameservers.CheckHealth(sanity_checks['primary'], sanity_checks['secondary'])
 except nameserver_list.TooFewNameservers:
   pass
 print '-' * 80
@@ -86,7 +85,7 @@ for ns in nameservers:
   region = details.get('region_name', '').decode('latin-1')
   results = check_nameserver_popularity.CheckPopularity(ns.ip)
   urls = [ x['Url'] for x in results ]
-  main = "%s=UNKNOWN" 
+  main = "%s=UNKNOWN" % ns.ip
 
   if 'Responded with: REFUSED' in ns.warnings:
     note = '_REFUSED_'
@@ -100,7 +99,7 @@ for ns in nameservers:
     note = '' 
 
   if urls:
-    note = note + ' '.join(urls[:2])
+    note = note + ' ' + ' '.join(urls[:2])
   geo = '/'.join([x for x in [city, region, country_code] if x and not x.isdigit()])
-  entry = "%-52.52s # %s,%s,%s (%s) %s %s" % (main, ns.hostname, latitude, longitude, geo, note)
+  entry = "%-52.52s # %s,%s,%s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
   print entry.encode('utf-8')
