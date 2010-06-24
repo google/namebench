@@ -31,11 +31,12 @@ geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
 cfg_nameservers = global_ns + regional_ns
 #cfg_nameservers = [('205.151.67.2', '205.151.67.2')]
+nameserver_list.MAX_INITIAL_HEALTH_THREAD_COUNT = 100
 nameservers = nameserver_list.NameServers(
     cfg_nameservers,
     timeout=30,
     health_timeout=30,
-    threads=40,
+    threads=100,
     skip_cache_collusion_checks=True,
 )
 
@@ -68,9 +69,13 @@ for ns in nameservers:
   if matches:
     instance = matches.group(1)
     ns.name = re.sub('[- ]%s' % instance, '', ns.name)
-    main = u"%s=%s (%s)" % (ns.ip, ns.name, instance)
+    main = u"%s=%s (%s)" % (ns.ip, ns.name.decode('latin-1'), instance.decode('latin-1'))
   else:
-    main = u"%s=%s" % (ns.ip, ns.name)
+    try:
+      main = u"%s=%s" % (ns.ip, ns.name.decode('latin-1'))
+    except:
+      main = "%s=ENCODE_ERROR" % ns.ip
+
   if 'Responded with: REFUSED' in ns.warnings:
     note = '_REFUSED_'
   elif 'a.root-servers.net.: Timeout' in ns.warnings:
@@ -82,6 +87,6 @@ for ns in nameservers:
   else:
     note = '' 
 
-  geo = '/'.join([x for x in [city, region, country] if x and not x.isdigit()])
-  entry = "%-50.50s # %s, %s, %s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
+  geo = '/'.join([x for x in [city, region, country_code] if x and not x.isdigit()])
+  entry = "%-52.52s # %s,%s,%s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
   print entry.encode('utf-8')
