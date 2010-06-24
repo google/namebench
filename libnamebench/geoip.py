@@ -20,7 +20,6 @@ import tempfile
 # external dependencies (from nb_third_party)
 import httplib2
 import simplejson
-
 import util
 
 
@@ -79,3 +78,14 @@ def GetGeoData():
   except:
     print 'Failed to get Geodata: %s' % util.GetLastExceptionString()
     return {}
+
+def DistanceBetweenCoordinates(lat1, lon1, lat2, lon2):
+  """Distance between two coordinate pairs (in km)
+  Based on:
+  http://cyberpython.wordpress.com/2010/03/31/python-calculate-the-distance-between-2-points-given-their-coordinates/
+  """
+  lat1_r = math.radians(lat1)
+  lat2_r = math.radians(lat2)
+  lon_diff = math.radians(lon2 - lon1)
+  x = math.sin(lat1_r) * math.sin(lat2_r) + math.cos(lat1_r) * math.cos(lat2_r) * math.cos(lon_diff)
+  return math.degrees(math.acos(x)) * 60 * 1.852
