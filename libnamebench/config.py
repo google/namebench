@@ -31,15 +31,15 @@ import util
 import addr_util
 import version
 
-SANITY_REFERENCE_URL = 'http://namebench.googlecode.com/svn/trunk/config/hostname_reference.cfg'
+TRUNK_URL = 'http://namebench.googlecode.com/svn/trunk/'
 
 
-def GetConfiguration(filename='config/namebench.cfg'):
+def GetConfigurationAndSuppliedServers(filename='config/namebench.cfg'):
   """Get all of our configuration setup, args and config file."""
   (options, args) = DefineAndParseOptions(filename=filename)
-  (configured_options, global_ns, regional_ns) = ProcessConfigurationFile(options)
+  configured_options = ProcessConfigurationFile(options)
   supplied_ns = addr_util.ExtractIPTuplesFromString(' '.join(args))
-  return (configured_options, supplied_ns, global_ns, regional_ns)
+  return (configured_options, supplied_ns)
 
 
 def DefineAndParseOptions(filename):
@@ -112,41 +112,52 @@ def DefineAndParseOptions(filename):
 
 
 def GetLatestSanityChecks():
-  """Get the latest copy of the sanity checks config."""
+  return GetLatestConfig('config/hostname_reference.cfg')
+
+def GetNameServerList():
+  raw_data = GetLatestConfig('servers.cfg')
+  
+  
+
+def GetLatestConfig(conf_file):
+  """Get the latest copy of the config file"""
+
+  ref_file = util.FindDataFile(conf_file)
+  local_config = ConfigParser.ConfigParser()
+  local_config.read(ref_file)
+  download_latest = int(local_config.get('config', 'download_latest'))
+  local_version = int(local_config.get('config', 'version'))
+  
+  if download_latest == 0:
+    return _ExpandConfigSections(local_config)
+    
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
-  http_version_usable = False
-  use_config = None
+  url = '%s/%s' % (TRUNK_URL, conf_file)
   content = None
   try:
-    unused_resp, content = h.request(SANITY_REFERENCE_URL, 'GET')
+    unused_resp, content = h.request(url, 'GET')
+    remote_config = ConfigParser.ConfigParser()
   except:
-    print '* Unable to fetch latest reference: %s' % util.GetLastExceptionString()
-  http_config = ConfigParser.ConfigParser()
+    print '* Unable to fetch remote %s: %s' % (conf_file, util.GetLastExceptionString())
+    return _ExpandConfigSections(local_config)
 
   if content and '[base]' in content:
     fp = StringIO.StringIO(content)
     try:
       http_config.readfp(fp)
-      http_version_usable = True
     except:
-      pass
+      print '* Unable to read remote %s: %s' % (conf_file, util.GetLastExceptionString())
+      return _ExpandConfigSections(local_config)
 
-  ref_file = util.FindDataFile('config/hostname_reference.cfg')
-  local_config = ConfigParser.ConfigParser()
-  local_config.read(ref_file)
+  if int(http_config.get('config', 'version')) > local_version:
+    print '- Using %s' % url
+    return _ExpandConfigSections(remote_config)
+  else:
+    return _ExpandConfigSections(local_config)
 
-  if http_version_usable:
-    if int(http_config.get('base', 'version')) > int(local_config.get('base', 'version')):
-      print '- Using %s' % SANITY_REFERENCE_URL
-      use_config = http_config
 
-  if not use_config:
-    use_config = local_config
-
-  return (use_config.items('sanity'),
-          use_config.items('sanity-secondary'),
-          use_config.items('censorship'))
-
+def _ExpandConfigSections(config):
+  return dict([ (y, config.items(y)) for y in config.sections() if y != 'config' ])
 
 def ProcessConfigurationFile(options):
   """Process configuration file, merge configuration with OptionParser.
