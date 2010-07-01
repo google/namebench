@@ -19,29 +19,34 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import unittest
 import config
+import sys
+
+sys.path.append('..')
+import third_party
 
 class ConfigTest(unittest.TestCase):
   def testParseFullLine(self):
-    line = '129.250.35.251=NTT (2)                               # y.ns.gin.ntt.net,39.569,-104.8582 (Englewood/CO/US)'
-    expected = {'name': 'NTT (2)', 'service': 'NTT', 'ip': '129.250.35.251',
+    line = 'NTT (2)                               # y.ns.gin.ntt.net,39.569,-104.8582 (Englewood/CO/US)'
+    expected = {'name': 'NTT (2)', 'service': 'NTT',
                 'lon': '-104.8582', 'instance': '2', 'country_code': 'US',
-                'lat': '39.569'}
-    self.assertEquals(config._ParseServerLine(line), expected)
+                'lat': '39.569', 'hostname': 'y.ns.gin.ntt.net'}
+    self.assertEquals(config._ParseServerValue(line), expected)
 
   def testOpenDNSLine(self):
-    line = '208.67.220.220=OpenDNS                               # resolver2.opendns.com'
+    line = 'OpenDNS                               # resolver2.opendns.com'
     expected = {'name': 'OpenDNS', 'service': 'OpenDNS', 'ip': '208.67.220.220',
                 'lon': None, 'instance': None, 'country_code': None,
-                'lat': None}
+                'lat': None, 'hostname': 'resolver2.opendns.com'}
 
-    self.assertEquals(config._ParseServerLine(line), expected)
+    self.assertEquals(config._ParseServerValue(line), expected)
 
   def testLineWithNoRegion(self):
-    line = '4.2.2.2=Level/GTEI-2 (3)                             # vnsc-bak.sys.gtei.net,38.0,-97.0 (US) '
+    line = 'Level/GTEI-2 (3)                             # vnsc-bak.sys.gtei.net,38.0,-97.0 (US) '
     expected = {'name': 'Level/GTEI-2 (3)', 'service': 'Level/GTEI-2',
-                'ip': '4.2.2.2', 'lon': '-97.0', 'instance': '3',
-                'country_code': 'US', 'lat': '38.0'}
-    self.assertEquals(config._ParseServerLine(line), expected)
+                'lon': '-97.0', 'instance': '3',
+                'country_code': 'US', 'lat': '38.0',
+                'hostname': 'vnsc-bak.sys.gtei.net'}
+    self.assertEquals(config._ParseServerValue(line), expected)
 
 if __name__ == '__main__':
   unittest.main()

@@ -12,16 +12,18 @@ QUERY_MODIFIERS = '-site:txdns.net -site:sitedossier.com -mx -site:dataopedia.co
 CACHE_DIR = os.getenv('HOME') + '/.ycache'
 
 def CheckPopularity(ip):
-  cache_path = os.path.join(CACHE_DIR, ip) + '.pickle'
+  # DUH
+  cache_path = os.path.join(CACHE_DIR, ip) + '.pickle.pickle'
   if os.path.exists(cache_path):
     f = open(cache_path)
     return pickle.load(f)
   else:
+    print "miss: %s" % ip
     try:
-      query = '"%s" %s' % (ip, QUERY_MODIFIERS)      
+      query = '"%s" %s' % (ip, QUERY_MODIFIERS)
       srch = WebSearch(APP_ID, query=query, results=50)
       results = srch.parse_results()
-      pf = open(cache_path + '.pickle', 'w')
+      pf = open(cache_path, 'w')
       pickle.dump(results.results, pf)
       pf.close()
       return results
@@ -30,11 +32,4 @@ def CheckPopularity(ip):
       return []
 
 if __name__ == "__main__":
-  for ip in sys.argv[1:]:      
-    print '%s = %s' % (ip, total)
-    for result in results.results:
-      try:
-        print '  - %s: %s' % (result['Url'], result['Title'])
-      except UnicodeEncodeError:
-        print '  - %s' % result['Url']#      print results.results
-  time.sleep(0.5)
+  pass

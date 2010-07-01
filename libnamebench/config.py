@@ -24,6 +24,8 @@ import re
 import StringIO
 import tempfile
 
+import third_party
+
 # from third_party
 import httplib2
 
@@ -161,11 +163,12 @@ def _ParseServerValue(value):
     service = name
     instance = None
 
-  matches = re.search(',([-\.\d]+),([-\.\d]+) \(.*?(\w+)\)', comment)
+  matches = re.search('(\w.*?),([-\.\d]+),([-\.\d]+) \(.*?(\w+)\)(.*)', comment)
   if matches:
-    lat, lon, country_code = matches.groups()
+    hostname, lat, lon, country_code, notes = matches.groups()
   else:
-    lat = lon = country_code = None
+    lat = lon = country_code = hostname = None
+    notes = ''
 
   return {
     'name': name,
@@ -173,6 +176,8 @@ def _ParseServerValue(value):
     'instance': instance,
     'lat': lat,
     'lon': lon,
+    'notes': notes.rstrip().lstrip().split('http')[0],
+    'hostname': hostname,
     'labels': set(),
     'country_code': country_code
   }

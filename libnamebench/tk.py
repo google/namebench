@@ -31,6 +31,7 @@ import addr_util
 import base_ui
 import conn_quality
 import nameserver_list
+import sys_nameservers
 import util
 
 THREAD_UNSAFE_TK = 0
@@ -297,7 +298,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     ds_label['font'] = bold_font
 
     numqueries_label = Label(inner_frame, text='Number of queries')
-    numqueries_label.grid(row=12, column=1, sticky=W)    
+    numqueries_label.grid(row=12, column=1, sticky=W)
     numqueries_label['font'] = bold_font
 
     data_source = OptionMenu(inner_frame, self.data_source, *source_titles)

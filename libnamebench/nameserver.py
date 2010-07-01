@@ -24,8 +24,8 @@ import sys
 import time
 
 
-if __name__ == '__main__':
-  sys.path.append('../nb_third_party')
+
+
 
 # external dependencies (from nb_third_party)
 import dns.exception
@@ -57,7 +57,7 @@ MAX_WARNINGS = 7
 
 FAILURE_PRONE_RATE = 10
 
-    
+
 def _DoesClockGoBackwards():
   """Detect buggy Windows systems where time.clock goes backwards"""
   reference = 0
@@ -303,14 +303,14 @@ class NameServer(health_checks.NameServerHealthChecks):
       self.disabled = message
     elif self.failed_test_count >= max_count:
       self.disabled = "Failed %s tests, last: %s" % (self.failed_test_count, message)
-      
+
   def AddWarning(self, message, penalty=True):
     """Add a warning to a host."""
-    
+
     if not isinstance(message, str):
       print "Tried to add %s to %s (not a string)" % (message, self)
       return None
-    
+
     self.warnings.add(message)
     if penalty and len(self.warnings) >= MAX_WARNINGS:
       self.AddFailure('Too many warnings (%s), probably broken.' % len(self.warnings), fatal=True)
@@ -396,7 +396,7 @@ class NameServer(health_checks.NameServerHealthChecks):
     if error_msg:
       key = util.GetLastExceptionString()
       self.error_map[key] = self.error_map.setdefault(key, 0) + 1
-      
+
     if duration < 0:
       raise BrokenSystemClock('The time on your machine appears to be going backwards. '
                               'We cannot accurately benchmark due to this error. '

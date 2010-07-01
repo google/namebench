@@ -60,30 +60,6 @@ else:
 MAX_INITIAL_HEALTH_THREAD_COUNT = 35
 
 
-def InternalNameServers():
-  """Return list of DNS server IP's used by the host via dnspython"""
-  try:
-    servers = dns.resolver.Resolver().nameservers
-  except:
-    print "Unable to get list of internal DNS servers."
-    servers = []
-    
-  # dnspython does not always get things right on Windows, particularly in
-  # versions with right-to-left languages. Fall back to ipconfig /all
-  if not servers and sys.platform[:3] == 'win':
-    return WinIpConfigNameServers()
-  return servers
-
-def WinIpConfigNameServers():
-  """Return a list of DNS servers via ipconfig (Windows only)"""
-  servers = []
-  output = subprocess.Popen(['ipconfig', '/all'], stdout=subprocess.PIPE).stdout.read()
-  for line in output.split('\r\n'):
-    if 'DNS Servers' in line:
-      print "ipconfig: %s" % line
-      servers.extend(addr_util.ExtractIPsFromString(line))
-  return servers
-      
 class OutgoingUdpInterception(Exception):
 
   def __init__(self, value):
@@ -342,7 +318,7 @@ class NameServers(list):
 
   def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_NEARBY_SERVERS):
     """Disable servers who's fastest duration is multiplier * average of best 10 servers."""
-    
+
     self.RemoveBrokenServers(delete_unwanted=True)
     secondaries = self.secondaries
     fastest = [x for x in self.SortByFastest() if not x.disabled ][:10]
@@ -351,8 +327,8 @@ class NameServers(list):
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
     for idx, ns in enumerate(secondaries):
       if (ns.fastest_check_duration > cutoff) or idx > max_servers:
-        self.remove(ns)    
-        
+        self.remove(ns)
+
   def DisableUnwantedServers(self, target_count, delete_unwanted=False):
     """Given a target count, delete nameservers that we do not plan to test."""
     self.RemoveBrokenServers(delete_unwanted)
@@ -647,7 +623,7 @@ class NameServers(list):
       success_rate = (float(len(self.enabled)) / float(len(self))) * 100
       self.msg('%s of %s servers are available (duration: %s)' %
                (len(self.enabled), len(self), datetime.datetime.now() - start))
-    
+
     return results
 
   def RunHealthCheckThreads(self, checks):
