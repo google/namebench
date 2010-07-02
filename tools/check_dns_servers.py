@@ -18,8 +18,10 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 
+import csv
+import re
 import sys
-import pygeoip
+import GeoIP
 sys.path.append('..')
 sys.path.append('/Users/tstromberg/namebench')
 import third_party
@@ -29,8 +31,12 @@ from libnamebench import addr_util
 
 import check_nameserver_popularity
 
+gi = GeoIP.open('/usr/local/share/GeoLiteCity.dat', GeoIP.GEOIP_MEMORY_CACHE)
+asn_lookup = GeoIP.open('/usr/local/share/GeoIPASNum.dat', GeoIP.GEOIP_MEMORY_CACHE)
+
 existing_nameservers = config.GetLocalNameServerList()
 check_ns = []
+output = csv.writer(open('output.csv', 'w'))
 
 for line in sys.stdin:
   ips = addr_util.ExtractIPsFromString(line)
@@ -49,12 +55,13 @@ if not check_ns:
 else:
   print "%s servers to check" % len(check_ns)
 print '-' * 80
-
-nameservers = nameserver_list.NameServers(
-    check_ns,
+nameserver_list.MAX_INITIAL_HEALTH_THREAD_COUNT = 100
+nameservers = nameserver_list.NameServers([],
+    global_servers=check_ns,
     timeout=10,
     health_timeout=10,
     threads=100,
+    num_servers=5000,
     skip_cache_collusion_checks=True,
 )
 nameservers.min_healthy_percent = 0
@@ -64,25 +71,28 @@ try:
 except nameserver_list.TooFewNameservers:
   pass
 print '-' * 80
-geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 
 for ns in nameservers:
-  if ':' in ns.ip:
-    details = {}
-  else:
-    try:
-      details = geo_city.record_by_addr(ns.ip)
-    except:
-      pass
-    
+  try:
+    details = gi.record_by_addr(ns.ip)
+  except:
+    pass
+
   if not details:
     details = {}
-  city = details.get('city', '').decode('latin-1')
+
+  city = details.get('city', '')
+  if city:
+    city = city.decode('latin-1')
   latitude = details.get('latitude', '')
   longitude = details.get('longitude', '')
-  country = details.get('country_name', '').decode('latin-1')
+  country = details.get('country_name', '')
+  if country:
+    country = country.decode('latin-1')
   country_code = details.get('country_code', '')
-  region = details.get('region_name', '').decode('latin-1')
+  region = details.get('region_name', '')
+  if region:
+    region = region.decode('latin-1')
   results = check_nameserver_popularity.CheckPopularity(ns.ip)
   urls = [ x['Url'] for x in results ]
   main = "%s=UNKNOWN" % ns.ip
@@ -96,10 +106,18 @@ for ns in nameservers:
   elif ns.warnings:
     note = '_WARNING/%s_' % '/'.join(list(ns.warnings))
   else:
-    note = '' 
+    note = ''
 
-  if urls:
-    note = note + ' ' + ' '.join(urls[:2])
-  geo = '/'.join([x for x in [city, region, country_code] if x and not x.isdigit()])
-  entry = "%-52.52s # %s,%s,%s (%s) %s" % (main, ns.hostname, latitude, longitude, geo, note)
-  print entry.encode('utf-8')
+  if ns.hostname != ns.ip:
+    domain = addr_util.GetDomainPartOfHostname(ns.hostname)
+    if domain:
+      good_urls = [x for x in urls if re.search(domain, x, re.I)]
+      if good_urls:
+        urls = good_urls
+
+  geo = '/'.join([x for x in [country_code, region, city] if x and not x.isdigit()]).encode('utf-8')
+  coords = ','.join(map(str, [latitude,longitude]))
+  asn = asn_lookup.org_by_addr(ns.ip)
+  row = [ns.ip, 'regional', 'UNKNOWN', '', ns.hostname, geo, coords, asn, note, ' '.join(urls[:2])]
+  print row
+  output.writerow(row)

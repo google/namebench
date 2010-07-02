@@ -25,10 +25,11 @@ import GeoIP
 sys.path.append('..')
 #sys.path.append('/Users/tstromberg/namebench')
 import third_party
+from libnamebench import addr_util
 from libnamebench import nameserver_list
 from libnamebench import config
 
-output = csv.writer(open('servers.csv', 'w'))
+output = csv.writer(open('output.csv', 'w'))
 #output.writerow(['IP', 'Name', 'Hostname', 'Country/Region/City', 'Coords', 'ASN', 'Label', 'Status', 'Refs'])
 gi = GeoIP.open('/usr/local/share/GeoLiteCity.dat', GeoIP.GEOIP_MEMORY_CACHE)
 asn_lookup = GeoIP.open('/usr/local/share/GeoIPASNum.dat', GeoIP.GEOIP_MEMORY_CACHE)
@@ -61,15 +62,7 @@ for ip in ns_hash:
   refs = None
   asn = asn_lookup.org_by_addr(ip)
   labels = ' '.join(list(ns_hash[ip]['labels']))
-  search_results = check_nameserver_popularity.CheckPopularity(ip)
-  class_b = '.'.join(ip.split('.')[0:2])
-  suffix = '.'.join(ip.split('.')[-2:])
-  middle = '.'.join(ip.split('.')[1:3])
-  banned_urls = [ class_b, suffix, middle, '\.xls$', '\.txt$', 'spam',
-                  'nettools', 'namebench', 'spam', 'affinity-v1',
-                  'corporationwiki', 'iptools', 'whois', 'iana.org',
-                  'public.*dns', 'blocked', 'firewall', 'websitevaluespy',
-                  'iptool', 'sshd-versions', '\.off$']
+  urls = check_nameserver_popularity.GetUrls(ip)
 
   use_keywords = set()
   if ns_hash[ip]['name'] and 'UNKNOWN' not in ns_hash[ip]['name']:
@@ -81,34 +74,22 @@ for ip in ns_hash:
         use_keywords.add(word.lower().replace('-', ''))
 
   if hostname and hostname != ip:
-    print "host: %s ip: %s" % (hostname, ip)
-    host_parts = hostname.split('.')
-    if len(host_parts) > 3 and (len(host_parts[-2]) < 3 or host_parts[-2] in ('edu', 'com', 'net')):
-      use_keywords.add(host_parts[-3].lower())
-    else:
-      use_keywords.add(host_parts[-2].lower())
+    use_keywords.add(addr_util.GetDomainPartOfHostname(ip))
 
   for bad_word in ('ns', 'dns'):
     if bad_word in use_keywords:
       use_keywords.remove(bad_word)
   print use_keywords
-  urls = []
-  best_urls = []
-  for result in search_results:
-    reject = False
-    for keyword in banned_urls:
-      if re.search(keyword, result['Url'], re.I):
-        reject = True
 
-    if not reject:
-      for keyword in use_keywords:
-        if re.search(keyword, result['Url'], re.I):
-          best_urls.append(result['Url'])
-          break
-      urls.append(result['Url'])
+  context_urls = []
+  for url in urls:
+    for keyword in use_keywords:
+      if re.search(keyword, url, re.I):
+        context_urls.append(url)
+        break
 
-  if best_urls:
-    urls = best_urls
+  if context_urls:
+    urls = context_urls
   row = [ip, labels, ns_hash[ip]['name'], hostname, geo, coords, asn, status[0:30], ' '.join(urls[:2])]
   print row
   output.writerow(row)
