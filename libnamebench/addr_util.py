@@ -43,7 +43,10 @@ def ExtractIPsFromString(ip_string):
   ips = []
   # IPV6 If this regexp is too loose, see Regexp-IPv6 in CPAN for inspiration.
   ips.extend(re.findall('[\dabcdef:]+:[\dabcdef:]+', ip_string, re.IGNORECASE))
-  ips.extend(re.findall('\d+\.\d+\.\d+\.+\d+', ip_string))
+  for ip in re.findall('\d+\.\d+\.\d+\.+\d+', ip_string):
+    # Remove any leading zeros
+    ips.append(re.sub('\.0(\d+)', '.\\1', ip))
+
   return ips
 
 
@@ -61,6 +64,16 @@ def IsPrivateHostname(hostname):
     return True
   else:
     return False
+
+def GetDomainPartOfHostname(hostname):
+  """Get the main domain part of a hostname. Needs work."""
+  host_parts = hostname.split('.')
+  if len(host_parts) > 3 and (len(host_parts[-2]) < 3 or host_parts[-2] in ('edu', 'com', 'net')):
+    return host_parts[-3].lower()
+  elif len(host_parts) > 1:
+    return host_parts[-2].lower()
+  else:
+    return hostname
 
 
 def IsLoopbackIP(ip):
