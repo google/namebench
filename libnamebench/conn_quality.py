@@ -20,6 +20,7 @@ import time
 
 import nameserver
 import nameserver_list
+import sys_nameservers
 import util
 
 OPENDNS_NS = '208.67.220.220'
@@ -70,7 +71,7 @@ class ConnectionQuality(object):
   def GetSystemPrimaryNameServer(self):
     """Return a nameserver object for the system primary."""
 
-    internal = nameserver_list.InternalNameServers()
+    internal = sys_nameservers.GetCurrentNameServers()
     # In rare cases, we may not find any to use.
     if not internal:
       print 'Odd - no built-in nameservers found.'
