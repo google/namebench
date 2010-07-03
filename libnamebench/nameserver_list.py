@@ -33,6 +33,7 @@ import dns.resolver
 
 import conn_quality
 import nameserver
+import sys_nameservers
 import addr_util
 import util
 
@@ -167,7 +168,7 @@ class NameServers(list):
 
     self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
-    self.system_nameservers = InternalNameServers()
+    self.system_nameservers = sys_nameservers.GetCurrentNameServers()
     if nameservers:
       for (ip, name) in nameservers:
         if (not name or name == ip) and ip in self.system_nameservers:
