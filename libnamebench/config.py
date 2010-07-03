@@ -17,7 +17,9 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+
 import ConfigParser
+import csv
 import optparse
 import os.path
 import re
@@ -124,17 +126,31 @@ def GetNameServerList():
   raw_data = GetLatestConfig('config/servers.cfg')
 
 def GetLocalNameServerList():
-  return _ParseNameServerListing(_GetLocalConfig('config/servers.cfg'))
+  server_file = util.FindDataFile('config/servers.csv')
+  return _ParseNameServerListing(open(server_file))
 
-def _ParseNameServerListing(ns_config):
-  nameservers = {}
-  for label in ns_config:
-    for ip, desc in ns_config[label]:
-      # Convert IPv6 addresses back into a usable form.
-      ip = ip.replace('_', ':')
-      nameservers[ip] = _ParseServerValue(desc)
-      nameservers[ip]['labels'].add(label)
-  return nameservers
+def _ParseNameServerListing(fp):
+  fields = ['ip', 'category', 'provider', 'instance', 'hostname', 'location',
+            'coords', 'asn', 'list_note', 'urls']
+  reader = csv.DictReader(fp, fieldnames=fields)
+  ns_data = {}
+
+  for row in reader:
+    ip = row['ip']
+    if row['location']:
+      row['country_code'] = row['location'].split('/')[0]
+    else:
+      row['country_code'] = None
+
+    if row['coords']:
+      row['lat'], row['lon'] = row['coords'].split(',')
+    else:
+      row['lat'] = row['lon'] = None
+    
+    row['urls'] = row['urls'].split(' ')
+    ns_data[ip] = row
+    
+  return ns_data
 
 def _GetLocalConfig(conf_file):
   local_config = _ReadConfigFile(conf_file)
@@ -146,41 +162,6 @@ def _ReadConfigFile(conf_file):
   local_config.read(ref_file)
   return local_config
 
-def _ParseServerValue(value):
-  """Why on earth did I make something so fugly."""
-  # Example:
-  # 129.250.35.251=NTT (2)    # y.ns.gin,39.569,-104.8582 (Englewood/CO/US)
-  if '#' in value:
-    name, comment = value.split('#')[0:2]
-  else:
-    name = value
-    comment = ''
-  name = name.rstrip()
-  matches = re.match('(.*?) \((\w+)\)', name)
-  if matches:
-    service, instance = matches.groups()
-  else:
-    service = name
-    instance = None
-
-  matches = re.search('(\w.*?),([-\.\d]+),([-\.\d]+) \(.*?(\w+)\)(.*)', comment)
-  if matches:
-    hostname, lat, lon, country_code, notes = matches.groups()
-  else:
-    lat = lon = country_code = hostname = None
-    notes = ''
-
-  return {
-    'name': name,
-    'service': service,
-    'instance': instance,
-    'lat': lat,
-    'lon': lon,
-    'notes': notes.rstrip().lstrip().split('http')[0],
-    'hostname': hostname,
-    'labels': set(),
-    'country_code': country_code
-  }
 
 def GetLatestConfig(conf_file):
   """Get the latest copy of the config file"""
