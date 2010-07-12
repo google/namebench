@@ -141,24 +141,26 @@ class QueryThreads(threading.Thread):
 
 class NameServers(list):
 
-  def __init__(self, nameservers, global_servers=None, regional_servers=None,
-               num_servers=1,
-               include_internal=False, threads=5, status_callback=None,
-               timeout=5, health_timeout=5, ping_timeout=1,
-               skip_cache_collusion_checks=False,
-               ipv6_only=False):
-    self.seen_ips = set()
-    self.seen_names = set()
+  def __init__(self, ns_data, include_tags=None, require_tags=None,
+               num_servers=100, threads=5, status_callback=None,
+               timeout=5, health_timeout=5, ping_timeout=1):
+
+    if not require_tags:
+      require_tags = set()
+      
+    if not include_tags:
+      include_tags = set()
+
     self.timeout = timeout
     self.ping_timeout = ping_timeout
     self.num_servers = num_servers
     self.requested_health_timeout = health_timeout
-    self.skip_cache_collusion_checks = skip_cache_collusion_checks
     self.health_timeout = health_timeout
     self.min_healthy_percent = MIN_HEALTHY_PERCENT
     self.status_callback = status_callback
     self.cache_dir = tempfile.gettempdir()
-    self.ipv6_only = ipv6_only
+    self._ips = set()
+
     if threads > MAX_SANE_THREAD_COUNT:
       self.msg('Lowing thread count from %s to sane limit of %s' %
                (threads, MAX_SANE_THREAD_COUNT))
@@ -168,24 +170,10 @@ class NameServers(list):
 
     self.ApplyCongestionFactor()
     super(NameServers, self).__init__()
-    self.system_nameservers = sys_nameservers.GetCurrentNameServers()
-    if nameservers:
-      for (ip, name) in nameservers:
-        if (not name or name == ip) and ip in self.system_nameservers:
-          name = 'SYS-%s' % ip
-        self.AddServer(ip, name, is_custom=True, is_preferred=True)
 
-    if global_servers:
-      for (ip, name) in global_servers:
-        self.AddServer(ip, name, is_global=True, is_preferred=True)
-
-    if regional_servers:
-      for (ip, name) in regional_servers:
-        self.AddServer(ip, name)
-
-    if include_internal:
-      for ip in self.system_nameservers:
-        self.AddServer(ip, 'SYS-%s' % ip, is_preferred=True)
+    for ip in ns_data:
+      print ip
+      self.AddServer(ip, ns_data[ip]['name'], ns_data[ip]['tags'])
 
   @property
   def preferred(self):
@@ -217,24 +205,10 @@ class NameServers(list):
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
-  def AddServer(self, ip, name, is_preferred=False, is_global=False, is_regional=False,
-                is_custom=False):
+  def AddServer(self, ip, name, tags):
     """Add a server to the list given an IP and name."""
 
-    ns = nameserver.NameServer(ip, name=name, preferred=is_preferred)
-    if self.ipv6_only and not ns.is_ipv6:
-      return
-
-    ns.is_custom = is_custom
-
-    if ip in self.system_nameservers:
-      ns.is_system = True
-      ns.is_preferred = True
-      ns.is_custom = False
-      ns.system_position = self.system_nameservers.index(ip)
-
-    ns.is_global = is_global
-    ns.is_regional = is_regional
+    ns = nameserver.NameServer(ip, name=name)
     ns.timeout = self.timeout
     ns.ping_timeout = self.ping_timeout
 
@@ -251,26 +225,11 @@ class NameServers(list):
 
   def append(self, ns):
     """Add a nameserver to the list, guaranteeing uniqueness."""
-    if ns.ip in self.seen_ips:
-      # Perhaps we already know of the IP, but do not have a proper name for it
-      if ns.name != ns.ip:
-        for existing_ns in self:
-          if existing_ns.ip == ns.ip and existing_ns.name == existing_ns.ip:
-            existing_ns.name = ns.name
+    if ns.ip in self._ips:
       return None
-
-    # Add an identifier to the name if necessary.
-    if ns.name in self.seen_names:
-      for identifier in range(2, 10):
-        new_name = ''.join((ns.name, '-', str(identifier)))
-        if new_name not in self.seen_names:
-          ns.name = new_name
-          break
-
-#    print "Adding: %s [%s]" % (ns.name, ns.ip)
+    print "Adding: %s [%s]" % (ns.name, ns.ip)
     super(NameServers, self).append(ns)
-    self.seen_ips.add(ns.ip)
-    self.seen_names.add(ns.name)
+    self._ips.add(ns.ip)
 
   def ApplyCongestionFactor(self):
     # If we are only benchmarking one server, don't bother w/ congestion checking.

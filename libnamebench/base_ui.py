@@ -24,6 +24,7 @@ import geoip
 import nameserver_list
 import reporter
 import site_connector
+import sys_nameservers
 import util
 
 
@@ -77,18 +78,60 @@ class BaseUI(object):
         select_mode=self.options.select_mode
     )
 
+  def GatherNameServerData(self):
+    """Build a nameserver data set from config and other sources."""
+
+    ns_data = config.GetNameServerData()
+    for i, ip in enumerate(self.options.servers):
+      if ip not in ns_data:
+          ns_data[ip] = { 'tags': set(), 'name': 'USER-%s' % i }
+      ns_data[ip]['tags'].add('user-specified')
+
+    if self.options.include_system or self.options.include_all:
+      for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
+        if ip not in ns_data:
+          ns_data[ip] = { 'tags': set(), 'name': 'SYS-%s' % i }
+        ns_data[ip]['tags'].add('system')
+        ns_data[ip]['tags'].add('system-%s' % i)
+        print "Added %s: %s" % (ip, ns_data[ip]['tags'])
+
+      for i, ip in enumerate(sys_nameservers.GetAssignedNameServers()):
+        if ip not in ns_data:
+          ns_data[ip] = { 'tags': set(), 'name': 'DHCP-%s' % i }
+        ns_data[ip]['tags'].add('assigned')
+        ns_data[ip]['tags'].add('assigned-%s' % i)
+        print "Added %s: %s" % (ip, ns_data[ip]['tags'])
+    return ns_data
+
   def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""
+    ns_data = self.GatherNameServerData()
+    require_tags = set()
+    include_tags = set(['user-specified'])
+
+    if self.options.ipv6_only:
+      require_tags.add('ipv6')
+    elif self.options.ipv4_only:
+      require_tags.add('ipv4')
+
+    if self.options.include_system or self.options.include_all:
+      include_tags.add('system', 'assigned')
+
+    if self.options.include_regional or self.options.include_all:
+      include_tags.add('regional', 'regional-noanswer', 'regional-refused',
+                       'internal', 'global')
+
+    if self.options.include_global or self.options.include_all:
+      include_tags.add('preferred', 'global')
+
     self.nameservers = nameserver_list.NameServers(
-        self.supplied_ns,
-        global_servers=self.global_ns,
-        regional_servers=self.regional_ns,
-        include_internal=self.include_internal,
+        ns_data,
+        include_tags=include_tags,
+        require_tags=require_tags,
         num_servers=self.options.num_servers,
         timeout=self.options.timeout,
         ping_timeout=self.options.ping_timeout,
         health_timeout=self.options.health_timeout,
-        ipv6_only=self.options.ipv6_only,
         status_callback=self.UpdateStatus
     )
     if self.options.invalidate_cache:
@@ -101,14 +144,7 @@ class BaseUI(object):
       self.nameservers.thread_count = int(self.options.health_thread_count)
       self.nameservers.cache_dir = tempfile.gettempdir()
 
-    self.UpdateStatus('Checking latest sanity reference')
-    (primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
-    if not self.options.enable_censorship_checks:
-      censor_tests = []
-    else:
-      self.UpdateStatus('Censorship checks enabled: %s found.' % len(censor_tests))
-
-    self.nameservers.CheckHealth(primary_checks, secondary_checks, censor_tests=censor_tests)
+    self.nameservers.CheckHealth(sanity_checks=config.GetSanityChecks())
 
   def PrepareBenchmark(self):
     """Setup the benchmark object with the appropriate dataset."""

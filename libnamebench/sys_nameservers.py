@@ -48,7 +48,7 @@ def GetCurrentNameServers():
   # dnspython does not always get things right on Windows, particularly in
   # versions with right-to-left languages. Fall back to ipconfig /all
   if not servers and sys.platform[:3] == 'win':
-    return GetNameServersFromIpConfig()
+    return _GetNameServersFromIpConfig()
   return servers
 
 def GetAssignedNameServers():
@@ -109,4 +109,4 @@ def _FindNewestDhclientLeaseFile():
 if __name__ == '__main__':
   print "Current: %s" % GetCurrentNameServers()
   print "Assigned: %s" % GetAssignedNameServers()
-  print "System: %s" % GetSystemNameServers()
+  print "System: %s" % GetAllSystemNameServers()

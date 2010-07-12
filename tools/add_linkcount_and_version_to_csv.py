@@ -20,7 +20,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import csv
 import check_nameserver_popularity
 import sys
-reader = csv.reader(open('../config/servers.csv'))
+reader = csv.reader(open(sys.argv[1]))
 writer = csv.writer(open('output.csv', 'w'))
 
 sys.path.append('..')

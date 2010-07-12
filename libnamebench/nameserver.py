@@ -105,16 +105,13 @@ class BrokenSystemClock(Exception):
 class NameServer(health_checks.NameServerHealthChecks):
   """Hold information about a particular nameserver."""
 
-  def __init__(self, ip, name=None, internal=False, preferred=False):
+  def __init__(self, ip, name=None, tags=None):
     self.name = name
-    # We use _ for IPV6 representation in our configuration due to ConfigParser issues.
-    self.ip = ip.replace('_', ':')
-    self.is_system = internal
-    self.is_regional = False
-    self.is_global = False
-    self.is_custom = False
-    self.system_position = None
-    self.is_preferred = preferred
+    self.ip = ip
+    if tags:
+      self.tags = tags
+    else:
+      self.tags = set()
     self.timeout = 5
     self.health_timeout = 5
     self.ping_timeout = 1
@@ -129,6 +126,18 @@ class NameServer(health_checks.NameServerHealthChecks):
       self.is_ipv6 = True
     else:
       self.is_ipv6 = False
+
+  @property
+  def is_system(self):
+    return 'system' in self.tags
+
+  @property
+  def is_preferred(self):
+    return 'preferred' in self.tags
+
+  @property
+  def is_specified(self):
+    return 'user-specified' in self.tags
 
   @property
   def check_average(self):

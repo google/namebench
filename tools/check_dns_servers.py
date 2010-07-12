@@ -93,8 +93,13 @@ for ns in nameservers:
   region = details.get('region_name', '')
   if region:
     region = region.decode('latin-1')
-  results = check_nameserver_popularity.CheckPopularity(ns.ip)
-  urls = [ x['Url'] for x in results ]
+  
+  try:
+    results = check_nameserver_popularity.CheckPopularity(ns.ip)
+    urls = [ x['Url'] for x in results ]
+  except:
+    urls = ['(exception)']
+  num_urls = len(urls)
   main = "%s=UNKNOWN" % ns.ip
 
   if 'Responded with: REFUSED' in ns.warnings:
@@ -118,6 +123,6 @@ for ns in nameservers:
   geo = '/'.join([x for x in [country_code, region, city] if x and not x.isdigit()]).encode('utf-8')
   coords = ','.join(map(str, [latitude,longitude]))
   asn = asn_lookup.org_by_addr(ns.ip)
-  row = [ns.ip, 'regional', 'UNKNOWN', '', ns.hostname, geo, coords, asn, note, ' '.join(urls[:2])]
+  row = [ns.ip, 'regional', 'UNKNOWN', '', ns.hostname, geo, coords, asn, note, num_urls, ' '.join(urls[:2]), ns.version]
   print row
   output.writerow(row)

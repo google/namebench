@@ -33,18 +33,10 @@ import nameserver_list
 class NameBenchCli(base_ui.BaseUI):
   """A command-line implementation of the namebench workflow."""
 
-  def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
-
+  def __init__(self, options):
     self.options = options
-    self.supplied_ns = supplied_ns
-    self.global_ns = global_ns
-    self.include_internal = True
-    self.regional_ns = regional_ns
-    self.version = version
     self.last_msg = (None, None, None, None)
     self.last_msg_count_posted = 0
-    self.preferred = []
-    self.secondary = []
     super(NameBenchCli, self).__init__()
 
   def UpdateStatus(self, msg, count=None, total=None, error=False, debug=False):
@@ -103,7 +95,7 @@ class NameBenchCli(base_ui.BaseUI):
   def Execute(self):
     """Called by namebench.py to start the show."""
     print('namebench %s - %s (%s) on %s' %
-          (self.version, self.options.input_source or 'best source',
+          (self.options.version, self.options.input_source or 'best source',
            self.options.select_mode, datetime.datetime.now()))
     print ('threads=%s/%s queries=%s runs=%s timeout=%s health_timeout=%s servers=%s' %
            (self.options.health_thread_count, self.options.benchmark_thread_count,
@@ -111,12 +103,6 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.run_count, self.options.timeout,
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
-
-    if self.options.only:
-      if not self.supplied_ns:
-        print 'If you use --only, you must provide nameservers to use.'
-        sys.exit(1)
-      self.include_internal = False
 
     try:
       self.LoadDataSources()

@@ -35,7 +35,7 @@ from libnamebench import config
 from libnamebench import version
 
 if __name__ == '__main__':
-  (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
+  options = config.GetMergedConfiguration()
   use_tk = False
 
   if not options.no_gui:
@@ -69,6 +69,6 @@ if __name__ == '__main__':
   else:
     interface = cli.NameBenchCli
 
-  namebench = interface(options, supplied_ns, global_ns, regional_ns, version=version.VERSION)
+  namebench = interface(options)
   namebench.Execute()
 
