@@ -108,7 +108,7 @@ class QueryThreads(threading.Thread):
           (ns, other_ns) = self.input.get_nowait()
         except Queue.Empty:
           return
-        if ns.disabled or other_ns.disabled:
+        if ns.is_disabled or other_ns.is_disabled:
           self.results.put(None)
           continue
         else:
@@ -120,7 +120,7 @@ class QueryThreads(threading.Thread):
         except Queue.Empty:
           return
 
-        if ns.disabled:
+        if ns.is_disabled:
           self.results.put(None)
           continue
         if self.action_type == 'ping':
@@ -141,39 +141,10 @@ class QueryThreads(threading.Thread):
 
 class NameServers(list):
 
-  def __init__(self, ns_data, include_tags=None, require_tags=None,
-               num_servers=100, threads=5, status_callback=None,
-               timeout=5, health_timeout=5, ping_timeout=1):
-
-    if not require_tags:
-      require_tags = set()
-      
-    if not include_tags:
-      include_tags = set()
-
-    self.timeout = timeout
-    self.ping_timeout = ping_timeout
-    self.num_servers = num_servers
-    self.requested_health_timeout = health_timeout
-    self.health_timeout = health_timeout
-    self.min_healthy_percent = MIN_HEALTHY_PERCENT
-    self.status_callback = status_callback
-    self.cache_dir = tempfile.gettempdir()
+  def __init__(self):
     self._ips = set()
-
-    if threads > MAX_SANE_THREAD_COUNT:
-      self.msg('Lowing thread count from %s to sane limit of %s' %
-               (threads, MAX_SANE_THREAD_COUNT))
-      self.thread_count = MAX_SANE_THREAD_COUNT
-    else:
-      self.thread_count = threads
-
-    self.ApplyCongestionFactor()
+    self.thread_count = MAX_SANE_THREAD_COUNT
     super(NameServers, self).__init__()
-
-    for ip in ns_data:
-      print ip
-      self.AddServer(ip, ns_data[ip]['name'], ns_data[ip]['tags'])
 
   @property
   def preferred(self):
@@ -181,7 +152,7 @@ class NameServers(list):
 
   @property
   def enabled_preferred(self):
-    return [x for x in self.preferred if not x.disabled]
+    return [x for x in self.preferred if not x.is_disabled]
 
   @property
   def secondaries(self):
@@ -189,15 +160,15 @@ class NameServers(list):
 
   @property
   def enabled_secondaries(self):
-    return [x for x in self.secondaries if not x.disabled]
+    return [x for x in self.secondaries if not x.is_disabled and not x.is_hidden ]
 
   @property
   def enabled(self):
-    return [x for x in self if not x.disabled]
+    return [x for x in self if not x.is_disabled and not x.is_hidden]
 
   @property
   def check_average(self):
-    return util.CalculateListAverage([x.check_average for x in self if not x.disabled])
+    return util.CalculateListAverage([x.check_average for x in self if not x.is_disabled])
 
   def msg(self, msg, count=None, total=None, **kwargs):
     if self.status_callback:
@@ -205,37 +176,21 @@ class NameServers(list):
     else:
       print '%s [%s/%s]' % (msg, count, total)
 
-  def AddServer(self, ip, name, tags):
-    """Add a server to the list given an IP and name."""
-
-    ns = nameserver.NameServer(ip, name=name)
-    ns.timeout = self.timeout
-    ns.ping_timeout = self.ping_timeout
-
-    # Give them a little extra love for the road.
-    if ns.is_system:
-      ns.health_timeout = self.health_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
-      ns.ping_timeout = self.ping_timeout * SYSTEM_HEALTH_TIMEOUT_MULTIPLIER
-    elif ns.is_preferred:
-      ns.health_timeout = self.health_timeout * PREFERRED_HEALTH_TIMEOUT_MULTIPLIER
-      ns.ping_timeout = self.ping_timeout * PREFERRED_HEALTH_TIMEOUT_MULTIPLIER
-    else:
-      ns.health_timeout = self.health_timeout
-    self.append(ns)
+  def _GetObjectForIP(self, ip):
+    return [x for x in self if x.ip == ip][0]
 
   def append(self, ns):
     """Add a nameserver to the list, guaranteeing uniqueness."""
     if ns.ip in self._ips:
-      return None
-    print "Adding: %s [%s]" % (ns.name, ns.ip)
-    super(NameServers, self).append(ns)
-    self._ips.add(ns.ip)
+      print "%s already exists, adding tags: %s" % (ns.ip, ns.tags)
+      existing_ns = self._GetObjectForIP(ns.ip)
+      existing_ns.tags.update(ns.tags)
+    else:
+      print "Adding: %s [%s]" % (ns.name, ns.ip)
+      super(NameServers, self).append(ns)
+      self._ips.add(ns.ip)
 
-  def ApplyCongestionFactor(self):
-    # If we are only benchmarking one server, don't bother w/ congestion checking.
-
-    if len(self) == 1:
-      return
+  def SetTimeouts(self, timeout, ping_timeout, health_timeout):
     cq = conn_quality.ConnectionQuality(status_callback=self.status_callback)
     (intercepted, unused_level, multiplier) = cq.CheckConnectionQuality()[0:3]
     if intercepted:
@@ -245,13 +200,36 @@ class NameServers(list):
           'benchmark or utilize alternate DNS servers. Please adjust your '
           'router configuration or file a support request with your ISP.'
       )
+
     if multiplier > 1:
-# TODO(tstromberg): Consider retiring this feature for good.
-#      self.timeout *= multiplier
-      self.health_timeout *= multiplier
-      self.ping_timeout *= multiplier
+      health_timeout *= multiplier
+      ping_timeout *= multiplier
       self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f ping, %2.1f health.'
-               % (multiplier, self.ping_timeout, self.health_timeout))
+               % (multiplier, ping_timeout, health_timeout))
+
+    for ns in self:
+      ns.timeout = timeout
+      ns.ping_timeout = ping_timeout
+      ns.health_timeout = health_timeout
+
+  def FilterByTag(self, include_tags=None, require_tags=None):
+    for ns in self:
+      if include_tags:
+        if not ns.MatchesTags(include_tags):
+          print "%s does not have %s" % (ns, include_tags)
+          ns.is_hidden = True
+      if require_tags:
+        for tag in require_tags:
+          if not ns.HasTag(tag):
+            print "%s does not have %s" % (ns, tag)
+            ns.is_hidden = True
+
+    if not self.enabled:
+      raise TooFewNameservers('No nameservers specified matched tags %s %s' % (include_tags, require_tags))
+
+
+  def FilterByProximity(self, latitude, longitude, country, asn, hostname):
+    print "PROXIMITY DOES NOTHING"
 
   def InvokeSecondaryCache(self):
     """Delete secondary ips that do not exist in the cache file."""
@@ -273,7 +251,7 @@ class NameServers(list):
   def RemoveBrokenServers(self, delete_unwanted=False):
     """Quietly remove broken servers."""
     for ns in list(self):
-      if ns.disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
+      if ns.is_disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
         self.remove(ns)
 
   def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_NEARBY_SERVERS):
@@ -281,7 +259,7 @@ class NameServers(list):
 
     self.RemoveBrokenServers(delete_unwanted=True)
     secondaries = self.secondaries
-    fastest = [x for x in self.SortByFastest() if not x.disabled ][:10]
+    fastest = [x for x in self.SortByFastest() if not x.is_disabled ][:10]
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in fastest])
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
@@ -310,7 +288,7 @@ class NameServers(list):
     secondaries_to_keep = []
     for ns in self.SortByNearest():
 
-      if not ns.is_preferred and not ns.disabled:
+      if not ns.is_preferred and not ns.is_disabled:
         if not secondaries_to_keep and secondaries_needed < 15:
           self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
         secondaries_to_keep.append(ns)
@@ -319,7 +297,7 @@ class NameServers(list):
 
     # Phase three is removing all of the slower secondary servers
     for ns in self.SortByFastest():
-      if not ns.is_preferred and not ns.disabled and ns not in secondaries_to_keep:
+      if not ns.is_preferred and not ns.is_disabled and ns not in secondaries_to_keep:
         secondaries_to_keep.append(ns)
         if len(secondaries_to_keep) >= secondaries_needed:
           break
@@ -331,49 +309,27 @@ class NameServers(list):
 #      else:
 #        print "KEEP  : Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
 
-  def CheckHealth(self, primary_checks, secondary_checks, cache_dir=None, censor_tests=None):
+  def CheckHealth(self, sanity_checks=None, max_servers=11):
     """Filter out unhealthy or slow replica servers."""
-    if len(self) == 1:
-      return None
-
-    if cache_dir:
-      self.cache_dir = cache_dir
-
-    cpath = self._SecondaryCachePath()
-    try:
-      cached = self.InvokeSecondaryCache()
-    except:
-      self.msg('Failed to use secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString()))
-      cached = False
-    if not cached:
-      self.msg('Building initial DNS cache for %s nameservers (%s threads)' %
-               (len(self), self.thread_count))
-
+    self.msg('Building initial DNS cache for %s nameservers (%s threads)' %
+             (len(self), self.thread_count))
     self.PingNameServers()
-    if len(self.enabled) > int(self.num_servers * NS_CACHE_SLACK):
-      self.DisableDistantServers()
-    self.RunHealthCheckThreads(primary_checks)
-    if len(self.enabled) > self.num_servers:
+    self.DisableDistantServers(NS_CACHE_SLACK, max_servers)
+    self.RunHealthCheckThreads(sanity_checks['primary'])
+    if len(self.enabled) > max_servers:
       self._DemoteSecondaryGlobalNameServers()
-    self.DisableUnwantedServers(target_count=int(self.num_servers * NS_CACHE_SLACK), delete_unwanted=True)
-    if not cached:
-      try:
-        self._UpdateSecondaryCache(cpath)
-      except:
-        self.msg('Failed to save secondary cache in [%s]: %s' % (cpath, util.GetLastExceptionString()))
+    self.DisableUnwantedServers(target_count=int(max_servers * NS_CACHE_SLACK),
+                                delete_unwanted=True)
+    # TODO(tstromberg): Insert caching here.
 
-    if not self.skip_cache_collusion_checks:
-      self.CheckCacheCollusion()
+    self.CheckCacheCollusion()
     self.DisableUnwantedServers(self.num_servers)
-
-    self.RunFinalHealthCheckThreads(secondary_checks)
-    if censor_tests:
-      self.RunCensorshipCheckThreads(censor_tests)
-    else:
-      # If we aren't doing censorship checks, quiet any possible false positives.
-      self._RemoveGlobalWarnings()
+    self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
     if not self.enabled:
       raise TooFewNameservers('None of the nameservers tested are healthy')
+
+  def CheckCensorship(self, sanity_checks):
+    pass
 
   def _RemoveGlobalWarnings(self):
     """If all nameservers have the same warning, remove it. It's likely false."""
@@ -464,7 +420,7 @@ class NameServers(list):
     time.sleep(sleepy_time)
 
     test_combos = []
-    good_nameservers = [x for x in self.SortByFastest() if not x.disabled]
+    good_nameservers = [x for x in self.SortByFastest() if not x.is_disabled]
     for ns in good_nameservers:
       for compare_ns in good_nameservers:
         if ns != compare_ns:
@@ -476,7 +432,7 @@ class NameServers(list):
       if shared_ns:
         ns.shared_with.add(shared_ns)
         shared_ns.shared_with.add(ns)
-        if ns.disabled or shared_ns.disabled:
+        if ns.is_disabled or shared_ns.is_disabled:
           continue
 
         if ns.check_average > shared_ns.check_average:
@@ -487,15 +443,15 @@ class NameServers(list):
           faster = ns
 
         if slower.system_position == 0:
-          faster.disabled = 'Shares-cache with current primary DNS server'
+          faster.is_disabled = 'Shares-cache with current primary DNS server'
           slower.warnings.add('Replica of %s' % faster.ip)
         elif slower.is_preferred and not faster.is_preferred:
-          faster.disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
+          faster.is_disabled = 'Replica of %s [%s]' % (slower.name, slower.ip)
           slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
         else:
           diff = slower.check_average - faster.check_average
           self.msg("Disabling %s - slower replica of %s by %0.1fms." % (slower.name_and_node, faster.name_and_node, diff))
-          slower.disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
+          slower.is_disabled = 'Slower replica of %s [%s]' % (faster.name, faster.ip)
           faster.warnings.add('Replica of %s [%s]' % (slower.name, slower.ip))
 
   def _LaunchQueryThreads(self, action_type, status_message, items,

@@ -23,10 +23,6 @@ import socket
 import sys
 import time
 
-
-
-
-
 # external dependencies (from nb_third_party)
 import dns.exception
 import dns.message
@@ -58,29 +54,8 @@ MAX_WARNINGS = 7
 FAILURE_PRONE_RATE = 10
 
 
-def _DoesClockGoBackwards():
-  """Detect buggy Windows systems where time.clock goes backwards"""
-  reference = 0
-  print "Checking if time.clock() goes backwards (broken hardware)..."
-  for x in range(0, 200):
-    counter = time.clock()
-    if counter < reference:
-      print "Clock went backwards by %fms" % (counter - reference)
-      return True
-    reference = counter
-    time.sleep(random.random() / 500)
-  return False
-
-def _GetBestTimer():
-  """Pick the most accurate timer for a platform."""
-  if sys.platform[:3] == 'win' and not _DoesClockGoBackwards():
-    return time.clock
-  else:
-    return time.time
-
-
 # EVIL IMPORT-TIME SIDE EFFECT
-BEST_TIMER_FUNCTION = _GetBestTimer()
+BEST_TIMER_FUNCTION = util.GetMostAccurateTimerFunction()
 
 
 def ResponseToAscii(response):
@@ -105,13 +80,24 @@ class BrokenSystemClock(Exception):
 class NameServer(health_checks.NameServerHealthChecks):
   """Hold information about a particular nameserver."""
 
-  def __init__(self, ip, name=None, tags=None):
-    self.name = name
+  def __init__(self, ip, name=None, tags=None, provider=None, instance=None,
+               location=None, latitude=None, longitude=None, asn=None):
     self.ip = ip
+    self.name = name
     if tags:
-      self.tags = tags
+      self.tags = set(tags)
     else:
       self.tags = set()
+    self.provider = provider
+    self.instance = instance
+    self.location = location
+    self.latitude = latitude
+    self.longitude = longitude
+    self.asn = asn
+
+    self.is_hidden = False
+    self.is_disabled = False
+
     self.timeout = 5
     self.health_timeout = 5
     self.ping_timeout = 1
@@ -123,9 +109,9 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.timer = BEST_TIMER_FUNCTION
 
     if ':' in self.ip:
-      self.is_ipv6 = True
-    else:
-      self.is_ipv6 = False
+      self.tags.add('ipv6')
+    elif '.' in self.ip:
+      self.tags.add('ipv4')
 
   @property
   def is_system(self):
@@ -167,14 +153,14 @@ class NameServer(health_checks.NameServerHealthChecks):
 
   @property
   def warnings_string(self):
-    if self.disabled:
-      return '(excluded: %s)' % self.disabled
+    if self.is_disabled:
+      return '(excluded: %s)' % self.is_disabled
     else:
       return ', '.join(map(str, self.warnings))
 
   @property
   def warnings_comment(self):
-    if self.warnings or self.disabled:
+    if self.warnings or self.is_disabled:
       return '# ' + self.warnings_string
     else:
       return ''
@@ -203,8 +189,8 @@ class NameServer(health_checks.NameServerHealthChecks):
       my_notes.append('%0.0f queries to this host failed' % self.failure_rate)
     if self.port_behavior and 'POOR' in self.port_behavior:
       my_notes.append('Vulnerable to poisoning attacks (poor port diversity)')
-    if self.disabled:
-      my_notes.append(self.disabled)
+    if self.is_disabled:
+      my_notes.append(self.is_disabled)
     else:
       my_notes.extend(self.warnings)
     if self.errors:
@@ -270,11 +256,17 @@ class NameServer(health_checks.NameServerHealthChecks):
   def __repr__(self):
     return self.__str__()
 
+  def HasTag(self, tag):
+    return tag in self.tags
+
+  def MatchesTags(self, tags):
+    return self.tags.intersection(tags)
+
   def ResetTestStatus(self):
     """Reset testing status of this host."""
     self.warnings = set()
     self.shared_with = set()
-    self.disabled = False
+    self.is_disabled = False
     self.checks = []
     self.failed_test_count = 0
     self.share_check_count = 0
@@ -303,15 +295,15 @@ class NameServer(health_checks.NameServerHealthChecks):
     if self.is_system or self.is_preferred:
       # If the preferred host is IPv6 and we have no previous checks, fail quietly.
       if self.is_ipv6 and len(self.checks) <= 1:
-        self.disabled = message
+        self.is_disabled = message
       else:
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)
 
     # Fatal doesn't count for system & preferred nameservers.
     if fatal and not (self.is_system or self.is_preferred):
-      self.disabled = message
+      self.is_disabled = message
     elif self.failed_test_count >= max_count:
-      self.disabled = "Failed %s tests, last: %s" % (self.failed_test_count, message)
+      self.is_disabled = "Failed %s tests, last: %s" % (self.failed_test_count, message)
 
   def AddWarning(self, message, penalty=True):
     """Add a warning to a host."""
@@ -323,6 +315,12 @@ class NameServer(health_checks.NameServerHealthChecks):
     self.warnings.add(message)
     if penalty and len(self.warnings) >= MAX_WARNINGS:
       self.AddFailure('Too many warnings (%s), probably broken.' % len(self.warnings), fatal=True)
+
+  def DisableWithMessage(self, message):
+    self.is_disabled = True
+    if not self.is_preferred:
+      self.hidden = True
+    self.disabled_msg = message
 
   def CreateRequest(self, record, request_type, return_type):
     """Function to work around any dnspython make_query quirks."""

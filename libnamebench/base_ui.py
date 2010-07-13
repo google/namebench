@@ -21,12 +21,13 @@ import better_webbrowser
 import config
 import data_sources
 import geoip
-import nameserver_list
+import nameserver
 import reporter
 import site_connector
 import sys_nameservers
 import util
 
+DEFAULT_DISTANCE_KM=1000
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
@@ -83,29 +84,27 @@ class BaseUI(object):
 
     ns_data = config.GetNameServerData()
     for i, ip in enumerate(self.options.servers):
-      if ip not in ns_data:
-          ns_data[ip] = { 'tags': set(), 'name': 'USER-%s' % i }
-      ns_data[ip]['tags'].add('user-specified')
+      ns = nameserver.NameServer(ip, tags=['specified'], name='USR%s-%s' % (i, ip))
+      ns_data.append(ns)
 
     if self.options.include_system or self.options.include_all:
       for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
-        if ip not in ns_data:
-          ns_data[ip] = { 'tags': set(), 'name': 'SYS-%s' % i }
-        ns_data[ip]['tags'].add('system')
-        ns_data[ip]['tags'].add('system-%s' % i)
-        print "Added %s: %s" % (ip, ns_data[ip]['tags'])
+        ns = nameserver.NameServer(ip, tags=['system', 'system-%s' % i],
+                                   name='SYS%s-%s' % (i, ip))
+        ns_data.append(ns)
 
       for i, ip in enumerate(sys_nameservers.GetAssignedNameServers()):
-        if ip not in ns_data:
-          ns_data[ip] = { 'tags': set(), 'name': 'DHCP-%s' % i }
-        ns_data[ip]['tags'].add('assigned')
-        ns_data[ip]['tags'].add('assigned-%s' % i)
-        print "Added %s: %s" % (ip, ns_data[ip]['tags'])
+        ns = nameserver.NameServer(ip, tags=['dhcp', 'dhcp-%s' % i],
+                                   name='DHCP%s-%s' % (i, ip))
+        ns_data.append(ns)
     return ns_data
 
-  def PrepareNameServers(self):
+  def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
     """Setup self.nameservers to have a list of healthy fast servers."""
-    ns_data = self.GatherNameServerData()
+    self.nameservers = self.GatherNameServerData()
+    if self.options.invalidate_cache:
+      self.nameservers.InvalidateSecondaryCache()
+
     require_tags = set()
     include_tags = set(['user-specified'])
 
@@ -118,32 +117,20 @@ class BaseUI(object):
       include_tags.add('system', 'assigned')
 
     if self.options.include_regional or self.options.include_all:
-      include_tags.add('regional', 'regional-noanswer', 'regional-refused',
-                       'internal', 'global')
+      include_tags.add('regional', 'internal', 'global')
 
     if self.options.include_global or self.options.include_all:
       include_tags.add('preferred', 'global')
 
-    self.nameservers = nameserver_list.NameServers(
-        ns_data,
-        include_tags=include_tags,
-        require_tags=require_tags,
-        num_servers=self.options.num_servers,
-        timeout=self.options.timeout,
-        ping_timeout=self.options.ping_timeout,
-        health_timeout=self.options.health_timeout,
-        status_callback=self.UpdateStatus
-    )
-    if self.options.invalidate_cache:
-      self.nameservers.InvalidateSecondaryCache()
-
+    self.nameservers.status_callback = self.UpdateStatus
     self.nameservers.cache_dir = tempfile.gettempdir()
-
-    # Don't waste time checking the health of the only nameserver in the list.
-    if len(self.nameservers) > 1:
-      self.nameservers.thread_count = int(self.options.health_thread_count)
-      self.nameservers.cache_dir = tempfile.gettempdir()
-
+    self.nameservers.SetTimeouts(self.options.timeout,
+                                 self.options.ping_timeout,
+                                 self.options.health_timeout)
+    self.nameservers.FilterByTag(include_tags=include_tags,
+                                 require_tags=require_tags)
+    lat = lon = country = asn = hostname = None
+    self.nameservers.FilterByProximity(lat, lon, country, asn, hostname)
     self.nameservers.CheckHealth(sanity_checks=config.GetSanityChecks())
 
   def PrepareBenchmark(self):

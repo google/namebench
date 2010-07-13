@@ -26,12 +26,14 @@ import re
 import StringIO
 import tempfile
 
-import third_party
+import nb_third_party
 
 # from third_party
 import httplib2
 
 import data_sources
+import nameserver
+import nameserver_list
 import util
 import addr_util
 import version
@@ -92,50 +94,39 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
     options.servers.extend(addr_util.ExtractIPTuplesFromString(' '.join(args)))
   return options
 
-def GetLatestSanityChecks():
-  return GetLatestConfig('config/hostname_reference.cfg')
-
-def GetLocalSanityChecks():
-  return _GetLocalConfig('config/hostname_reference.cfg')
-
 def GetNameServerData(filename='config/servers.csv'):
   server_file = util.FindDataFile(filename)
   return _ParseNameServerListing(open(server_file))
 
 def _ParseNameServerListing(fp):
-  fields = ['ip', 'category', 'provider', 'instance', 'hostname', 'location',
+  fields = ['ip', 'tags', 'provider', 'instance', 'hostname', 'location',
             'coords', 'asn', 'list_note', 'urls']
   reader = csv.DictReader(fp, fieldnames=fields)
-  ns_data = {}
+  ns_data = nameserver_list.NameServers()
 
   for row in reader:
-    ip = row['ip']
-    if row['location']:
-      row['country_code'] = row['location'].split('/')[0]
+    if row['instance']:
+      name = "%s (%s)" % (row['provider'], row['instance'])
     else:
-      row['country_code'] = None
+      name = row['provider']
 
     if row['coords']:
-      row['lat'], row['lon'] = row['coords'].split(',')
+      lat, lon = row['coords'].split(',')
     else:
-      row['lat'] = row['lon'] = None
+      lat = lon = None
 
-    # While a DNS server can only have one category, it may end up having
-    # multiple tags: global, assigned, system
-    row['tags'] = set(row['category'])
-    if '.' in row['ip']:
-      row['tags'].add('ipv4')
-    elif ':' in row['ip']:
-      row['tags'].add('ipv6')
+    ns_data.append(nameserver.NameServer(
+        row['ip'],
+        name=name,
+        tags=row['tags'].split(),
+        provider=row['provider'],
+        instance=row['instance'],
+        location=row['location'],
+        latitude=lon,
+        longitude=lat,
+        asn=row['asn']
+    ))
 
-    row['urls'] = row['urls'].split(' ')
-    if row['instance']:
-      row['name'] = "%s (%s)" % (row['provider'], row['instance'])
-    else:
-      row['name'] = row['provider']
-
-    ns_data[ip] = row
-    
   return ns_data
 
 def GetSanityChecks():
@@ -161,10 +152,10 @@ def GetAutoUpdatingConfigFile(conf_file):
   local_config = _ReadConfigFile(conf_file)
   download_latest = int(local_config.get('config', 'download_latest'))
   local_version = int(local_config.get('config', 'version'))
-  
+
   if download_latest == 0:
     return _ExpandConfigSections(local_config)
-    
+
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   url = '%s/%s' % (TRUNK_URL, conf_file)
   content = None
@@ -237,5 +228,3 @@ def MergeConfigurationFileOptions(options):
   options.version = version.VERSION
   return options
 
-if __name__ == '__main__':
-  print GetLocalNameServerList()

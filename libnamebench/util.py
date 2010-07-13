@@ -20,6 +20,7 @@ import datetime
 import math
 import os.path
 import sys
+import time
 import tempfile
 
 
@@ -133,3 +134,25 @@ def GetLastExceptionString():
   error = '%s %s' % (exc_msg, error)
   # We need to remove the trailing space at some point.
   return error.rstrip()
+
+
+
+def DoesClockGoBackwards():
+  """Detect buggy Windows systems where time.clock goes backwards"""
+  reference = 0
+  print "Checking if time.clock() goes backwards (broken hardware)..."
+  for x in range(0, 200):
+    counter = time.clock()
+    if counter < reference:
+      print "Clock went backwards by %fms" % (counter - reference)
+      return True
+    reference = counter
+    time.sleep(random.random() / 500)
+  return False
+
+def GetMostAccurateTimerFunction():
+  """Pick the most accurate timer for a platform."""
+  if sys.platform[:3] == 'win' and not _DoesClockGoBackwards():
+    return time.clock
+  else:
+    return time.time
