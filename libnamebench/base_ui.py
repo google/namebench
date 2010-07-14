@@ -102,13 +102,13 @@ class BaseUI(object):
       require_tags.add('ipv4')
 
     if self.options.include_system or self.options.include_all:
-      include_tags.add('system', 'assigned')
+      include_tags.update(set(['system', 'dhcp']))
 
     if self.options.include_regional or self.options.include_all:
-      include_tags.add('regional', 'internal', 'global')
+      include_tags.update(set(['regional', 'internal', 'global']))
 
     if self.options.include_global or self.options.include_all:
-      include_tags.add('preferred', 'global')
+      include_tags.update(set(['preferred', 'global']))
 
     self.nameservers.status_callback = self.UpdateStatus
     self.nameservers.cache_dir = tempfile.gettempdir()
