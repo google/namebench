@@ -49,15 +49,6 @@ def ExtractIPsFromString(ip_string):
 
   return ips
 
-
-def ExtractIPTuplesFromString(ip_string):
-  """Return a list of (ip, name) tuples for use by NameServer class."""
-  ip_tuples = []
-  for ip in ExtractIPsFromString(ip_string):
-    ip_tuples.append((ip, ip))
-  return ip_tuples
-
-
 def IsPrivateHostname(hostname):
   """Basic matching to determine if the hostname is likely to be 'internal'."""
   if PRIVATE_RE.search(hostname):
