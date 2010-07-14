@@ -330,7 +330,7 @@ class NameServers(list):
     # TODO(tstromberg): Insert caching here.
     if len(self.enabled_servers) > 1:
       self.CheckCacheCollusion()
-      self.DisableUnwantedServers(self.num_servers)
+      self.DisableUnwantedServers(max_servers)
 
     self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
     if not self.enabled_servers:
