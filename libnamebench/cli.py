@@ -105,10 +105,22 @@ class NameBenchCli(base_ui.BaseUI):
     print '-' * 78
 
     try:
+      self.PrepareNameServers()
+    except nameserver_list.TooFewNameservers:
+      print "You need to specify some DNS servers to benchmark. Try:"
+      print ""
+      print "namebench.py -a                  # Benchmark all available DNS servers"
+      print "namebench.py -s                  # Benchmark current system DNS servers"
+      print "namebench.py -r                  # Benchmark regional DNS servers only"
+      print "namebench.py -r                  # Benchmark global DNS servers only"
+      print "namebench.py 8.8.8.8 10.0.0.1    # Benchmark just these two servers"
+      print ""
+      print "For more assistance, get help via namebench.py -h"
+      sys.exit(1)
+    try:
       self.LoadDataSources()
       self.PrepareTestRecords()
       print ''
-      self.PrepareNameServers()
       self.PrepareBenchmark()
       self.RunAndOpenReports()
     except (nameserver_list.OutgoingUdpInterception,
