@@ -48,15 +48,30 @@ def GetCurrentNameServers():
   # dnspython does not always get things right on Windows, particularly in
   # versions with right-to-left languages. Fall back to ipconfig /all
   if not servers and sys.platform[:3] == 'win':
-    return _GetNameServersFromIpConfig()
+    return _GetNameServersFromWinIpConfig()
   return servers
 
 def GetAssignedNameServers():
   """Servers assigned by DHCP."""
-  return _GetNameServersFromDhclient()
+  if sys.platform == 'darwin':
+    return _GetNameServersFromMacIpConfig()
+  else:
+    return _GetNameServersFromDhclient()
 
+def _GetNameServersFromMacIpConfig():
+  servers = []
+  ifcount = subprocess.Popen(['ipconfig', 'ifcount'], stdout=subprocess.PIPE).stdout.read()
+  interfaces = ["en%s" % (int(x)-1) for x in range(int(ifcount))]
+  for iface in interfaces:
+    output = subprocess.Popen(['ipconfig', 'getpacket', iface], stdout=subprocess.PIPE).stdout.read()
+    for line in output.split('\n'):
+      if 'domain_name_server' in line:
+        print "%s domain_name_server: %s" % (iface, line)
+        servers.extend(addr_util.ExtractIPsFromString(line))
+  return servers
+  
 
-def _GetNameServersFromIpConfig():
+def _GetNameServersFromWinIpConfig():
   """Return a list of DNS servers via ipconfig (Windows only)"""
   servers = []
   output = subprocess.Popen(['ipconfig', '/all'], stdout=subprocess.PIPE).stdout.read()
