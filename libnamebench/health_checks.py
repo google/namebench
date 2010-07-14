@@ -197,7 +197,7 @@ class NameServerHealthChecks(object):
 
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
       if len(attempted) == MAX_STORE_ATTEMPTS:
-        self.disabled = 'Unable to get uncached results for: %s' % ', '.join(attempted)
+        self.DisableWithMessage('Unable to get uncached results for: %s' % ', '.join(attempted))
         return False
       domain = random.choice(WILDCARD_DOMAINS)
       hostname = 'namebench%s.%s' % (random.randint(1, 2**32), domain)
@@ -224,12 +224,12 @@ class NameServerHealthChecks(object):
     checked = []
     shared = False
 
-    if self.disabled or other_ns.disabled:
+    if self.is_disabled or other_ns.is_disabled:
       return False
 
     if not other_ns.cache_checks:
       print '%s has no cache checks (disabling - how did this happen?)' % other_ns
-      other_ns.disabled = 'Unable to perform cache checks.'
+      other_ns.DisableWithMessage('Unable to perform cache checks.')
       return False
 
     for (ref_hostname, ref_response, ref_timestamp) in other_ns.cache_checks:
@@ -276,9 +276,9 @@ class NameServerHealthChecks(object):
       is_fatal = True
       sanity_checks = []
     elif final_check:
-      tests = [(self.TestWwwNegativeResponse, []), (self.TestPortBehavior, []), (self.TestNodeId, [])]
+      tests = [(self.TestWwwNegativeResponse, []), (self.TestNodeId, [])]
     elif port_check:
-      tests = [(self.TestPortBehavior, []), (self.TestNodeId, [])]
+      tests = [(self.TestNodeId, [])]
     else:
       # Put the bind version here so that we have a great minimum latency measurement.
       tests = [(self.TestNegativeResponse, []), (self.TestBindVersion, [])]
@@ -304,8 +304,8 @@ class NameServerHealthChecks(object):
         # Special case for NXDOMAIN de-duplication
         if not ('NXDOMAIN' in warning and 'NXDOMAIN Hijacking' in self.warnings):
           self.AddWarning(warning)
-      if self.disabled:
+      if self.is_disabled:
         break
 
-    return self.disabled
+    return self.is_disabled
 
