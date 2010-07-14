@@ -56,6 +56,17 @@ def IsPrivateHostname(hostname):
   else:
     return False
 
+def GetNetworkForIp(ip, reverse=False):
+  """Turn into a class C."""
+  if '.' in ip:
+    bits = ip.split('.')[0:3]
+    if reverse:
+      bits.reverse()
+    return '.'.join(bits)
+  elif ':' in ip:
+    print "GetNetworkForIp() does not yet support IPv6"
+    return None
+
 def GetDomainPartOfHostname(hostname):
   """Get the main domain part of a hostname. Needs work."""
   host_parts = hostname.split('.')
@@ -102,7 +113,7 @@ def IsPrivateIP(ip):
 
 def MaskStringWithIPs(string):
   """Mask all private IP addresses listed in a string."""
-  
+
   ips = ExtractIPsFromString(string)
   for ip in ips:
     use_bits = IsPrivateIP(ip)
@@ -110,7 +121,7 @@ def MaskStringWithIPs(string):
       masked_ip = MaskIPBits(ip, use_bits)
       string = string.replace(ip, masked_ip)
   return string
-    
+
 def MaskIPBits(ip, use_bits):
   """Mask an IP, but still keep a meaningful checksum."""
   ip_parts = ip.split('.')

@@ -98,7 +98,7 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
 def GetNameServerData(filename='config/servers.csv'):
   server_file = util.FindDataFile(filename)
   ns_data = _ParseNameServerListing(open(server_file))
-  
+
   # Add the system servers for later reference.
   for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
     ns = nameserver.NameServer(ip, tags=['system', 'system-%s' % i],
@@ -128,6 +128,13 @@ def _ParseNameServerListing(fp):
     else:
       lat = lon = None
 
+    as_match = re.match('AS\d+(.*)', row['asn'])
+    if as_match:
+      asn, network_owner = as_match.groups()
+      network_owner = network_owner.lstrip(' ').rstrip(' ')
+    else:
+      asn, network_owner = None
+
     ns_data.append(nameserver.NameServer(
         row['ip'],
         name=name,
@@ -137,7 +144,8 @@ def _ParseNameServerListing(fp):
         location=row['location'],
         latitude=lon,
         longitude=lat,
-        asn=row['asn']
+        asn=asn,
+        network_owner=network_owner
     ))
 
   return ns_data

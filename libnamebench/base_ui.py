@@ -23,6 +23,7 @@ import data_sources
 import geoip
 import nameserver
 import reporter
+import providers
 import site_connector
 import util
 
@@ -90,6 +91,8 @@ class BaseUI(object):
   def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()
+    longitude = latitude = asn = country = None
+
     if self.options.invalidate_cache:
       self.nameservers.InvalidateSecondaryCache()
 
@@ -105,6 +108,16 @@ class BaseUI(object):
       include_tags.update(set(['system', 'dhcp']))
 
     if self.options.include_regional or self.options.include_all:
+      if not self.geodata:
+        geodata = self.DiscoverLocation()
+        lon = geodata.get('longitude')
+        lat = geodata.get('latitude')
+        country = geodata.get('country')
+
+      client_ip = providers.MyResolverInfo().ClientIp()
+      local_ns = providers.SystemResolver()
+      hostname = local_ns.GetReverseIp(client_ip)
+      asn = local_ns.GetAsnForIp(client_ip)
       include_tags.update(set(['regional', 'internal', 'global']))
 
     if self.options.include_global or self.options.include_all:
@@ -114,8 +127,7 @@ class BaseUI(object):
     self.nameservers.cache_dir = tempfile.gettempdir()
     self.nameservers.FilterByTag(include_tags=include_tags,
                                  require_tags=require_tags)
-    lat = lon = country = asn = hostname = None
-    self.nameservers.FilterByProximity(lat, lon, country, asn, hostname)
+    self.nameservers.FilterByProximity(lat, lon, country, asn, client_ip, hostname)
     self.nameservers.SetTimeouts(self.options.timeout,
                                  self.options.ping_timeout,
                                  self.options.health_timeout)

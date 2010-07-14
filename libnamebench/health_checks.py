@@ -61,7 +61,7 @@ class NameServerHealthChecks(object):
     if response:
       response_code = rcode.to_text(response.rcode())
       if response_code in FATAL_RCODES:
-        error_msg = 'Responded with: %s' % response_code     
+        error_msg = 'Responded with: %s' % response_code
         if critical:
           is_broken = True
       elif not response.answer:
@@ -140,13 +140,13 @@ class NameServerHealthChecks(object):
       error_msg = 'NXDOMAIN Hijacking' + warning_suffix
 
     return (is_broken, error_msg, duration)
-    
+
   def TestRootNsResponse(self):
     """Test a . NS response.
-    
+
     NOTE: This is a bad way to gauge performance of a nameserver, as the
     response length varies between nameserver configurations.
-    """    
+    """
     is_broken = False
     error_msg = None
     (response, duration, error_msg) = self.TimedRequest('NS', '.')
@@ -158,7 +158,7 @@ class NameServerHealthChecks(object):
     else:
       response_code = rcode.to_text(response.rcode())
       if response_code in FATAL_RCODES:
-        error_msg = response_code     
+        error_msg = response_code
         is_broken = True
 
     return (is_broken, error_msg, duration)
@@ -168,27 +168,6 @@ class NameServerHealthChecks(object):
 
   def TestARootServerResponse(self):
     return self.TestAnswers('A', 'a.root-servers.net.', '198.41.0.4', critical=True)
-
-  def TestPortBehavior(self, tries=0):
-    """This is designed to be called multiple times to retry bad results."""
-
-    if self.port_behavior:
-      if 'UNKNOWN' not in self.port_behavior:
-        return (False, None, 0)
-
-    tries += 1
-    response = self.TimedRequest('TXT', 'porttest.dns-oarc.net.', timeout=5)[0]
-    if response and response.answer:
-      if len(response.answer) > 1:
-        text = response.answer[1].to_rdataset().to_text()
-        self.port_behavior = text.split('"')[1]
-
-    if (not self.port_behavior or 'UNKNOWN' in self.port_behavior) and tries < MAX_PORT_BEHAVIOR_TRIES:
-      time.sleep(1)
-      return self.TestPortBehavior(tries=tries)
-
-#    print "%s behavior: %s (tries=%s)" % (self, self.port_behavior, tries)
-    return (False, None, 0)
 
   def StoreWildcardCache(self):
     """Store a set of wildcard records."""

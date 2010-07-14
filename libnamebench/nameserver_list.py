@@ -147,20 +147,32 @@ class NameServers(list):
     super(NameServers, self).__init__()
 
   @property
-  def preferred(self):
+  def preferred_servers(self):
     return [x for x in self if x.is_preferred]
+
+  @property
+  def specified_servers(self):
+    return [x for x in self if x.is_specified]
 
   @property
   def enabled_preferred(self):
     return [x for x in self.preferred if not x.is_disabled]
 
   @property
-  def secondaries(self):
-    return [x for x in self.SortByNearest() if not x.is_preferred]
+  def regional_servers(self):
+    return [x for x in self if x.is_regional]
 
   @property
-  def enabled_secondaries(self):
-    return [x for x in self.secondaries if not x.is_disabled and not x.is_hidden ]
+  def enabled_regional(self):
+    return [x for x in self.regional if not x.is_disabled and not x.is_hidden]
+
+  @property
+  def global_servers(self):
+    return [x for x in self if x.is_global]
+
+  @property
+  def enabled_global(self):
+    return [x for x in self.global_servers if not x.is_disabled and not x.is_hidden]
 
   @property
   def enabled_servers(self):
@@ -219,7 +231,7 @@ class NameServers(list):
 
   def FilterByTag(self, include_tags=None, require_tags=None):
     print "Filter: %s by %s" % (include_tags, require_tags)
-    
+
     for ns in self:
       if include_tags:
         if not ns.MatchesTags(include_tags):
@@ -234,7 +246,21 @@ class NameServers(list):
       raise TooFewNameservers('No nameservers specified matched tags %s %s' % (include_tags, require_tags))
     self.msg("%s of %s nameservers are available after tag filtering." % (len(self.visible_servers), len(self)))
 
+  def NearbyServers(self, latitude, longitude, max_distance=1000):
+    srv_by_dist = sorted([(x.DistanceFromCoordinates(latitude, longitude), x) for x in self.enabled_regional],
+                         key=operator.itemgetter(0))
+    return [x[1] for x in srv_by_dist if x[0] <= max_distance]
+
   def FilterByProximity(self, latitude, longitude, country, asn, hostname):
+    in_asn = [x for x in self.enabled_regional if x.asn == asn]
+    print "blessed by asn: %s" % len(in_asn)
+
+    country_blessed = [x for x in self.enabled_servers and x.country_code == country]
+    print "in country %s: %s" % (country, len(blessed))
+    if len(blessed) < MAX_NEARBY_SERVERS:
+      blessed.extend(self.NearbyServers(latitude, longitude))
+
+
     print "PROXIMITY DOES NOTHING"
 
   def InvokeSecondaryCache(self):
@@ -551,8 +577,8 @@ class NameServers(list):
 
 
   def GetHealthyPercentage(self):
-    return (float(len(self.enabled_servers)) / float(len(self.visible_servers))) * 100    
-    
+    return (float(len(self.enabled_servers)) / float(len(self.visible_servers))) * 100
+
   def RunHealthCheckThreads(self, checks, min_healthy_percent=MIN_HEALTHY_PERCENT):
     """Quickly ping nameservers to see which are healthy."""
 

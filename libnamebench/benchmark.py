@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """Simple DNS server comparison benchmarking tool.
 
 Designed to assist system administrators in selection and prioritization.

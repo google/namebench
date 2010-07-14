@@ -19,12 +19,10 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import time
 
 import nameserver
-import nameserver_list
+import providers
 import sys_nameservers
 import util
 
-OPENDNS_NS = '208.67.220.220'
-GOOGLE_NS = '8.8.8.8'
 EXPECTED_CONGESTION_DURATION = 40.0
 CONGESTION_OFFSET_MULTIPLIER = 1
 MAX_CONGESTION_MULTIPLIER = 4.5
@@ -45,40 +43,13 @@ class ConnectionQuality(object):
 
   def __init__(self, status_callback=None):
     self.status_callback = status_callback
-    self.primary = self.GetSystemPrimaryNameServer()
+    self.primary = providers.SystemResolver()
 
   def msg(self, msg, **kwargs):
     if self.status_callback:
       self.status_callback(msg, **kwargs)
     else:
       print '- %s' % msg
-
-  def GetInterceptionStatus(self):
-    """Check if our packets are actually getting to the correct servers."""
-
-    opendns = nameserver.NameServer(OPENDNS_NS)
-    (node_id, duration, unused_error) = opendns.RequestNodeId()
-    if 'I am not an OpenDNS resolver' in node_id:
-      return (True, duration)
-    elif node_id:
-      return (False, duration)
-    else:
-      self.msg('DNS interception test failed (no response)')
-      return (False, duration)
-
-    return (False, duration)
-
-  def GetSystemPrimaryNameServer(self):
-    """Return a nameserver object for the system primary."""
-
-    internal = sys_nameservers.GetCurrentNameServers()
-    # In rare cases, we may not find any to use.
-    if not internal:
-      print 'Odd - no built-in nameservers found.'
-      return None
-    else:
-      primary_ip = internal[0]
-      return nameserver.NameServer(primary_ip)
 
   def GetNegativeResponseDuration(self):
     """Use the built-in DNS server to query for a negative response."""
@@ -87,7 +58,7 @@ class ConnectionQuality(object):
 
   def GetGoogleResponseDuration(self):
     """See how quickly we can query for www.google.com using a remote nameserver."""
-    gdns = nameserver.NameServer(GOOGLE_NS)
+    gdns = providers.GooglePublicDNS()
     return gdns.TimedRequest('A', 'www.google.com.')
 
   def CheckConnectionQuality(self):
@@ -96,7 +67,8 @@ class ConnectionQuality(object):
     is_connection_offline = True
     durations = []
     self.msg('Checking query interception status...')
-    (intercepted, i_duration) = self.GetInterceptionStatus()
+    odns = providers.OpenDNS()
+    (intercepted, i_duration) = odns.InterceptionStateWithDuration()
     if i_duration:
       is_connection_offline = False
 
@@ -121,9 +93,10 @@ class ConnectionQuality(object):
       time.sleep(0.2)
 
     if is_connection_offline:
-      raise OfflineConnection('It would appear that your internet connection is offline. '
+      raise OfflineConnection('It would appear that your internet connection is offline.'
                               'namebench is not gettng a response for DNS queries to '
-                              '%s, %s, or %s.' % (self.primary.ip, GOOGLE_NS, OPENDNS_NS))
+                              '%s, %s, or %s.' % (self.primary.ip, providers.GOOGLE_IP,
+                                                  providers.OPENDNS_IP))
 
     duration = util.CalculateListAverage(durations)
     congestion = duration / EXPECTED_CONGESTION_DURATION

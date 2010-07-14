@@ -123,7 +123,7 @@ class DataSources(object):
     for (unused_type, name, is_synthetic, count) in self.ListSourcesWithDetails():
       if not is_synthetic:
         seen_organic = True
-      
+
       if is_synthetic and seen_organic and not seen_synthetic:
         titles.append('-' * 36)
         seen_synthetic = True

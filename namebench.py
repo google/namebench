@@ -32,7 +32,6 @@ elif sys.version >= '3.0':
 
 from libnamebench import cli
 from libnamebench import config
-from libnamebench import version
 
 if __name__ == '__main__':
   options = config.GetMergedConfiguration()
