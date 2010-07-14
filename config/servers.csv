@@ -3221,7 +3221,7 @@
 "2001:6b0:1::200","regional","KTH","IPv6",,"SE/Stockholms Lan/Stockholm","59.3333015442,18.0499992371",,,2,,,,,,,,,,,,,
 "2001:6b0:1::201","regional","KTH","IPv6-2",,"SE/Stockholms Lan/Stockholm","59.3333015442,18.0499992371",,,2,,,,,,,,,,,,,
 "2001:ad0::","regional","LinxTelecom","IPv6",,"EE/Tartumaa/Tartu","58.3661003113,26.7360992432",,,39,,,,,,,,,,,,,
-"::1","regional","Localhost IPv6",,,,,,,50,,"unbound 1.4.2",,,,,,,,,,,
+"::1","internal","Localhost IPv6",,,,,,,50,,"unbound 1.4.2",,,,,,,,,,,
 "2a02:200:1:11::100","regional","Monzoon IPv6 AT",,,"US/Texas/El Paso","31.7831993103,-106.497596741",,,0,,,,,,,,,,,,,
 "2407:9000:0:c::3","regional","PipeNetworks AU",,,"GB/Edinburgh/Edinburgh","55.9500007629,-3.20000004768",,,0,,,,,,,,,,,,,
 "2001:840:100::","regional","PowerTech IPv6 NO",,,"US/Texas/Greenville","33.1181983948,-96.0986022949",,,0,,,,,,,,,,,,,

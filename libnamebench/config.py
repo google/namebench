@@ -128,12 +128,12 @@ def _ParseNameServerListing(fp):
     else:
       lat = lon = None
 
-    as_match = re.match('AS\d+(.*)', row['asn'])
+    as_match = re.match('AS(\d+)(.*)', row['asn'])
     if as_match:
       asn, network_owner = as_match.groups()
       network_owner = network_owner.lstrip(' ').rstrip(' ')
     else:
-      asn, network_owner = None
+      asn = network_owner = None
 
     ns_data.append(nameserver.NameServer(
         row['ip'],
@@ -142,9 +142,10 @@ def _ParseNameServerListing(fp):
         provider=row['provider'],
         instance=row['instance'],
         location=row['location'],
-        latitude=lon,
-        longitude=lat,
+        latitude=lat,
+        longitude=lon,
         asn=asn,
+        hostname=row['hostname'],
         network_owner=network_owner
     ))
 
@@ -181,7 +182,7 @@ def GetAutoUpdatingConfigFile(conf_file):
   url = '%s/%s' % (TRUNK_URL, conf_file)
   content = None
   try:
-    unused_resp, content = h.request(url, 'GET')
+    _, content = h.request(url, 'GET')
     remote_config = ConfigParser.ConfigParser()
   except:
     print '* Unable to fetch remote %s: %s' % (conf_file, util.GetLastExceptionString())

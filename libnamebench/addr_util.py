@@ -67,16 +67,20 @@ def GetNetworkForIp(ip, reverse=False):
     print "GetNetworkForIp() does not yet support IPv6"
     return None
 
-def GetDomainPartOfHostname(hostname):
+def GetDomainFromHostname(hostname):
   """Get the main domain part of a hostname. Needs work."""
   host_parts = hostname.split('.')
   if len(host_parts) > 3 and (len(host_parts[-2]) < 3 or host_parts[-2] in ('edu', 'com', 'net')):
-    return host_parts[-3].lower()
+    return '.'.join(host_parts[-3:]).lower()
   elif len(host_parts) > 1:
-    return host_parts[-2].lower()
+    return '.'.join(host_parts[-2:]).lower()
   else:
     return hostname
 
+def GetProviderPartOfHostname(hostname):
+  """Get the main domain part of a hostname. Needs work."""
+  domain = GetDomainFromHostname(hostname)
+  return domain.split('.')[0]
 
 def IsLoopbackIP(ip):
   """Boolean check to see if an IP is private or not.

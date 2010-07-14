@@ -27,7 +27,7 @@ import providers
 import site_connector
 import util
 
-DEFAULT_DISTANCE_KM=1000
+DEFAULT_DISTANCE_KM=2000
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
@@ -112,7 +112,7 @@ class BaseUI(object):
         geodata = self.DiscoverLocation()
         lon = geodata.get('longitude')
         lat = geodata.get('latitude')
-        country = geodata.get('country')
+        country = geodata.get('country_code')
 
       client_ip = providers.MyResolverInfo().ClientIp()
       local_ns = providers.SystemResolver()
@@ -127,7 +127,8 @@ class BaseUI(object):
     self.nameservers.cache_dir = tempfile.gettempdir()
     self.nameservers.FilterByTag(include_tags=include_tags,
                                  require_tags=require_tags)
-    self.nameservers.FilterByProximity(lat, lon, country, asn, client_ip, hostname)
+    if self.options.include_regional or self.options.include_all:
+      self.nameservers.FilterByProximity(lat, lon, country, asn, hostname, max_distance=DEFAULT_DISTANCE_KM)
     self.nameservers.SetTimeouts(self.options.timeout,
                                  self.options.ping_timeout,
                                  self.options.health_timeout)

@@ -44,7 +44,10 @@ CACHE_VER = 4
 PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
 TOO_DISTANT_MULTIPLIER = 4.75
-MAX_NEARBY_SERVERS = 400
+
+MAX_NEARBY_SERVERS = 500
+MAX_SERVERS_TO_CHECK = 350
+
 
 # If we can't ping more than this, go into slowmode.
 MIN_PINGABLE_PERCENT = 20
@@ -151,12 +154,17 @@ class NameServers(list):
     return [x for x in self if x.is_preferred]
 
   @property
+  def enabled_preferred(self):
+    return [x for x in self.preferred_servers if not x.is_disabled]
+
+  @property
+  def supplemental_servers(self):
+    return [x for x in self if not x.is_preferred and not x.is_specified]
+
+  @property
   def specified_servers(self):
     return [x for x in self if x.is_specified]
 
-  @property
-  def enabled_preferred(self):
-    return [x for x in self.preferred if not x.is_disabled]
 
   @property
   def regional_servers(self):
@@ -164,7 +172,7 @@ class NameServers(list):
 
   @property
   def enabled_regional(self):
-    return [x for x in self.regional if not x.is_disabled and not x.is_hidden]
+    return [x for x in self.regional_servers if not x.is_disabled and not x.is_hidden]
 
   @property
   def global_servers(self):
@@ -246,39 +254,42 @@ class NameServers(list):
       raise TooFewNameservers('No nameservers specified matched tags %s %s' % (include_tags, require_tags))
     self.msg("%s of %s nameservers are available after tag filtering." % (len(self.visible_servers), len(self)))
 
-  def NearbyServers(self, latitude, longitude, max_distance=1000):
+  def NearbyServers(self, latitude, longitude, max_distance):
     srv_by_dist = sorted([(x.DistanceFromCoordinates(latitude, longitude), x) for x in self.enabled_regional],
                          key=operator.itemgetter(0))
     return [x[1] for x in srv_by_dist if x[0] <= max_distance]
 
-  def FilterByProximity(self, latitude, longitude, country, asn, hostname):
+  def FilterByProximity(self, latitude, longitude, country, asn, hostname, max_distance=2500):
     in_asn = [x for x in self.enabled_regional if x.asn == asn]
     print "blessed by asn: %s" % len(in_asn)
 
-    country_blessed = [x for x in self.enabled_servers and x.country_code == country]
-    print "in country %s: %s" % (country, len(blessed))
-    if len(blessed) < MAX_NEARBY_SERVERS:
-      blessed.extend(self.NearbyServers(latitude, longitude))
+    my_domain = addr_util.GetDomainFromHostname(hostname)
+    in_domain = [x for x in self.enabled_regional if addr_util.GetDomainFromHostname(x.hostname) == my_domain]
+    print "in domain %s: %s" % (my_domain, len(in_domain))
 
+    my_provider = addr_util.GetProviderPartOfHostname(hostname)
+    in_provider = [x for x in self.enabled_regional if x.network_owner and my_provider in x.network_owner.lower()]
+    print "in provider %s: %s" % (my_provider, len(in_provider))
 
-    print "PROXIMITY DOES NOTHING"
+    in_country = [x for x in self.enabled_servers if x.country_code == country]
+    print "in country %s: %s" % (country, len(in_country))
+    if len(in_country) >= MAX_NEARBY_SERVERS:
+      max_distance = 100
 
-  def InvokeSecondaryCache(self):
-    """Delete secondary ips that do not exist in the cache file."""
-    cached = False
-    if self.cache_dir:
-      cpath = self._SecondaryCachePath()
-      cache_data = self._LoadSecondaryCache(cpath)
-      if cache_data:
-        for ns in self:
-          ns.warnings = set()
-          ns.checks = []
-        cached = True
-        cached_ips = [x.ip for x in cache_data if not x.is_preferred]
-        for ns in list(self.secondaries):
-          if ns.ip not in cached_ips:
-            self.remove(ns)
-    return cached
+    in_locale = self.NearbyServers(latitude, longitude, max_distance)[0:MAX_NEARBY_SERVERS]
+    print "near %s, %s (%s): %s" % (latitude, longitude, max_distance, len(in_locale))
+
+    blessed = set(in_asn)
+    blessed.update(set(in_domain))
+    blessed.update(set(in_provider))
+    blessed.update(set(in_country))
+    blessed.update(set(in_locale))
+    print "blessed: %s" % len(blessed)
+    for ns in self.enabled_regional:
+      if ns not in blessed:
+        ns.is_hidden = True
+
+    print "regionals left: %s" % len(self.enabled_regional)
 
   def RemoveBrokenServers(self, delete_unwanted=False):
     """Quietly remove broken servers."""
@@ -286,16 +297,16 @@ class NameServers(list):
       if ns.is_disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
         self.remove(ns)
 
-  def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_NEARBY_SERVERS):
+  def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_SERVERS_TO_CHECK):
     """Disable servers who's fastest duration is multiplier * average of best 10 servers."""
 
     self.RemoveBrokenServers(delete_unwanted=True)
-    secondaries = self.secondaries
+    supplemental_servers = self.supplemental_servers
     fastest = [x for x in self.SortByFastest() if not x.is_disabled ][:10]
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in fastest])
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
-    for idx, ns in enumerate(secondaries):
+    for idx, ns in enumerate(supplemental_servers):
       if (ns.fastest_check_duration > cutoff) or idx > max_servers:
         self.remove(ns)
 
@@ -307,35 +318,35 @@ class NameServers(list):
     # - Half of them should be the "nearest" nameservers
     # - Half of them should be the "fastest average" nameservers
     preferred_count = len(self.enabled_preferred)
-    secondaries_needed = target_count - preferred_count
-    if secondaries_needed < 1 or not self.secondaries:
+    supplemental_servers_needed = target_count - preferred_count
+    if supplemental_servers_needed < 1 or not self.supplemental_servers:
       return
-    nearest_needed = int(secondaries_needed / 2.0)
+    nearest_needed = int(supplemental_servers_needed / 2.0)
 
-    if secondaries_needed < 50:
+    if supplemental_servers_needed < 50:
       self.msg("Picking %s secondary servers to use (%s nearest, %s fastest)" %
-               (secondaries_needed, nearest_needed, secondaries_needed - nearest_needed))
+               (supplemental_servers_needed, nearest_needed, supplemental_servers_needed - nearest_needed))
 
     # Phase two is picking the nearest secondary server
-    secondaries_to_keep = []
+    supplemental_servers_to_keep = []
     for ns in self.SortByNearest():
 
       if not ns.is_preferred and not ns.is_disabled:
-        if not secondaries_to_keep and secondaries_needed < 15:
+        if not supplemental_servers_to_keep and supplemental_servers_needed < 15:
           self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
-        secondaries_to_keep.append(ns)
-        if len(secondaries_to_keep) >= nearest_needed:
+        supplemental_servers_to_keep.append(ns)
+        if len(supplemental_servers_to_keep) >= nearest_needed:
           break
 
     # Phase three is removing all of the slower secondary servers
     for ns in self.SortByFastest():
-      if not ns.is_preferred and not ns.is_disabled and ns not in secondaries_to_keep:
-        secondaries_to_keep.append(ns)
-        if len(secondaries_to_keep) >= secondaries_needed:
+      if not ns.is_preferred and not ns.is_disabled and ns not in supplemental_servers_to_keep:
+        supplemental_servers_to_keep.append(ns)
+        if len(supplemental_servers_to_keep) >= supplemental_servers_needed:
           break
 
-    for ns in self.secondaries:
-      if ns not in secondaries_to_keep:
+    for ns in self.supplemental_servers:
+      if ns not in supplemental_servers_to_keep:
 #        print "REMOVE: Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
         self.remove(ns)
 #      else:
@@ -398,41 +409,6 @@ class NameServers(list):
           ns.is_preferred = False
         else:
           seen[provider] = ns
-
-  def _SecondaryCachePath(self):
-    """Find a usable and unique location to store health results."""
-    secondary_ips = [x.ip for x in self.secondaries]
-    checksum = hash(str(sorted(secondary_ips)))
-    basefile = '.'.join(map(str, ('namebench', CACHE_VER, len(secondary_ips),
-                                  '_'.join(self.system_nameservers),
-                                  self.num_servers,
-                                  self.requested_health_timeout, checksum)))
-    return os.path.join(self.cache_dir, basefile)
-
-  def InvalidateSecondaryCache(self):
-    cpath = self._SecondaryCachePath()
-    if os.path.exists(cpath):
-      self.msg('Removing %s' % cpath)
-      os.unlink(cpath)
-
-  def _LoadSecondaryCache(self, cpath):
-    """Check if our health cache has any good data."""
-    if os.path.exists(cpath) and os.path.isfile(cpath):
-#      self.msg('Loading local server health cache: %s' % cpath)
-      cf = open(cpath, 'r')
-      try:
-        return pickle.load(cf)
-      except EOFError:
-        self.msg('No cached nameserver data found')
-    return False
-
-  def _UpdateSecondaryCache(self, cpath):
-    """Update the cache with our object."""
-    cf = open(cpath, 'w')
-    try:
-      pickle.dump(list(self), cf)
-    except TypeError, exc:
-      self.msg('Could not save cache: %s' % exc)
 
   def SortByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
