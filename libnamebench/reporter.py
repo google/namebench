@@ -70,7 +70,7 @@ class ReportGenerator(object):
 
     records = []
     for ns in self.results:
-      if ns.disabled:
+      if ns.is_disabled:
         continue
       failure_count = 0
       nx_count = 0
@@ -231,15 +231,9 @@ class ReportGenerator(object):
     template_dir = os.path.dirname(template_path)
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     template = env.get_template(template_name)
-    sys_nameservers = nameserver_list.InternalNameServers()
-    if sys_nameservers:
-      system_primary = sys_nameservers[0]
-    else:
-      system_primary = None
 
     rendered = template.render(
         best_ns=best_ns,
-        system_primary=system_primary,
         timestamp=datetime.datetime.now(),
         lowest_latency=lowest_latency,
         version=self.config.version,
@@ -293,12 +287,12 @@ class ReportGenerator(object):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     placed_at = -1
     fastest = {}
-    fastest_nonglobal = {}
+    fastest_normal = {}
     reference = {}
 
     # Fill in basic information for all nameservers, even those without scores.
     fake_position = 1000
-    for ns in sorted(self.nameservers, key=operator.attrgetter('check_average')):
+    for ns in sorted(self.nameservers.visible_servers, key=operator.attrgetter('check_average')):
       fake_position += 1
 
       nsdata[ns] = {
@@ -310,11 +304,8 @@ class ReportGenerator(object):
           'sys_position': ns.system_position,
           'is_failure_prone': ns.is_failure_prone,
           'duration_min': float(ns.fastest_check_duration),
-          'is_global': ns.is_global,
-          'is_regional': ns.is_regional,
-          'is_custom': ns.is_custom,
           'is_reference': False,
-          'is_disabled': bool(ns.disabled),
+          'is_disabled': ns.is_disabled,
           'check_average': ns.check_average,
           'error_count': ns.error_count,
           'timeout_count': ns.timeout_count,
@@ -342,34 +333,30 @@ class ReportGenerator(object):
           'index': self._GenerateIndexSummary(ns),
       })
       # Determine which nameserver to refer to for improvement scoring
-      if not ns.disabled:
-        if ns.system_position == 0:
+      if not ns.is_disabled:
+        if ns.is_system_primary:
           reference = ns
-        elif not fastest_nonglobal and not ns.is_global:
-          fastest_nonglobal = ns
+        elif not fastest_normal and not ns.is_preferred:
+          fastest_normal = ns
 
     # If no reference was found, use the fastest non-global nameserver record.
     if not reference:
-      if fastest_nonglobal:
-        reference = fastest_nonglobal
+      if fastest_normal:
+        reference = fastest_normal
       else:
         # The second ns.
-        reference = sorted_averages[1][0]
+        if len(sorted_averages) > 1:
+          reference = sorted_averages[1][0]
 
     # Update the improvement scores for each nameserver.
-    for ns in nsdata:
-      if nsdata[ns]['ip'] != nsdata[reference]['ip']:
-        if 'overall_average' in nsdata[ns]:
-          nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] /
-                                 nsdata[ns]['overall_average']) - 1) * 100
-      else:
-        nsdata[ns]['is_reference'] = True
-
-#      print "--- DEBUG: %s ---" % ns
-#      print nsdata[ns]
-#      if 'index' in nsdata[ns]:
-#        print "index length: %s" % len(nsdata[ns]['index'])
-#      print ""
+    if reference:
+      for ns in nsdata:
+        if nsdata[ns]['ip'] != nsdata[reference]['ip']:
+          if 'overall_average' in nsdata[ns]:
+            nsdata[ns]['diff'] = ((nsdata[reference]['overall_average'] /
+                                   nsdata[ns]['overall_average']) - 1) * 100
+        else:
+          nsdata[ns]['is_reference'] = True
 
     self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
     return self.cached_summary

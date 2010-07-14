@@ -31,11 +31,12 @@ import nb_third_party
 # from third_party
 import httplib2
 
+import addr_util
 import data_sources
 import nameserver
 import nameserver_list
+import sys_nameservers
 import util
-import addr_util
 import version
 
 TRUNK_URL = 'http://namebench.googlecode.com/svn/trunk/'
@@ -91,12 +92,24 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
 
   options, args = parser.parse_args()
   if args:
-    options.servers.extend(addr_util.ExtractIPTuplesFromString(' '.join(args)))
+    options.servers.extend(addr_util.ExtractIPsFromString(' '.join(args)))
   return options
 
 def GetNameServerData(filename='config/servers.csv'):
   server_file = util.FindDataFile(filename)
-  return _ParseNameServerListing(open(server_file))
+  ns_data = _ParseNameServerListing(open(server_file))
+  
+  # Add the system servers for later reference.
+  for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
+    ns = nameserver.NameServer(ip, tags=['system', 'system-%s' % i],
+                               name='SYS%s-%s' % (i, ip))
+    ns_data.append(ns)
+
+  for i, ip in enumerate(sys_nameservers.GetAssignedNameServers()):
+    ns = nameserver.NameServer(ip, tags=['dhcp', 'dhcp-%s' % i],
+                               name='DHCP%s-%s' % (i, ip))
+    ns_data.append(ns)
+  return ns_data
 
 def _ParseNameServerListing(fp):
   fields = ['ip', 'tags', 'provider', 'instance', 'hostname', 'location',

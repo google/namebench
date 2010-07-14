@@ -116,7 +116,7 @@ class Benchmark(object):
     """Run all test runs for all nameservers."""
 
     # We don't want to keep stats on how many queries timed out from previous runs.
-    for ns in self.nameservers.enabled:
+    for ns in self.nameservers.enabled_servers:
       ns.ResetErrorCounts()
 
     for _ in range(self.run_count):
@@ -143,13 +143,13 @@ class Benchmark(object):
     results = {}
     # Pre-compute the shuffled test records per-nameserver to avoid thread
     # contention.
-    for ns in self.nameservers.enabled:
+    for ns in self.nameservers.enabled_servers:
       random.shuffle(test_records)
       shuffled_records[ns.ip] = list(test_records)
 
     # Feed the pre-computed records into the input queue.
     for i in range(len(test_records)):
-      for ns in self.nameservers.enabled:
+      for ns in self.nameservers.enabled_servers:
         (request_type, hostname) = shuffled_records[ns.ip][i]
         input_queue.put((ns, request_type, hostname))
 
@@ -176,9 +176,9 @@ class Benchmark(object):
       thread.start()
       threads.append(thread)
 
-    query_count = expected_total / len(self.nameservers.enabled)
+    query_count = expected_total / len(self.nameservers.enabled_servers)
     status_message = ('Sending %s queries to %s servers' %
-                      (query_count, len(self.nameservers.enabled)))
+                      (query_count, len(self.nameservers.enabled_servers)))
     while results_queue.qsize() != expected_total:
       self.msg(status_message, count=results_queue.qsize(), total=expected_total)
       time.sleep(0.5)

@@ -24,7 +24,6 @@ import geoip
 import nameserver
 import reporter
 import site_connector
-import sys_nameservers
 import util
 
 DEFAULT_DISTANCE_KM=1000
@@ -86,17 +85,6 @@ class BaseUI(object):
     for i, ip in enumerate(self.options.servers):
       ns = nameserver.NameServer(ip, tags=['specified'], name='USR%s-%s' % (i, ip))
       ns_data.append(ns)
-
-    if self.options.include_system or self.options.include_all:
-      for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
-        ns = nameserver.NameServer(ip, tags=['system', 'system-%s' % i],
-                                   name='SYS%s-%s' % (i, ip))
-        ns_data.append(ns)
-
-      for i, ip in enumerate(sys_nameservers.GetAssignedNameServers()):
-        ns = nameserver.NameServer(ip, tags=['dhcp', 'dhcp-%s' % i],
-                                   name='DHCP%s-%s' % (i, ip))
-        ns_data.append(ns)
     return ns_data
 
   def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
@@ -106,7 +94,7 @@ class BaseUI(object):
       self.nameservers.InvalidateSecondaryCache()
 
     require_tags = set()
-    include_tags = set(['user-specified'])
+    include_tags = set(['specified'])
 
     if self.options.ipv6_only:
       require_tags.add('ipv6')
@@ -124,13 +112,13 @@ class BaseUI(object):
 
     self.nameservers.status_callback = self.UpdateStatus
     self.nameservers.cache_dir = tempfile.gettempdir()
-    self.nameservers.SetTimeouts(self.options.timeout,
-                                 self.options.ping_timeout,
-                                 self.options.health_timeout)
     self.nameservers.FilterByTag(include_tags=include_tags,
                                  require_tags=require_tags)
     lat = lon = country = asn = hostname = None
     self.nameservers.FilterByProximity(lat, lon, country, asn, hostname)
+    self.nameservers.SetTimeouts(self.options.timeout,
+                                 self.options.ping_timeout,
+                                 self.options.health_timeout)
     self.nameservers.CheckHealth(sanity_checks=config.GetSanityChecks())
 
   def PrepareBenchmark(self):
