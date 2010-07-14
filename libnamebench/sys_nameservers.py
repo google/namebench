@@ -69,7 +69,7 @@ def _GetNameServersFromIpConfig():
 def _GetNameServersFromDhclient():
   path = _FindNewestDhclientLeaseFile()
   if not path:
-    return None
+    return []
 
   # We want the last matching line in the file
   for line in open(path):
@@ -79,7 +79,7 @@ def _GetNameServersFromDhclient():
   if ns_string:
     return addr_util.ExtractIPsFromString(ns_string)
   else:
-    return None
+    return []
 
 def _FindNewestDhclientLeaseFile():
   paths = [
