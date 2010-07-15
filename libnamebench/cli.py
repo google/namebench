@@ -75,16 +75,6 @@ class NameBenchCli(base_ui.BaseUI):
     sys.stdout.flush()
     self.last_msg = (msg, count, total, error)
 
-  def PrepareNameServers(self):
-    super(NameBenchCli, self).PrepareNameServers()
-    print ''
-    print 'Final list of nameservers considered:'
-    print '-' * 78
-    for n in self.nameservers.SortByFastest():
-      print '%-15.15s %-18.18s %-4.0fms | %s' % (n.ip, n.name, n.check_average,
-                                                 n.warnings_string)
-    print ''
-
   def RunAndOpenReports(self):
     self.RunBenchmark()
     print "\n%s\n" % self.reporter.CreateReport(format='ascii')
@@ -120,6 +110,15 @@ class NameBenchCli(base_ui.BaseUI):
     try:
       self.LoadDataSources()
       self.PrepareTestRecords()
+      print '-' * 78
+      self.CheckNameServerHealth()
+      print 'Final list of nameservers considered:'
+      print '-' * 78
+      for n in self.nameservers.SortByFastest():
+        print '%-15.15s %-18.18s %-4.0fms | %s' % (n.ip, n.name, n.check_average,
+                                                   n.warnings_string)
+      print ''
+
       print ''
       self.PrepareBenchmark()
       self.RunAndOpenReports()

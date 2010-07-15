@@ -125,6 +125,8 @@ class BaseUI(object):
                                  require_tags=require_tags)
     if self.options.include_regional or self.options.include_all:
       self.nameservers.FilterByProximity(max_distance=DEFAULT_DISTANCE_KM)
+
+  def CheckNameServerHealth(self):
     self.nameservers.SetTimeouts(self.options.timeout,
                                  self.options.ping_timeout,
                                  self.options.health_timeout)
