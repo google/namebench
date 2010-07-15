@@ -121,6 +121,28 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     elif '.' in self.ip:
       self.tags.add('ipv4')
 
+    if ip.endswith('.0') or ip.endswith('.255'):
+      self.DisableWithMessage("IP appears to be a broadcast address.")
+
+  def ResetTestStatus(self):
+    """Reset testing status of this host."""
+    self.warnings = set()
+    self.shared_with = set()
+    self.is_disabled = False
+    self.checks = []
+    self.failed_test_count = 0
+    self.share_check_count = 0
+    self.cache_checks = []
+    self.is_slower_replica = False
+    self.ResetErrorCounts()
+
+  def ResetErrorCounts(self):
+    """NOTE: This gets called by benchmark.Run()!"""
+
+    self.request_count = 0
+    self.failure_count = 0
+    self.error_map = {}
+
   @property
   def is_system(self):
     return 'system' in self.tags
@@ -185,7 +207,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   @property
   def warnings_string(self):
     if self.is_disabled:
-      return '(excluded: %s)' % self.is_disabled
+      return 'DISABLED: %s' % self.disabled_msg
     else:
       return ', '.join(map(str, self.warnings))
 
@@ -198,7 +220,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   @property
   def errors(self):
-    return ['%s (%s Gets)' % (_[0], _[1]) for _ in self.error_map.items() if _[0] != 'Timeout']
+    return ['%s (%s requests)' % (_[0], _[1]) for _ in self.error_map.items() if _[0] != 'Timeout']
 
   @property
   def error_count(self):
@@ -217,11 +239,11 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     elif self.system_position:
       my_notes.append('A backup DNS server for this system.')
     if self.is_failure_prone:
-      my_notes.append('%0.0f queries to this host failed' % self.failure_rate)
+      my_notes.append('%s of %s queries failed' % (self.failure_count, self.request_count))
     if self.port_behavior and 'POOR' in self.port_behavior:
       my_notes.append('Vulnerable to poisoning attacks (poor port diversity)')
     if self.is_disabled:
-      my_notes.append(self.is_disabled)
+      my_notes.append(self.disabled_msg)
     else:
       my_notes.extend(self.warnings)
     if self.errors:
@@ -237,7 +259,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   @property
   def version(self):
     if self._version is None:
-      self.RequestVersion()
+      self.GetVersion()
 
     if not self._version:
       return None
@@ -313,25 +335,6 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   def MatchesTags(self, tags):
     return self.tags.intersection(tags)
 
-  def ResetTestStatus(self):
-    """Reset testing status of this host."""
-    self.warnings = set()
-    self.shared_with = set()
-    self.is_disabled = False
-    self.checks = []
-    self.failed_test_count = 0
-    self.share_check_count = 0
-    self.cache_checks = []
-    self.is_slower_replica = False
-    self.ResetErrorCounts()
-
-  def ResetErrorCounts(self):
-    """NOTE: This gets called by benchmark.Run()!"""
-
-    self.request_count = 0
-    self.failure_count = 0
-    self.error_map = {}
-
   def AddFailure(self, message, fatal=False):
     """Add a failure for this nameserver. This will effectively disable it's use."""
     if self.is_system:
@@ -369,7 +372,9 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   def DisableWithMessage(self, message):
     self.is_disabled = True
-    if not self.is_preferred:
+    if self.is_preferred or self.is_specified:
+      print "DISABLING %s: %s" % (self, message)
+    else:
       self.hidden = True
     self.disabled_msg = message
 
@@ -403,6 +408,8 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     record = dns.name.from_text(record_string, None)
     request = None
     self.request_count += 1
+
+#    print "%s: %s:%s" % (self, type_string, record_string)
 
     # Sometimes it takes great effort just to craft a UDP packet.
     try:
