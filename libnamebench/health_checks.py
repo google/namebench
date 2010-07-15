@@ -238,9 +238,11 @@ class NameServerHealthChecks(object):
     for (check, expected) in tests:
       (req_type, req_name) = check.split(' ')
       expected_values = expected.split(',')
-      result = self.TestAnswers(req_type.upper(), req_name, expected_values,
-                                timeout=CENSORSHIP_TIMEOUT)
-      warning = result[1]
+      is_broken, warning = self.TestAnswers(req_type.upper(), req_name, expected_values,
+                                            timeout=CENSORSHIP_TIMEOUT)[0:2]
+      if is_broken:
+        is_broken, warning = self.TestAnswers(req_type.upper(), req_name, expected_values,
+                                              timeout=CENSORSHIP_TIMEOUT)[0:2]
       if warning:
         self.AddWarning(warning, penalty=False)
 
