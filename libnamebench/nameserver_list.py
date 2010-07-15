@@ -165,11 +165,6 @@ class NameServers(list):
     return [x for x in self if not x.is_preferred and not x.is_specified and not x.is_hidden and not x.is_disabled]
 
   @property
-  def specified_servers(self):
-    return [x for x in self if x.is_specified]
-
-
-  @property
   def regional_servers(self):
     return [x for x in self if x.is_regional]
 
@@ -178,24 +173,12 @@ class NameServers(list):
     return [x for x in self.regional_servers if not x.is_disabled and not x.is_hidden]
 
   @property
-  def global_servers(self):
-    return [x for x in self if x.is_global]
-
-  @property
-  def enabled_global(self):
-    return [x for x in self.global_servers if not x.is_disabled and not x.is_hidden]
-
-  @property
   def enabled_servers(self):
     return [x for x in self if not x.is_disabled and not x.is_hidden]
 
   @property
   def visible_servers(self):
     return [x for x in self if not x.is_hidden]
-
-  @property
-  def check_average(self):
-    return util.CalculateListAverage([x.check_average for x in self if not x.is_disabled])
 
   def msg(self, msg, count=None, total=None, **kwargs):
     if self.status_callback:

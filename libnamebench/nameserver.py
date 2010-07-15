@@ -111,7 +111,6 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.health_timeout = 5
     self.ping_timeout = 1
     self.ResetTestStatus()
-    self.port_behavior = None
     self._version = None
     self._node_ids = set()
     self.timer = BEST_TIMER_FUNCTION
@@ -194,13 +193,6 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       return 0.0
 
   @property
-  def slowest_check_duration(self):
-    if self.checks:
-      return max([x[3] for x in self.checks])
-    else:
-      return None
-
-  @property
   def check_duration(self):
     return sum([x[3] for x in self.checks])
 
@@ -210,13 +202,6 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       return 'DISABLED: %s' % self.disabled_msg
     else:
       return ', '.join(map(str, self.warnings))
-
-  @property
-  def warnings_comment(self):
-    if self.warnings or self.is_disabled:
-      return '# ' + self.warnings_string
-    else:
-      return ''
 
   @property
   def errors(self):
@@ -240,8 +225,6 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       my_notes.append('A backup DNS server for this system.')
     if self.is_failure_prone:
       my_notes.append('%s of %s queries failed' % (self.failure_count, self.request_count))
-    if self.port_behavior and 'POOR' in self.port_behavior:
-      my_notes.append('Vulnerable to poisoning attacks (poor port diversity)')
     if self.is_disabled:
       my_notes.append(self.disabled_msg)
     else:

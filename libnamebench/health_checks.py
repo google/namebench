@@ -139,27 +139,6 @@ class NameServerHealthChecks(object):
 
     return (is_broken, error_msg, duration)
 
-  def TestRootNsResponse(self):
-    """Test a . NS response.
-
-    NOTE: This is a bad way to gauge performance of a nameserver, as the
-    response length varies between nameserver configurations.
-    """
-    is_broken = False
-    error_msg = None
-    (response, duration, error_msg) = self.TimedRequest('NS', '.')
-    if not response:
-      response_code = None
-      is_broken = True
-      if not error_msg:
-        error_msg = 'No response'
-    else:
-      response_code = rcode.to_text(response.rcode())
-      if response_code in FATAL_RCODES:
-        error_msg = response_code
-        is_broken = True
-
-    return (is_broken, error_msg, duration)
 
   def TestWwwNegativeResponse(self):
     return self.TestNegativeResponse(prefix='www')

@@ -310,7 +310,6 @@ class ReportGenerator(object):
           'error_count': ns.error_count,
           'timeout_count': ns.timeout_count,
           'notes': url_map.CreateNoteUrlTuples(ns.notes),
-          'port_behavior': ns.port_behavior,
           'position': fake_position
       }
 
