@@ -37,7 +37,7 @@ if __name__ == '__main__':
   options = config.GetMergedConfiguration()
   use_tk = False
 
-  if not options.no_gui:
+  if len(sys.argv) == 1:
     if os.getenv('DISPLAY', None):
       use_tk = True
     # Macs get a special Cocoa binary
@@ -62,7 +62,7 @@ if __name__ == '__main__':
       use_tk = False
 
   if use_tk:
-    print 'Starting Tk interface for namebench...'
+    print 'Starting graphical interface for namebench (use -x to force command-line usage)'
     from libnamebench import tk
     interface = tk.NameBenchGui
   else:
