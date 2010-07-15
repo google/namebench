@@ -16,6 +16,7 @@
 
 import tempfile
 
+import addr_util
 import benchmark
 import better_webbrowser
 import config
@@ -91,11 +92,6 @@ class BaseUI(object):
   def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()
-    longitude = latitude = asn = country = None
-
-    if self.options.invalidate_cache:
-      self.nameservers.InvalidateSecondaryCache()
-
     require_tags = set()
     include_tags = set(['specified'])
 
@@ -109,26 +105,26 @@ class BaseUI(object):
 
     if self.options.include_regional or self.options.include_all:
       if not self.geodata:
-        geodata = self.DiscoverLocation()
-        lon = geodata.get('longitude')
-        lat = geodata.get('latitude')
-        country = geodata.get('country_code')
-
+        self.DiscoverLocation()
+      self.nameservers.SetClientLocation(self.geodata.get('latitude'),
+                                         self.geodata.get('longitude'),
+                                         self.geodata.get('country_code'))
       client_ip = providers.MyResolverInfo().ClientIp()
       local_ns = providers.SystemResolver()
       hostname = local_ns.GetReverseIp(client_ip)
-      asn = local_ns.GetAsnForIp(client_ip)
+      self.nameservers.SetNetworkLocation(addr_util.GetDomainFromHostname(hostname),
+                                          local_ns.GetAsnForIp(client_ip))
+
       include_tags.update(set(['regional', 'internal', 'global']))
 
     if self.options.include_global or self.options.include_all:
       include_tags.update(set(['preferred', 'global']))
 
     self.nameservers.status_callback = self.UpdateStatus
-    self.nameservers.cache_dir = tempfile.gettempdir()
     self.nameservers.FilterByTag(include_tags=include_tags,
                                  require_tags=require_tags)
     if self.options.include_regional or self.options.include_all:
-      self.nameservers.FilterByProximity(lat, lon, country, asn, hostname, max_distance=DEFAULT_DISTANCE_KM)
+      self.nameservers.FilterByProximity(max_distance=DEFAULT_DISTANCE_KM)
     self.nameservers.SetTimeouts(self.options.timeout,
                                  self.options.ping_timeout,
                                  self.options.health_timeout)

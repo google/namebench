@@ -142,6 +142,12 @@ class NameServers(list):
     self.thread_count = MAX_SANE_THREAD_COUNT
     super(NameServers, self).__init__()
 
+    self.client_latitude = None
+    self.client_longitude = None
+    self.client_country = None
+    self.client_domain = None
+    self.client_asn = None
+
   @property
   def preferred_servers(self):
     return [x for x in self if x.is_preferred]
@@ -153,6 +159,10 @@ class NameServers(list):
   @property
   def supplemental_servers(self):
     return [x for x in self if not x.is_preferred and not x.is_specified]
+
+  @property
+  def enabled_supplemental(self):
+    return [x for x in self if not x.is_preferred and not x.is_specified and not x.is_hidden and not x.is_disabled]
 
   @property
   def specified_servers(self):
@@ -229,6 +239,15 @@ class NameServers(list):
       ns.ping_timeout = ping_timeout
       ns.health_timeout = health_timeout
 
+  def SetClientLocation(self, latitude, longitude, client_country):
+    self.client_latitude = latitude
+    self.client_longitude = longitude
+    self.client_country = client_country
+
+  def SetNetworkLocation(self, domain, asn):
+    self.client_domain = domain
+    self.client_asn = asn
+
   def FilterByTag(self, include_tags=None, require_tags=None):
     for ns in self:
       if include_tags:
@@ -251,34 +270,28 @@ class NameServers(list):
       self.msg("%s of %s nameservers have tags: %s" %
                (len(self.visible_servers), len(self), ', '.join(include_tags)))
 
-  def NearbyServers(self, latitude, longitude, max_distance):
-    srv_by_dist = sorted([(x.DistanceFromCoordinates(latitude, longitude), x) for x in self.enabled_regional],
-                         key=operator.itemgetter(0))
+  def NearbyServers(self, max_distance):
+    srv_by_dist = sorted([(x.DistanceFromCoordinates(self.client_latitude, self.client_longitude), x)
+                          for x in self.enabled_regional], key=operator.itemgetter(0))
     return [x[1] for x in srv_by_dist if x[0] <= max_distance]
 
-  def FilterByProximity(self, latitude, longitude, country, asn, hostname, max_distance=2500):
-    in_asn = [x for x in self.enabled_regional if x.asn == asn]
+  def FilterByProximity(self, max_distance=2500):
+    in_asn = [x for x in self.enabled_regional if x.asn == self.client_asn]
     print "blessed by asn: %s" % len(in_asn)
 
-    my_domain = addr_util.GetDomainFromHostname(hostname)
-    in_domain = [x for x in self.enabled_regional if addr_util.GetDomainFromHostname(x.hostname) == my_domain]
-    print "in domain %s: %s" % (my_domain, len(in_domain))
+    in_domain = [x for x in self.enabled_regional if addr_util.GetDomainFromHostname(x.hostname) == self.client_domain]
+    print "in domain %s: %s" % (self.client_domain, len(in_domain))
 
-    my_provider = addr_util.GetProviderPartOfHostname(hostname)
-    in_provider = [x for x in self.enabled_regional if x.network_owner and my_provider in x.network_owner.lower()]
-    print "in provider %s: %s" % (my_provider, len(in_provider))
-
-    in_country = [x for x in self.enabled_servers if x.country_code == country]
-    print "in country %s: %s" % (country, len(in_country))
+    in_country = [x for x in self.enabled_servers if x.country_code == self.client_country]
+    print "in country %s: %s" % (self.client_country, len(in_country))
     if len(in_country) >= MAX_NEARBY_SERVERS:
       max_distance = 100
 
-    in_locale = self.NearbyServers(latitude, longitude, max_distance)[0:MAX_NEARBY_SERVERS]
-    print "near %s, %s (%s): %s" % (latitude, longitude, max_distance, len(in_locale))
+    in_locale = self.NearbyServers(max_distance)[0:MAX_NEARBY_SERVERS]
+    print "near %s, %s (%s): %s" % (self.client_latitude, self.client_longitude, max_distance, len(in_locale))
 
     blessed = set(in_asn)
     blessed.update(set(in_domain))
-    blessed.update(set(in_provider))
     blessed.update(set(in_country))
     blessed.update(set(in_locale))
     print "blessed: %s" % len(blessed)
@@ -288,29 +301,27 @@ class NameServers(list):
 
     print "regionals left: %s" % len(self.enabled_regional)
 
-  def RemoveBrokenServers(self, delete_unwanted=False):
-    """Quietly remove broken servers."""
-    for ns in list(self):
-      if ns.is_disabled and delete_unwanted and (ns.is_ipv6 or not ns.is_preferred):
-        self.remove(ns)
-
-  def DisableDistantServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_SERVERS_TO_CHECK):
+  def DisableSlowestSupplementalServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_SERVERS_TO_CHECK,
+                                        prefer_asn=None):
     """Disable servers who's fastest duration is multiplier * average of best 10 servers."""
 
-    self.RemoveBrokenServers(delete_unwanted=True)
-    supplemental_servers = self.supplemental_servers
+    supplemental_servers = self.enabled_supplemental
     fastest = [x for x in self.SortByFastest() if not x.is_disabled ][:10]
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in fastest])
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
-    for idx, ns in enumerate(supplemental_servers):
-      if (ns.fastest_check_duration > cutoff) or idx > max_servers:
-        self.remove(ns)
+    for (idx, ns) in enumerate(supplemental_servers):
+      if ns.asn == self.client_asn or ns.hostname.endswith(self.client_domain):
+        print "%s (%s) is part of our network" % (ns, ns.fastest_check_duration)
+      elif ns.fastest_check_duration > cutoff:
+        print "%s (%s) is slower than cutoff." % (ns, ns.fastest_check_duration)
+        ns.is_hidden = True
+      elif idx > max_servers:
+        print "%s (%s) is >%s" % (ns, ns.fastest_check_duration, max_servers)
+        ns.is_hidden = True
 
   def DisableUnwantedServers(self, target_count, delete_unwanted=False):
     """Given a target count, delete nameservers that we do not plan to test."""
-    self.RemoveBrokenServers(delete_unwanted)
-
     # Magic secondary mixing algorithm:
     # - Half of them should be the "nearest" nameservers
     # - Half of them should be the "fastest average" nameservers
@@ -349,13 +360,13 @@ class NameServers(list):
 #      else:
 #        print "KEEP  : Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
 
-  def CheckHealth(self, sanity_checks=None, max_servers=11):
+  def CheckHealth(self, sanity_checks=None, max_servers=11, prefer_asn=None):
     """Filter out unhealthy or slow replica servers."""
 #    self.msg('Pinging %s nameservers (%s threads)' %
 #             (len(self.enabled_servers), self.thread_count))
     self.PingNameServers()
     if len(self.enabled_servers) > max_servers:
-      self.DisableDistantServers(NS_CACHE_SLACK, max_servers)
+      self.DisableSlowestSupplementalServers(prefer_asn=prefer_asn)
     self.RunHealthCheckThreads(sanity_checks['primary'])
     if len(self.enabled_servers) > max_servers:
       self._DemoteSecondaryGlobalNameServers()
@@ -397,15 +408,13 @@ class NameServers(list):
     seen = {}
     for ns in self.SortByFastest():
       if ns.is_preferred:
-        # TODO(tstromberg): Have a better way of denoting secondary anycast.
-        provider = ns.name.replace('-2', '')
-        if provider in seen and not ns.is_system:
-          faster_ns = seen[provider]
+        if ns.provider in seen and not ns.is_system and not ns.is_specified:
+          faster_ns = seen[ns.provider]
           self.msg('Making %s the primary anycast - faster than %s by %2.2fms' %
                    (faster_ns.name_and_node, ns.name_and_node, ns.check_average - faster_ns.check_average))
-          ns.is_preferred = False
+          ns.is_hidden = True
         else:
-          seen[provider] = ns
+          seen[ns.provider] = ns
 
   def SortByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
