@@ -293,6 +293,8 @@ class ReportGenerator(object):
     # Fill in basic information for all nameservers, even those without scores.
     fake_position = 1000
     for ns in sorted(self.nameservers.visible_servers, key=operator.attrgetter('check_average')):
+      if ns.is_hidden:
+        continue
       fake_position += 1
 
       nsdata[ns] = {
