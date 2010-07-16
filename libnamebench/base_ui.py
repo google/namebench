@@ -103,7 +103,10 @@ class BaseUI(object):
     if 'regional' in self.options.tags:
       country, lat, lon = self.ConfiguredLocationData()
       if country:
+        self.UpdateStatus("Detected country as %s (%s,%s)" % (country, lat, lon))
         self.nameservers.SetClientLocation(lat, lon, country)
+
+    if self.options.tags.intersection(set(['regional','isp','network'])):
       client_ip = providers.MyResolverInfo().ClientIp()
       local_ns = providers.SystemResolver()
       try:
@@ -111,8 +114,12 @@ class BaseUI(object):
         domain = addr_util.GetDomainFromHostname(hostname)
       except:
         domain = 'UNKNOWN'
-      self.nameservers.SetNetworkLocation(domain, local_ns.GetAsnForIp(client_ip))
+      asn = local_ns.GetAsnForIp(client_ip)
+      self.nameservers.SetNetworkLocation(domain, asn)
+      self.UpdateStatus("Detected ISP as %s (AS%s)" % (domain, asn))
       new_tags = self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
+
+    if 'regional' in self.options.tags:
       include_tags.discard('regional')
       include_tags.update(new_tags)
 
