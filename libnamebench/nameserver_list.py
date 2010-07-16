@@ -272,13 +272,21 @@ class NameServers(list):
     tags_added = set()
 
     for ns in self:
+      if addr_util.GetDomainFromHostname(ns.hostname) == self.client_domain:
+        ns.tags.add('isp')
+        tags_added.add('isp')      
+      
       if ns.asn == self.client_asn:
         ns.tags.add('network')
         tags_added.add('network')
-
-      if addr_util.GetDomainFromHostname(ns.hostname) == self.client_domain:
-        ns.tags.add('isp')
-        tags_added.add('isp')
+        
+        # If we share an ASN and other data looks similar, call it part of the ISP.
+        provider = self.client_domain.split('.')[0]
+        if (provider.lower() in ns.name.lower()
+            or provider.lower() in ns.hostname.lower()
+            or provider.lower() in ns.network_owner.lower()):
+          ns.tags.add('isp')
+          tags_added.add('isp')
 
     if self.client_country and self.country_servers:
       tags_added.add('country_%s' % self.client_country.lower())
@@ -301,12 +309,11 @@ class NameServers(list):
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
     for (idx, ns) in enumerate(supplemental_servers):
-      if ns.asn == self.client_asn:
-        print "%s (%s) seems slow, but part of our network (AS%s)" % (ns, self.client_asn)
-      elif  ns.hostname.endswith(self.client_domain):
-        print "%s (%s) seems slow, but shares our domain %s" % (ns, self.client_domain)
+      if ns.hostname.endswith(self.client_domain):
+        self.msg("%s seems slow, but shares our domain %s" % (ns, self.client_domain))
+      elif ns.asn == self.client_asn:
+        self.msg("%s seems slow, but part of our network (AS%s)" % (ns, self.client_asn))
       elif ns.fastest_check_duration > cutoff:
-#        print "%s (%s) is slower than cutoff." % (ns, ns.fastest_check_duration)
         ns.is_hidden = True
       elif idx > max_servers:
         print "%s (%s) is >%s" % (ns, ns.fastest_check_duration, max_servers)
