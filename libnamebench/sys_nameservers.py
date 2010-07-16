@@ -66,7 +66,7 @@ def _GetNameServersFromMacIpConfig():
     output = subprocess.Popen(['ipconfig', 'getpacket', iface], stdout=subprocess.PIPE).stdout.read()
     for line in output.split('\n'):
       if 'domain_name_server' in line:
-        print "%s domain_name_server: %s" % (iface, line)
+#        print "%s domain_name_server: %s" % (iface, line)
         servers.extend(addr_util.ExtractIPsFromString(line))
   return servers
   
