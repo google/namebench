@@ -157,12 +157,16 @@ class NameServers(list):
     return [x for x in self.preferred_servers if not x.is_disabled]
 
   @property
+  def enabled_keepers(self):
+    return [x for x in self.enabled_servers if x.is_keeper]
+
+  @property
   def supplemental_servers(self):
-    return [x for x in self if not x.is_preferred and not x.is_specified]
+    return [x for x in self if not x.is_keeper]
 
   @property
   def enabled_supplemental(self):
-    return [x for x in self if not x.is_preferred and not x.is_specified and not x.is_hidden and not x.is_disabled]
+    return [x for x in self if not x.is_keeper and not x.is_hidden and not x.is_disabled]
 
   @property
   def regional_servers(self):
@@ -175,6 +179,10 @@ class NameServers(list):
   @property
   def enabled_servers(self):
     return [x for x in self if not x.is_disabled and not x.is_hidden]
+
+  @property
+  def country_servers(self):
+    return [x for x in self if x.country_code == self.client_country]
 
   @property
   def visible_servers(self):
@@ -194,6 +202,7 @@ class NameServers(list):
     if ns.ip in self._ips:
       existing_ns = self._GetObjectForIP(ns.ip)
       existing_ns.tags.update(ns.tags)
+      print "Adding tags for %s: %s" % (ns, ns.tags)
     else:
 #      print "Adding: %s [%s]" % (ns.name, ns.ip)
       super(NameServers, self).append(ns)
@@ -258,31 +267,29 @@ class NameServers(list):
                           for x in self.enabled_regional], key=operator.itemgetter(0))
     return [x[1] for x in srv_by_dist if x[0] <= max_distance]
 
-  def FilterByProximity(self, max_distance=2500):
-    in_asn = [x for x in self.enabled_regional if x.asn == self.client_asn]
-    print "blessed by asn: %s" % len(in_asn)
+  def AddLocalityTags(self, max_distance=1000):
+    country_flagged = 0
+    tags_added = set()
 
-    in_domain = [x for x in self.enabled_regional if addr_util.GetDomainFromHostname(x.hostname) == self.client_domain]
-    print "in domain %s: %s" % (self.client_domain, len(in_domain))
+    for ns in self:
+      if ns.asn == self.client_asn:
+        ns.tags.add('network')
+        tags_added.add('network')
 
-    in_country = [x for x in self.enabled_servers if x.country_code == self.client_country]
-    print "in country %s: %s" % (self.client_country, len(in_country))
-    if len(in_country) >= MAX_NEARBY_SERVERS:
-      max_distance = 100
+      if addr_util.GetDomainFromHostname(ns.hostname) == self.client_domain:
+        ns.tags.add('isp')
+        tags_added.add('isp')
 
-    in_locale = self.NearbyServers(max_distance)[0:MAX_NEARBY_SERVERS]
-    print "near %s, %s (%s): %s" % (self.client_latitude, self.client_longitude, max_distance, len(in_locale))
+    if self.client_country and self.country_servers:
+      tags_added.add('country_%s' % self.client_country.lower())
+      if len(self.country_servers) >= MAX_NEARBY_SERVERS:
+        max_distance = 100
 
-    blessed = set(in_asn)
-    blessed.update(set(in_domain))
-    blessed.update(set(in_country))
-    blessed.update(set(in_locale))
-    print "blessed: %s" % len(blessed)
-    for ns in self.enabled_regional:
-      if ns not in blessed:
-        ns.is_hidden = True
+    for ns in self.NearbyServers(max_distance)[0:MAX_NEARBY_SERVERS]:
+      ns.tags.add('nearby')
+      tags_added.add('nearby')
 
-    print "regionals left: %s" % len(self.enabled_regional)
+    return tags_added
 
   def DisableSlowestSupplementalServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_SERVERS_TO_CHECK,
                                         prefer_asn=None):
@@ -294,22 +301,46 @@ class NameServers(list):
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
     for (idx, ns) in enumerate(supplemental_servers):
-      if ns.asn == self.client_asn or ns.hostname.endswith(self.client_domain):
-        print "%s (%s) is part of our network" % (ns, ns.fastest_check_duration)
+      if ns.asn == self.client_asn:
+        print "%s (%s) seems slow, but part of our network (AS%s)" % (ns, self.client_asn)
+      elif  ns.hostname.endswith(self.client_domain):
+        print "%s (%s) seems slow, but shares our domain %s" % (ns, self.client_domain)
       elif ns.fastest_check_duration > cutoff:
-        print "%s (%s) is slower than cutoff." % (ns, ns.fastest_check_duration)
+#        print "%s (%s) is slower than cutoff." % (ns, ns.fastest_check_duration)
         ns.is_hidden = True
       elif idx > max_servers:
         print "%s (%s) is >%s" % (ns, ns.fastest_check_duration, max_servers)
         ns.is_hidden = True
 
-  def DisableUnwantedServers(self, target_count, delete_unwanted=False):
+  def _FastestByLocalProvider(self):
+    """Find the fastest DNS server by the client provider."""
+    isp_keeper = None
+
+    for ns in self.SortByFastest():
+      if not ns.is_hidden and not ns.is_disabled:
+        if 'isp' in ns.tags:
+          isp_keeper = ns
+
+    if not isp_keeper:
+      for ns in self.SortByFastest():
+        if not ns.is_hidden and not ns.is_disabled:
+          if 'network' in ns.tags:
+            isp_keeper = ns
+
+    return isp_keeper
+
+  def HideSlowSupplementalServers(self, target_count, delete_unwanted=False):
     """Given a target count, delete nameservers that we do not plan to test."""
     # Magic secondary mixing algorithm:
     # - Half of them should be the "nearest" nameservers
     # - Half of them should be the "fastest average" nameservers
-    preferred_count = len(self.enabled_preferred)
-    supplemental_servers_needed = target_count - preferred_count
+    keepers = self.enabled_keepers
+    isp_keeper = self._FastestByLocalProvider()
+    if isp_keeper:
+      self.msg("%s is the fastest DNS server provided by your ISP." % isp_keeper)
+      keepers.append(isp_keeper)
+
+    supplemental_servers_needed = target_count - len(keepers)
     if supplemental_servers_needed < 1 or not self.supplemental_servers:
       return
     nearest_needed = int(supplemental_servers_needed / 2.0)
@@ -321,8 +352,7 @@ class NameServers(list):
     # Phase two is picking the nearest secondary server
     supplemental_servers_to_keep = []
     for ns in self.SortByNearest():
-
-      if not ns.is_preferred and not ns.is_disabled:
+      if ns not in keepers and not ns.is_disabled and not ns.is_hidden:
         if not supplemental_servers_to_keep and supplemental_servers_needed < 15:
           self.msg('%s appears to be the nearest regional (%0.2fms)' % (ns, ns.fastest_check_duration))
         supplemental_servers_to_keep.append(ns)
@@ -331,15 +361,16 @@ class NameServers(list):
 
     # Phase three is removing all of the slower secondary servers
     for ns in self.SortByFastest():
-      if not ns.is_preferred and not ns.is_disabled and ns not in supplemental_servers_to_keep:
+      if (ns not in keepers and not ns.is_disabled and not ns.is_hidden
+          and ns not in supplemental_servers_to_keep):
         supplemental_servers_to_keep.append(ns)
         if len(supplemental_servers_to_keep) >= supplemental_servers_needed:
           break
 
     for ns in self.supplemental_servers:
-      if ns not in supplemental_servers_to_keep:
+      if ns not in supplemental_servers_to_keep and ns not in keepers:
 #        print "REMOVE: Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
-        self.remove(ns)
+        ns.is_hidden = True
 #      else:
 #        print "KEEP  : Fastest: %0.2f Avg: %0.2f:  %s - %s" % (ns.fastest_check_duration, ns.check_average, ns, ns.checks)
 
@@ -353,12 +384,12 @@ class NameServers(list):
     self.RunHealthCheckThreads(sanity_checks['primary'])
     if len(self.enabled_servers) > max_servers:
       self._DemoteSecondaryGlobalNameServers()
-      self.DisableUnwantedServers(target_count=int(max_servers * NS_CACHE_SLACK),
+      self.HideSlowSupplementalServers(target_count=int(max_servers * NS_CACHE_SLACK),
                                   delete_unwanted=True)
     # TODO(tstromberg): Insert caching here.
     if len(self.enabled_servers) > 1:
       self.CheckCacheCollusion()
-      self.DisableUnwantedServers(max_servers)
+      self.HideSlowSupplementalServers(max_servers)
 
     self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
     if not self.enabled_servers:
@@ -444,7 +475,7 @@ class NameServers(list):
         if slower.system_position == 0:
           faster.DisableWithMessage('Shares-cache with current primary DNS server')
           slower.warnings.add('Replica of %s' % faster.ip)
-        elif slower.is_preferred and not faster.is_preferred:
+        elif slower.is_keeper and not faster.is_keeper:
           faster.DisableWithMessage('Replica of %s [%s]' % (slower.name, slower.ip))
           slower.warnings.add('Replica of %s [%s]' % (faster.name, faster.ip))
         else:

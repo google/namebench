@@ -41,6 +41,22 @@ import version
 
 TRUNK_URL = 'http://namebench.googlecode.com/svn/trunk/'
 
+SETS_TO_TAGS_MAP = {
+  'system': ['system', 'dhcp'],
+  'global': ['global', 'preferred'],
+  'preferred': ['preferred'],
+  'all': ['global', 'system', 'dhcp', 'internal', 'regional', 'preferred'],
+  'regional': ['internal', 'regional'],
+  'isp': ['isp', 'dhcp'],
+  'network': ['network', 'internal', 'dhcp'],
+}
+
+def ExpandSetsToTags(set_names):
+  tags = set()
+  for set_name in set_names:
+    print set_name
+    tags.update(set(SETS_TO_TAGS_MAP.get(set_name, set_name)))
+  return tags
 
 def GetMergedConfiguration():
   """Get all of our configuration setup."""
@@ -61,26 +77,23 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
   parser = optparse.OptionParser()
   parser.add_option('-6', '--ipv6_only', dest='ipv6_only', action='store_true', help='Only include IPv6 name servers')
   parser.add_option('-4', '--ipv4_only', dest='ipv4_only', action='store_true', help='Only include IPv4 name servers')
-  parser.add_option('-a', '--include-all', dest='include_all', action='store_true', help='Include all possible DNS servers.')
-  parser.add_option('-c', '--csv_output', dest='csv_file', default=None, help='Filename to write query details to (CSV)')
+  parser.add_option('-c', '--country', dest='country', default=None, help='Set country (overrides GeoIP)')
   parser.add_option('-C', '--enable-censorship-checks', dest='enable_censorship_checks', action='store_true', help='Enable censorship checks')
-  parser.add_option('-g', '--include-global', dest='include_global', action='store_true', help='Only test globally accessible nameservers.')
   parser.add_option('-H', '--hide_results', dest='hide_results', action='store_true',  help='Upload results, but keep them hidden from indexes.')
   parser.add_option('-i', '--input', dest='input_source', help=('Import hostnames from an filename or application (%s)' % ', '.join(import_types)))
   parser.add_option('-I', '--invalidate_cache', dest='invalidate_cache', action='store_true', help='Force health cache to be invalidated')
   parser.add_option('-J', '--benchmark_threads', dest='benchmark_thread_count', type='int', help='# of benchmark threads to use')
   parser.add_option('-j', '--health_threads', dest='health_thread_count', type='int', help='# of health check threads to use')
-  parser.add_option('-l', '--runs', dest='run_count', default=1, type='int', help='Number of test runs to perform on each nameserver.')
   parser.add_option('-m', '--select_mode', dest='select_mode', default='automatic', help='Selection algorithm to use (weighted, random, chunk)')
   parser.add_option('-n', '--num_servers', dest='num_servers', type='int', help='Number of nameservers to include in test')
   parser.add_option('-o', '--output', dest='output_file', default=None, help='Filename to write output to')
-  # Silly Mac OS X adding -psn_0_xxxx
-  parser.add_option('-p', '--psn')
+  parser.add_option('-O', '--csv_output', dest='csv_file', default=None, help='Filename to write query details to (CSV)')
+  parser.add_option('-p', '--psn')   # Silly Mac OS X adding -psn_0_xxxx
   parser.add_option('-P', '--ping_timeout', dest='ping_timeout', type='float', help='# of seconds ping requests timeout in.')
   parser.add_option('-q', '--query_count', dest='query_count', type='int', help='Number of queries per run.')
-  parser.add_option('-r', '--include-regional', dest='include_regional', action='store_true', help='Only test current system nameservers.')
-  parser.add_option('-s', '--include-system', dest='include_system', action='store_true',  help='Only test nameservers passed as arguments')
-  parser.add_option('-S', '--servers', dest='servers', default=[], help='A list of servers to test (can also be passed as arguments)')
+  parser.add_option('-r', '--runs', dest='run_count', default=1, type='int', help='Number of test runs to perform on each nameserver.')
+  parser.add_option('-s', '--server_sets', dest='server_sets', default=[], help='Comma-separated list of sets to test (%s)' % SETS_TO_TAGS_MAP.keys())
+  parser.add_option('-S', '--server_ips', dest='servers', default=[], help='A list of ips to test (can also be passed as arguments)')
   parser.add_option('-t', '--template', dest='template', default='html', help='Template to use for output generation (ascii, html, resolv.conf)')
   parser.add_option('-U', '--site_url', dest='site_url', help='URL to upload results to (http://namebench.appspot.com/)')
   parser.add_option('-u', '--upload_results', dest='upload_results', action='store_true', help='Upload anonymized results to SITE_URL (False)')
@@ -91,9 +104,30 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
   parser.add_option('-z', '--config', dest='config', default=default_config_file, help='Config file to use.')
 
   options, args = parser.parse_args()
+  if options.server_sets:
+    options.tags = ExpandSetsToTags(options.server_sets.split(','))
+  else:
+    options.tags = set()
+
   if args:
     options.servers.extend(addr_util.ExtractIPsFromString(' '.join(args)))
+    options.tags.add('specified')
+
   return options
+
+def GetCodeAndCoordinatesForCountry(country):
+  for row in GetCountryData():
+    if row['name'].lower() == country.lower() or row['code'].lower() == country.lower():
+      lat, lon = row['coords'].split(',')
+      return row['code'], lat, lon
+
+def GetCountryData(filename='data/countries.csv'):
+  country_file = util.FindDataFile(filename)
+  reader = csv.DictReader(open(country_file), fieldnames=['name', 'code', 'coords'])
+  data = []
+  for row in reader:
+    data.append(row)
+  return data
 
 def GetNameServerData(filename='config/servers.csv'):
   server_file = util.FindDataFile(filename)
@@ -214,8 +248,6 @@ def MergeConfigurationFileOptions(options):
 
   Returns:
     options: optparse.OptionParser() object
-    global_ns: A list of global nameserver tuples.
-    regional_ns: A list of regional nameservers tuples.
 
   Raises:
     ValueError: If we are unable to find a usable configuration file.

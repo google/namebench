@@ -95,6 +95,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.location = location
     if self.location:
       self.country_code = location.split('/')[0]
+      self.tags.add('country_%s' % self.country_code.lower())
     else:
       self.country_code = None
 
@@ -160,6 +161,11 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   @property
   def is_preferred(self):
     return 'preferred' in self.tags
+
+  @property
+  def is_keeper(self):
+    if self.tags.intersection(set(['preferred', 'dhcp', 'system', 'specified'])):
+      return True
 
   @property
   def is_regional(self):

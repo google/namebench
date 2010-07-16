@@ -93,38 +93,47 @@ class BaseUI(object):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()
     require_tags = set()
-    include_tags = set(['specified'])
+    include_tags = self.options.tags
 
     if self.options.ipv6_only:
       require_tags.add('ipv6')
     elif self.options.ipv4_only:
       require_tags.add('ipv4')
 
-    if self.options.include_system or self.options.include_all:
-      include_tags.update(set(['system', 'dhcp']))
-
-    if self.options.include_regional or self.options.include_all:
-      if not self.geodata:
-        self.DiscoverLocation()
-      self.nameservers.SetClientLocation(self.geodata.get('latitude'),
-                                         self.geodata.get('longitude'),
-                                         self.geodata.get('country_code'))
+    if 'regional' in self.options.tags:
+      country, lat, lon = self.ConfiguredLocationData()
+      if country:
+        self.nameservers.SetClientLocation(lat, lon, country)
       client_ip = providers.MyResolverInfo().ClientIp()
       local_ns = providers.SystemResolver()
-      hostname = local_ns.GetReverseIp(client_ip)
-      self.nameservers.SetNetworkLocation(addr_util.GetDomainFromHostname(hostname),
-                                          local_ns.GetAsnForIp(client_ip))
-
-      include_tags.update(set(['regional', 'internal', 'global']))
-
-    if self.options.include_global or self.options.include_all:
-      include_tags.update(set(['preferred', 'global']))
+      try:
+        hostname = local_ns.GetReverseIp(client_ip)
+        domain = addr_util.GetDomainFromHostname(hostname)
+      except:
+        domain = 'UNKNOWN'
+      self.nameservers.SetNetworkLocation(domain, local_ns.GetAsnForIp(client_ip))
+      new_tags = self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
+      include_tags.discard('regional')
+      include_tags.update(new_tags)
 
     self.nameservers.status_callback = self.UpdateStatus
+    self.UpdateStatus("DNS server filter: %s %s" % (','.join(include_tags),
+                                                    ','.join(require_tags)))
     self.nameservers.FilterByTag(include_tags=include_tags,
                                  require_tags=require_tags)
-    if self.options.include_regional or self.options.include_all:
-      self.nameservers.FilterByProximity(max_distance=DEFAULT_DISTANCE_KM)
+
+  def ConfiguredLocationData(self):
+    if not self.geodata:
+      self.DiscoverLocation()
+      country_code = self.geodata.get('country_code')
+      lat = self.geodata.get('lat')
+      lon = self.geodata.get('lon'),
+
+    if self.options.country and self.options.country != country_code:
+      country_code, lat, lon = config.GetCodeAndCoordinatesForCountry(self.options.country)
+      self.UpdateStatus("Set country to %s (%s,%s)" % (country_code, lat, lon))
+
+    return country_code, lat, lon
 
   def CheckNameServerHealth(self):
     self.nameservers.SetTimeouts(self.options.timeout,
@@ -166,7 +175,6 @@ class BaseUI(object):
   def DiscoverLocation(self):
     if not getattr(self, 'geodata', None):
       self.geodata = geoip.GetGeoData()
-      self.country = self.geodata.get('country_name', None)
     return self.geodata
 
   def RunAndOpenReports(self):

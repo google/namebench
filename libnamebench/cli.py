@@ -94,19 +94,19 @@ class NameBenchCli(base_ui.BaseUI):
             self.options.health_timeout, self.options.num_servers))
     print '-' * 78
 
-    try:
-      self.PrepareNameServers()
-    except nameserver_list.TooFewNameservers:
+    if not self.options.tags:
       print "You need to specify some DNS servers to benchmark. Try:"
       print ""
-      print "namebench.py -a                  # Benchmark all available DNS servers"
-      print "namebench.py -s                  # Benchmark current system DNS servers"
-      print "namebench.py -r                  # Benchmark regional DNS servers only"
-      print "namebench.py -g                  # Benchmark global DNS servers only"
+      print "namebench.py -s all              # Test best available DNS servers"
+      print "namebench.py -s preferred,isp    # Only test preferred + ISP DNS servers"
+      print "namebench.py -s system           # Only test current system DNS servers"
+      print "namebench.py -s global 8.8.8.8   # Benchmark global DNS servers + 8.8.8.8"
       print "namebench.py 8.8.8.8 10.0.0.1    # Benchmark just these two servers"
       print ""
       print "For more assistance, get help via namebench.py -h"
       sys.exit(1)
+
+    self.PrepareNameServers()
     try:
       self.LoadDataSources()
       self.PrepareTestRecords()
