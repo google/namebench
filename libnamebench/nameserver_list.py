@@ -202,7 +202,7 @@ class NameServers(list):
     if ns.ip in self._ips:
       existing_ns = self._GetObjectForIP(ns.ip)
       existing_ns.tags.update(ns.tags)
-      print "Adding tags for %s: %s" % (ns, ns.tags)
+#      print "Adding tags for %s: %s" % (ns, ns.tags)
     else:
 #      print "Adding: %s [%s]" % (ns.name, ns.ip)
       super(NameServers, self).append(ns)
@@ -293,9 +293,10 @@ class NameServers(list):
       if len(self.country_servers) >= MAX_NEARBY_SERVERS:
         max_distance = 100
 
-    for ns in self.NearbyServers(max_distance)[0:MAX_NEARBY_SERVERS]:
-      ns.tags.add('nearby')
-      tags_added.add('nearby')
+    if self.client_latitude:
+      for ns in self.NearbyServers(max_distance)[0:MAX_NEARBY_SERVERS]:
+        ns.tags.add('nearby')
+        tags_added.add('nearby')
 
     return tags_added
 
@@ -316,7 +317,7 @@ class NameServers(list):
       elif ns.fastest_check_duration > cutoff:
         ns.is_hidden = True
       elif idx > max_servers:
-        print "%s (%s) is >%s" % (ns, ns.fastest_check_duration, max_servers)
+#        print "%s (%s) is >%s" % (ns, ns.fastest_check_duration, max_servers)
         ns.is_hidden = True
 
   def _FastestByLocalProvider(self):
@@ -335,6 +336,11 @@ class NameServers(list):
             isp_keeper = ns
 
     return isp_keeper
+    
+  def HideBrokenIPV6Servers(self):
+    for ns in self:
+      if ns.is_disabled and ns.is_ipv6 and not ns.is_hidden:
+        ns.is_hidden = True
 
   def HideSlowSupplementalServers(self, target_count, delete_unwanted=False):
     """Given a target count, delete nameservers that we do not plan to test."""
@@ -399,6 +405,7 @@ class NameServers(list):
       self.HideSlowSupplementalServers(max_servers)
 
     self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
+    self.HideBrokenIPV6Servers()
     if not self.enabled_servers:
       raise TooFewNameservers('None of the nameservers tested are healthy')
 
