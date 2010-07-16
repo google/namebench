@@ -47,7 +47,7 @@ SETS_TO_TAGS_MAP = {
   'preferred': ['preferred'],
   'all': ['global', 'system', 'dhcp', 'internal', 'regional', 'preferred'],
   'regional': ['internal', 'regional'],
-  'isp': ['isp', 'dhcp'],
+  'isp': ['isp', 'dhcp', 'internal'],
   'network': ['network', 'internal', 'dhcp'],
 }
 
