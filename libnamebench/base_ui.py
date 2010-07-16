@@ -126,8 +126,8 @@ class BaseUI(object):
     if not self.geodata:
       self.DiscoverLocation()
       country_code = self.geodata.get('country_code')
-      lat = self.geodata.get('lat')
-      lon = self.geodata.get('lon'),
+      lat = self.geodata.get('latitude')
+      lon = self.geodata.get('longitude')
 
     if self.options.country and self.options.country != country_code:
       country_code, lat, lon = config.GetCodeAndCoordinatesForCountry(self.options.country)
