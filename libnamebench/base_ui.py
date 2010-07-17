@@ -92,6 +92,7 @@ class BaseUI(object):
   def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()
+    self.nameservers.thread_count = self.options.health_thread_count
     require_tags = set()
     include_tags = self.options.tags
 
