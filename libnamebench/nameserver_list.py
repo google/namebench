@@ -48,14 +48,8 @@ MIN_HEALTHY_PERCENT = 10
 SLOW_MODE_THREAD_COUNT = 6
 
 # Windows behaves in unfortunate ways if too many threads are specified
-if sys.platform == 'win32':
-  MAX_SANE_THREAD_COUNT = 32
-else:
-  MAX_SANE_THREAD_COUNT = 100
-
-# Slow down for these, as they are used for timing.
+DEFAULT_THREAD_COUNT = 35
 MAX_INITIAL_HEALTH_THREAD_COUNT = 35
-
 
 class OutgoingUdpInterception(Exception):
 
@@ -137,9 +131,9 @@ class QueryThreads(threading.Thread):
 
 class NameServers(list):
 
-  def __init__(self):
+  def __init__(self, thread_count=DEFAULT_THREAD_COUNT):
     self._ips = set()
-    self.thread_count = MAX_SANE_THREAD_COUNT
+    self.thread_count = thread_count 
     super(NameServers, self).__init__()
 
     self.client_latitude = None
@@ -273,6 +267,7 @@ class NameServers(list):
 
     for ns in self:
       if addr_util.GetDomainFromHostname(ns.hostname) == self.client_domain:
+        print "%s shares our domain" % ns
         ns.tags.add('isp')
         tags_added.add('isp')      
       
@@ -287,6 +282,7 @@ class NameServers(list):
             or provider.lower() in ns.network_owner.lower()):
           ns.tags.add('isp')
           tags_added.add('isp')
+          print "%s seems to be part of our ISP" % ns
 
     if self.client_country and self.country_servers:
       tags_added.add('country_%s' % self.client_country.lower())
@@ -309,33 +305,36 @@ class NameServers(list):
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in fastest])
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
-    for (idx, ns) in enumerate(supplemental_servers):
-      if ns.hostname.endswith(self.client_domain):
-        self.msg("%s seems slow, but shares our domain %s" % (ns, self.client_domain))
-      elif ns.asn == self.client_asn:
-        self.msg("%s seems slow, but part of our network (AS%s)" % (ns, self.client_asn))
-      elif ns.fastest_check_duration > cutoff:
-        ns.is_hidden = True
-      elif idx > max_servers:
-#        print "%s (%s) is >%s" % (ns, ns.fastest_check_duration, max_servers)
-        ns.is_hidden = True
+    
+    for (idx, ns) in enumerate(self.SortByFastest()):
+      hide = False
+      if ns not in supplemental_servers:
+        continue
+    
+      if ns.fastest_check_duration > cutoff:
+        hide = True
+      if idx > max_servers:
+        hide = True
+
+      if hide:
+        if ns.hostname.endswith(self.client_domain):
+          self.msg("%s seems slow, but shares our domain %s" % (ns, self.client_domain))
+        elif ns.asn == self.client_asn:
+          self.msg("%s seems slow, but part of our network (AS%s)" % (ns, self.client_asn))
+        else:
+          ns.is_hidden = True
 
   def _FastestByLocalProvider(self):
     """Find the fastest DNS server by the client provider."""
-    isp_keeper = None
-
     for ns in self.SortByFastest():
       if not ns.is_hidden and not ns.is_disabled:
         if 'isp' in ns.tags:
-          isp_keeper = ns
+          return ns
 
-    if not isp_keeper:
-      for ns in self.SortByFastest():
-        if not ns.is_hidden and not ns.is_disabled:
-          if 'network' in ns.tags:
-            isp_keeper = ns
-
-    return isp_keeper
+    for ns in self.SortByFastest():
+      if not ns.is_hidden and not ns.is_disabled:
+        if 'network' in ns.tags:
+          return ns
     
   def HideBrokenIPV6Servers(self):
     for ns in self:
