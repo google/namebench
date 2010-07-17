@@ -20,6 +20,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import re
 import zlib
+import util
 
 # TODO(tstromberg): Find a way to combine the following two regexps.
 
@@ -36,6 +37,7 @@ FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{
 
 IP_RE = re.compile('^[0-9.]+$')
 
+KNOWN_SECOND_DOMAINS = [x.rstrip() for x in open(util.FindDataFile('data/second_level_domains.txt')).readlines()]
 
 def ExtractIPsFromString(ip_string):
   """Return a tuple of ip addressed held in a string."""
@@ -68,19 +70,17 @@ def GetNetworkForIp(ip, reverse=False):
     return None
 
 def GetDomainFromHostname(hostname):
-  """Get the main domain part of a hostname. Needs work."""
-  host_parts = hostname.split('.')
-  if len(host_parts) > 3 and (len(host_parts[-2]) < 3 or host_parts[-2] in ('edu', 'com', 'net')):
-    return '.'.join(host_parts[-3:]).lower()
-  elif len(host_parts) > 1:
-    return '.'.join(host_parts[-2:]).lower()
-  else:
-    return hostname
+  """Get the domain part of a hostname."""
+  for second_level in KNOWN_SECOND_DOMAINS:
+    if hostname.lower().endswith(second_level):
+      custom_part = hostname.replace(second_level, '').split('.')[-1]
+      return '%s%s' % (custom_part, second_level)
+
+  return '.'.join(hostname.split('.')[-2:]).lower()
 
 def GetProviderPartOfHostname(hostname):
-  """Get the main domain part of a hostname. Needs work."""
-  domain = GetDomainFromHostname(hostname)
-  return domain.split('.')[0]
+  """Get the custom patr of a hostname"""
+  return GetDomainFromHostname(hostname).split('.')[0]
 
 def IsLoopbackIP(ip):
   """Boolean check to see if an IP is private or not.
