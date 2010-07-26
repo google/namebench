@@ -114,7 +114,7 @@ class NameBenchCli(base_ui.BaseUI):
       self.CheckNameServerHealth()
       print 'Final list of nameservers considered:'
       print '-' * 78
-      for n in self.nameservers.SortByFastest():
+      for n in self.nameservers.SortEnabledByFastest():
         print '%-15.15s %-18.18s %-4.0fms | %s' % (n.ip, n.name, n.check_average,
                                                    n.warnings_string)
       print ''

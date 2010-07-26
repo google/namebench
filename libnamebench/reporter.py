@@ -335,9 +335,9 @@ class ReportGenerator(object):
       })
       # Determine which nameserver to refer to for improvement scoring
       if not ns.is_disabled:
-        if ns.is_system_primary:
+        if ns.system_position == 0:
           reference = ns
-        elif not fastest_normal and not ns.is_preferred:
+        elif not fastest_normal and not ns.HasTag('preferred'):
           fastest_normal = ns
 
     # If no reference was found, use the fastest non-global nameserver record.

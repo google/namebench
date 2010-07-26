@@ -212,7 +212,7 @@ def _SortDistribution(a, b):
   if sys_pos_cmp:
     return sys_pos_cmp
 
-  preferred_cmp = cmp(b[0].is_preferred, a[0].is_preferred)
+  preferred_cmp = cmp(b[0].is_keeper, a[0].is_keeper)
   if preferred_cmp:
     return preferred_cmp
 

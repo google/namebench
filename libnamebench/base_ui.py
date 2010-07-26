@@ -89,6 +89,23 @@ class BaseUI(object):
       ns_data.append(ns)
     return ns_data
 
+  def GetExternalNetworkData(self):
+    """Return a domain and ASN for myself."""
+
+    asn = None
+    domain = None    
+    client_ip = providers.AnyExternalIpHost().ClientIp()
+    if client_ip:
+      self.UpdateStatus("Detected external IP as %s" % client_ip)
+      local_ns = providers.SystemResolver()
+      hostname = local_ns.GetReverseIp(client_ip)
+      domain = addr_util.GetDomainFromHostname(hostname)
+      asn = local_ns.GetAsnForIp(client_ip)
+      
+    return (domain, asn)
+      
+      
+
   def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()
@@ -101,28 +118,26 @@ class BaseUI(object):
     elif self.options.ipv4_only:
       require_tags.add('ipv4')
 
-    if 'regional' in self.options.tags:
+    if 'likely-isp' in self.options.tags:
       country, lat, lon = self.ConfiguredLocationData()
       if country:
         self.UpdateStatus("Detected country as %s (%s,%s)" % (country, lat, lon))
         self.nameservers.SetClientLocation(lat, lon, country)
 
     if self.options.tags.intersection(set(['regional','isp','network'])):
-      client_ip = providers.MyResolverInfo().ClientIp()
-      local_ns = providers.SystemResolver()
-      try:
-        hostname = local_ns.GetReverseIp(client_ip)
-        domain = addr_util.GetDomainFromHostname(hostname)
-      except:
-        domain = 'UNKNOWN'
-      asn = local_ns.GetAsnForIp(client_ip)
-      self.nameservers.SetNetworkLocation(domain, asn)
-      self.UpdateStatus("Detected ISP as %s (AS%s)" % (domain, asn))
-      new_tags = self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
+      domain, asn = self.GetExternalNetworkData()
+      if asn:
+        self.nameservers.SetNetworkLocation(domain, asn)
+        self.UpdateStatus("Detected ISP as %s (AS%s)" % (domain, asn))
 
-    if 'regional' in self.options.tags:
+      if lat:
+        self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (DEFAULT_DISTANCE_KM, lat, lon))
+        self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
+
+    if 'regional' in self.options.tags and country:
       include_tags.discard('regional')
-      include_tags.update(new_tags)
+      include_tags.add('country_%s' % country.lower())
+      include_tags.add('nearby')
 
     self.nameservers.status_callback = self.UpdateStatus
     self.UpdateStatus("DNS server filter: %s %s" % (','.join(include_tags),
@@ -165,6 +180,7 @@ class BaseUI(object):
   def RunBenchmark(self):
     """Run the benchmark."""
     results = self.bmark.Run(self.test_records)
+    self.UpdateStatus("Benchmark finished.")
     index = []
     if self.options.upload_results in (1, True):
       connector = site_connector.SiteConnector(self.options, status_callback=self.UpdateStatus)
@@ -173,9 +189,8 @@ class BaseUI(object):
         index = self.bmark.RunIndex(index_hosts)
       else:
         index = []
+      
       self.DiscoverLocation()
-      if len(self.nameservers) > 1:
-        self.nameservers.RunPortBehaviorThreads()
 
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
                                              results, index=index, geodata=self.geodata)

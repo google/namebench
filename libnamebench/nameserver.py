@@ -37,6 +37,7 @@ import dns.version
 
 import health_checks
 import provider_extensions
+import addr_util
 import util
 
 # Look for buggy system versions of namebench
@@ -48,12 +49,12 @@ if dns.version.hexversion < 17301744:
 
 # How many failures before we disable system nameservers
 MAX_NORMAL_FAILURES = 2
-MAX_SYSTEM_FAILURES = 7
-MAX_PREFERRED_FAILURES = 5
-MAX_WARNINGS = 7
-
+MAX_KEEPER_FAILURES = 5
+MAX_WARNINGS = 8
 FAILURE_PRONE_RATE = 10
 
+# In order of most likely to be important.
+PROVIDER_TAGS = ['isp', 'network', 'likely-isp']
 
 # EVIL IMPORT-TIME SIDE EFFECT
 BEST_TIMER_FUNCTION = util.GetMostAccurateTimerFunction()
@@ -83,9 +84,12 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   def __init__(self, ip, hostname=None, name=None, tags=None, provider=None,
                instance=None, location=None, latitude=None, longitude=None, asn=None,
-               network_owner=None):
+               network_owner=None, dhcp_position=None, system_position=None):
     self.ip = ip
     self.name = name
+    self.dhcp_position = dhcp_position
+    self.system_position = system_position
+
     if tags:
       self.tags = set(tags)
     else:
@@ -93,6 +97,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.provider = provider
     self.instance = instance
     self.location = location
+    
     if self.location:
       self.country_code = location.split('/')[0]
       self.tags.add('country_%s' % self.country_code.lower())
@@ -114,6 +119,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.ResetTestStatus()
     self._version = None
     self._node_ids = set()
+    
     self.timer = BEST_TIMER_FUNCTION
 
     if ':' in self.ip:
@@ -121,8 +127,32 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     elif '.' in self.ip:
       self.tags.add('ipv4')
 
+    if self.dhcp_position:
+      self.tags.add('dhcp')
+    if self.system_position:
+      self.tags.add('system')
+
     if ip.endswith('.0') or ip.endswith('.255'):
       self.DisableWithMessage("IP appears to be a broadcast address.")
+      
+  def AddNetworkTags(self, domain, provider, asn, country_code):
+    my_domain = addr_util.GetDomainFromHostname(self.hostname)
+    if provider:
+      provider = provider.lower()
+
+    if domain and my_domain == domain:
+      self.tags.add('isp')
+    if asn and self.asn == asn:
+      self.tags.add('network')
+      
+      if provider and 'isp' not in self.tags:
+        if (provider in self.name.lower() or provider in self.hostname.lower()
+            or (self.network_owner and provider in self.network_owner.lower())):
+          self.tags.add('isp')
+    elif provider and self.country_code == country_code and my_domain != domain:
+      if (provider in self.name.lower() or provider in self.hostname.lower()
+        or (self.network_owner and provider in self.network_owner.lower())):
+        self.tags.add('likely-isp')
 
   def ResetTestStatus(self):
     """Reset testing status of this host."""
@@ -144,44 +174,8 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.error_map = {}
 
   @property
-  def is_system(self):
-    return 'system' in self.tags
-
-  @property
-  def is_system_primary(self):
-    return 'system-0' in self.tags
-
-  @property
-  def system_position(self):
-    if 'system' in self.tags:
-      for tag in self.tags:
-        if tag.startswith('system-'):
-          return int(tag.split('-')[1])
-
-  @property
-  def is_preferred(self):
-    return 'preferred' in self.tags
-
-  @property
   def is_keeper(self):
-    if self.tags.intersection(set(['preferred', 'dhcp', 'system', 'specified'])):
-      return True
-
-  @property
-  def is_regional(self):
-    return 'regional' in self.tags
-
-  @property
-  def is_global(self):
-    return 'global' in self.tags
-
-  @property
-  def is_specified(self):
-    return 'specified' in self.tags
-
-  @property
-  def is_ipv6(self):
-    return 'ipv6' in self.tags
+    return bool(self.MatchesTags(['preferred', 'dhcp', 'system', 'specified']))
 
   @property
   def check_average(self):
@@ -247,7 +241,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   @property
   def version(self):
-    if self._version is None:
+    if self._version is None and not self.is_disabled:
       self.GetVersion()
 
     if not self._version:
@@ -273,12 +267,14 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   @property
   def node_ids(self):
     """Return a set of node_ids seen on this system."""
+    if self.is_disabled:
+      return []
+    
     # We use a slightly different pattern here because we want to
     # append to our results each time this is called.
     self._node_ids.add(self.GetNodeIdWithDuration()[0])
     # Only return non-blank entries
     return [x for x in self._node_ids if x]
-
 
   @property
   def partial_node_ids(self):
@@ -324,31 +320,31 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     return self.__str__()
 
   def HasTag(self, tag):
+    """Matches one tag."""
     return tag in self.tags
 
   def MatchesTags(self, tags):
+    """Matches many tags."""
     return self.tags.intersection(tags)
 
   def AddFailure(self, message, fatal=False):
     """Add a failure for this nameserver. This will effectively disable it's use."""
-    if self.is_system:
-      max_count = MAX_SYSTEM_FAILURES
-    elif self.is_preferred:
-      max_count = MAX_PREFERRED_FAILURES
+
+    respect_fatal = True
+    if self.is_keeper:
+      max_count = MAX_KEEPER_FAILURES
     else:
       max_count = MAX_NORMAL_FAILURES
 
     self.failed_test_count += 1
-
-    if self.is_system or self.is_preferred:
-      # If the preferred host is IPv6 and we have no previous checks, fail quietly.
-      if self.is_ipv6 and len(self.checks) <= 1:
-        self.DisableWithMessage(message)
+    if self.is_keeper:
+      # Be quiet if this is simply a 'preferred' ipv6 host.
+      if self.HasTag('preferred') and self.HasTag('ipv6') and len(self.checks) <= 1:
+        self.is_disabled = True
       else:
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)
 
-    # Fatal doesn't count for system & preferred nameservers.
-    if fatal and not (self.is_system or self.is_preferred):
+    if fatal and respect_fatal:
       self.DisableWithMessage(message)
     elif self.failed_test_count >= max_count:
       self.DisableWithMessage("Failed %s tests, last: %s" % (self.failed_test_count, message))
@@ -366,8 +362,8 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   def DisableWithMessage(self, message):
     self.is_disabled = True
-    if self.is_preferred or self.is_specified:
-      print "DISABLING %s: %s" % (self, message)
+    if self.is_keeper:
+      print "\nDISABLING %s: %s\n" % (self, message)
     else:
       self.hidden = True
     self.disabled_msg = message
@@ -377,6 +373,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     return dns.message.make_query(record, request_type, return_type)
 
   def Query(self, request, timeout):
+#    print "%s -> %s" % (request, self)
     return dns.query.udp(request, self.ip, timeout, 53)
 
   def TimedRequest(self, type_string, record_string, timeout=None, rdataclass=None):
@@ -473,6 +470,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   def GetReverseIp(self, ip, retries_left=2):
     """Request a hostname for a given IP address."""
     try:
+#      print "reverse: %s -> %s" % (ip, self)
       answer = dns.resolver.query(dns.reversename.from_address(ip), 'PTR')
     except dns.resolver.NXDOMAIN:
       return ip

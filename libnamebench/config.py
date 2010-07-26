@@ -45,16 +45,15 @@ SETS_TO_TAGS_MAP = {
   'system': ['system', 'dhcp'],
   'global': ['global', 'preferred'],
   'preferred': ['preferred'],
-  'all': ['global', 'system', 'dhcp', 'internal', 'regional', 'preferred'],
-  'regional': ['internal', 'regional'],
-  'isp': ['isp', 'dhcp', 'internal'],
+  'all': ['global', 'regional', 'system', 'dhcp', 'internal', 'network', 'preferred', 'isp', 'likely-isp'],
+  'regional': ['internal', 'regional', 'nearby', 'network', 'isp', 'likely-isp'],
+  'isp': ['isp', 'dhcp', 'internal', 'likely-isp'],
   'network': ['network', 'internal', 'dhcp'],
 }
 
 def ExpandSetsToTags(set_names):
   tags = set()
   for set_name in set_names:
-    print set_name
     tags.update(set(SETS_TO_TAGS_MAP.get(set_name, set_name)))
   return tags
 
@@ -135,13 +134,11 @@ def GetNameServerData(filename='config/servers.csv'):
 
   # Add the system servers for later reference.
   for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
-    ns = nameserver.NameServer(ip, tags=['system', 'system-%s' % i],
-                               name='SYS%s-%s' % (i, ip))
+    ns = nameserver.NameServer(ip, name='SYS%s-%s', system_position=i)
     ns_data.append(ns)
 
   for i, ip in enumerate(sys_nameservers.GetAssignedNameServers()):
-    ns = nameserver.NameServer(ip, tags=['dhcp', 'dhcp-%s' % i],
-                               name='DHCP%s-%s' % (i, ip))
+    ns = nameserver.NameServer(ip, name='DHCP%s-%s', dhcp_position=i)
     ns_data.append(ns)
   return ns_data
 
