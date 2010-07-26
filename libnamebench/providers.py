@@ -16,6 +16,7 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
+import re
 import sys
 
 if __name__ == '__main__':
@@ -26,10 +27,15 @@ import addr_util
 import nameserver
 import sys_nameservers
 
+import httplib2
+
+
 OPENDNS_IP = '208.67.220.220'
+# TODO(tstromberg): Stop hardcoding ns2.myresolver.info.
 MY_RESOLVER_IP = '188.165.43.98'
 GOOGLE_IP = '8.8.8.8'
-
+DYNDNS_IP = 'http://checkip.dyndns.org/'
+IFCONFIG_IP = 'http://ifconfig.me/ip'
 
 class OpenDNS(nameserver.NameServer):
   def __init__(self, ip=OPENDNS_IP):
@@ -42,9 +48,40 @@ class MyResolverInfo(nameserver.NameServer):
   def __init__(self, ip=MY_RESOLVER_IP):
     super(MyResolverInfo, self).__init__(ip=ip)
 
-  def ClientIp(self):
+  def DnsClientIp(self):
     return self.GetMyResolverIpWithDuration()[0]
+    
+class ExternalIpAtUrl(object):
+  
+  def FindIpAtUrl(self, url):
+    h = httplib2.Http(timeout=10)
+    _, content = h.request(url, 'GET')
+    if content:
+      ips = addr_util.ExtractIPsFromString(content)
+      if ips:
+        return ips[0]
 
+class IfConfigMe(ExternalIpAtUrl):
+  
+  def IfConfigIp(self, url=IFCONFIG_IP):
+    return self.FindIpAtUrl(url)
+
+class DynDns(object):
+  
+  def CheckIp(self, url=DYNDNS_IP):
+    return self.FindIpAtUrl(url)
+
+class AnyExternalIpHost(MyResolverInfo, IfConfigMe, DynDns):
+  
+  """Try by DNS first, then use DynDNS to get the external IP."""
+
+  
+  def ClientIp(self):
+    for method in (self.DnsClientIp, self.IfConfigIp, self.CheckIp):
+      ip = method()
+      if ip:
+        print "Found IP via %s" % method
+        return ip
 
 class GooglePublicDNS(nameserver.NameServer):
   def __init__(self, ip=GOOGLE_IP):
@@ -71,7 +108,8 @@ class SystemResolver(nameserver.NameServer):
     class_c = addr_util.GetNetworkForIp(ip, reverse=True)
     host = '%s.origin.asn.cymru.com.' % class_c
     answer = self.GetTxtRecordWithDuration(host)
-    return answer[0].split(' | ')
+    if answer and answer[0] and '|' in answer[0]:
+      return answer[0].split(' | ')
 
   def GetAsnForIp(self, ip):
     return self.GetNetworkDataForIp(ip)[0]
