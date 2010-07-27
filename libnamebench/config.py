@@ -114,13 +114,14 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
 
   return options
 
-def GetCodeAndCoordinatesForCountry(country):
-  for row in GetCountryData():
+def GetInfoForCountry(country):
+  """Get code, name, lat and lon for a given country name or code."""
+  for row in GetAllCountryData():
     if row['name'].lower() == country.lower() or row['code'].lower() == country.lower():
       lat, lon = row['coords'].split(',')
-      return row['code'], lat, lon
+      return row['code'], row['name'], lat, lon
 
-def GetCountryData(filename='data/countries.csv'):
+def GetAllCountryData(filename='data/countries.csv'):
   country_file = util.FindDataFile(filename)
   reader = csv.DictReader(open(country_file), fieldnames=['name', 'code', 'coords'])
   data = []
@@ -134,11 +135,11 @@ def GetNameServerData(filename='config/servers.csv'):
 
   # Add the system servers for later reference.
   for i, ip in enumerate(sys_nameservers.GetCurrentNameServers()):
-    ns = nameserver.NameServer(ip, name='SYS%s-%s', system_position=i)
+    ns = nameserver.NameServer(ip, name='SYS%s-%s' % (i, ip), system_position=i)
     ns_data.append(ns)
 
   for i, ip in enumerate(sys_nameservers.GetAssignedNameServers()):
-    ns = nameserver.NameServer(ip, name='DHCP%s-%s', dhcp_position=i)
+    ns = nameserver.NameServer(ip, name='DHCP%s-%s' % (i, ip), dhcp_position=i)
     ns_data.append(ns)
   return ns_data
 

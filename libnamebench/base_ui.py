@@ -47,7 +47,6 @@ class BaseUI(object):
     self.report_path = None
     self.csv_path = None
     self.geodata = None
-    self.country = None
     self.sources = {}
     self.url = None
     self.share_state = None
@@ -96,10 +95,13 @@ class BaseUI(object):
     domain = None    
     client_ip = providers.GetExternalIp()
     if client_ip:
-      self.UpdateStatus("Detected external IP as %s" % client_ip)
+#      self.UpdateStatus("Detected external IP as %s" % client_ip)
       local_ns = providers.SystemResolver()
       hostname = local_ns.GetReverseIp(client_ip)
-      domain = addr_util.GetDomainFromHostname(hostname)
+      if hostname != client_ip:
+        domain = addr_util.GetDomainFromHostname(hostname)
+      else:
+        domain = None
       asn = local_ns.GetAsnForIp(client_ip)
       
     return (domain, asn)
@@ -112,17 +114,17 @@ class BaseUI(object):
     self.nameservers.thread_count = self.options.health_thread_count
     require_tags = set()
     include_tags = self.options.tags
+    country_code = None
 
     if self.options.ipv6_only:
       require_tags.add('ipv6')
     elif self.options.ipv4_only:
       require_tags.add('ipv4')
 
-    if 'likely-isp' in self.options.tags:
-      country, lat, lon = self.ConfiguredLocationData()
-      if country:
-        self.UpdateStatus("Detected country as %s (%s,%s)" % (country, lat, lon))
-        self.nameservers.SetClientLocation(lat, lon, country)
+    if self.options.tags.intersection(set(['regional','likely-isp','nearby'])):
+      country_code, country_name, lat, lon = self.ConfiguredLocationData()
+      if country_code:
+        self.nameservers.SetClientLocation(lat, lon, country_code)
 
     if self.options.tags.intersection(set(['regional','isp','network'])):
       domain, asn = self.GetExternalNetworkData()
@@ -134,9 +136,9 @@ class BaseUI(object):
         self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (DEFAULT_DISTANCE_KM, lat, lon))
         self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
 
-    if 'regional' in self.options.tags and country:
+    if 'regional' in self.options.tags and country_code:
       include_tags.discard('regional')
-      include_tags.add('country_%s' % country.lower())
+      include_tags.add('country_%s' % country_code.lower())
       include_tags.add('nearby')
 
     self.nameservers.status_callback = self.UpdateStatus
@@ -146,17 +148,17 @@ class BaseUI(object):
                                  require_tags=require_tags)
 
   def ConfiguredLocationData(self):
-    if not self.geodata:
-      self.DiscoverLocation()
-      country_code = self.geodata.get('country_code')
+    self.DiscoverLocation()
+    if self.options.country:
+      country_code, country_name, lat, lon = config.GetInfoForCountry(self.options.country)
+      self.UpdateStatus("Set country to %s - %s (%s,%s)" % (country_code, country_name, lat, lon))
+    else:
+      country_code, country_name = config.GetInfoForCountry(self.geodata.get('country_code'))[0:2]
       lat = self.geodata.get('latitude')
       lon = self.geodata.get('longitude')
+      self.UpdateStatus("Determined location as %s - %s (%s,%s)" % (country_code, country_name, lat, lon))
 
-    if self.options.country and self.options.country != country_code:
-      country_code, lat, lon = config.GetCodeAndCoordinatesForCountry(self.options.country)
-      self.UpdateStatus("Set country to %s (%s,%s)" % (country_code, lat, lon))
-
-    return country_code, lat, lon
+    return country_code, country_name, lat, lon
 
   def CheckNameServerHealth(self):
     self.nameservers.SetTimeouts(self.options.timeout,
