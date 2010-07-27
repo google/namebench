@@ -410,8 +410,9 @@ class NameServers(list):
       if ns.MatchesTags(['preferred', 'global']):
         if ns.provider in seen and not ns.MatchesTags(['system', 'specified']):
           faster_ns = seen[ns.provider]
-          self.msg('Making %s the primary anycast - faster than %s by %2.2fms' %
-                   (faster_ns.name_and_node, ns.name_and_node, ns.check_average - faster_ns.check_average))
+          if ns.HasTag('preferred'):
+            self.msg('Making %s the primary anycast - faster than %s by %2.2fms' %
+                     (faster_ns.name_and_node, ns.name_and_node, ns.check_average - faster_ns.check_average))
           ns.is_hidden = True
         else:
           seen[ns.provider] = ns
