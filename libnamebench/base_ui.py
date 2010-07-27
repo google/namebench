@@ -130,16 +130,17 @@ class BaseUI(object):
       domain, asn = self.GetExternalNetworkData()
       if asn:
         self.nameservers.SetNetworkLocation(domain, asn)
-        self.UpdateStatus("Detected ISP as %s (AS%s)" % (domain, asn))
+        self.UpdateStatus("Detected ISP as %s (AS%s), looking for ISP nameservers" % (domain, asn))
+        self.nameservers.AddNetworkTags()
 
-      if lat:
-        self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (DEFAULT_DISTANCE_KM, lat, lon))
-        self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
 
     if 'regional' in self.options.tags and country_code:
       include_tags.discard('regional')
       include_tags.add('country_%s' % country_code.lower())
-      include_tags.add('nearby')
+      if lat:
+        self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (DEFAULT_DISTANCE_KM, lat, lon))
+        self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
+        include_tags.add('nearby')
 
     self.nameservers.status_callback = self.UpdateStatus
     self.UpdateStatus("DNS server filter: %s %s" % (','.join(include_tags),

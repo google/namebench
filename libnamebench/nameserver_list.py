@@ -260,7 +260,8 @@ class NameServers(list):
                           for x in self.HasVisibleTag('regional')], key=operator.itemgetter(0))
     return [x[1] for x in srv_by_dist if x[0] <= max_distance]
 
-  def AddLocalityTags(self, max_distance=1000, max_distance_overload=100, max_nearby=MAX_NEARBY_SERVERS):
+  def AddNetworkTags(self):
+    """Add network tags for each nameserver."""
     if self.client_domain:
       provider = self.client_domain.split('.')[0]
     else:
@@ -269,6 +270,8 @@ class NameServers(list):
     for ns in self:
       ns.AddNetworkTags(self.client_domain, provider, self.client_asn, self.client_country)
 
+
+  def AddLocalityTags(self, max_distance=1000, max_distance_overload=100, max_nearby=MAX_NEARBY_SERVERS):
     if len(self.country_servers) >= max_nearby:
       max_distance = max_distance_overload
 
