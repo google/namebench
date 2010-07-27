@@ -150,10 +150,10 @@ class BaseUI(object):
   def ConfiguredLocationData(self):
     self.DiscoverLocation()
     if self.options.country:
-      country_code, country_name, lat, lon = config.GetInfoForCountry(self.options.country)
+      country_code, country_name, lat, lon = geoip.GetInfoForCountry(self.options.country)
       self.UpdateStatus("Set country to %s - %s (%s,%s)" % (country_code, country_name, lat, lon))
     else:
-      country_code, country_name = config.GetInfoForCountry(self.geodata.get('country_code'))[0:2]
+      country_code, country_name = geoip.GetInfoForCountry(self.geodata.get('country_code'))[0:2]
       lat = self.geodata.get('latitude')
       lon = self.geodata.get('longitude')
       self.UpdateStatus("Determined location as %s - %s (%s,%s)" % (country_code, country_name, lat, lon))

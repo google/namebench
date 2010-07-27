@@ -114,21 +114,6 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
 
   return options
 
-def GetInfoForCountry(country):
-  """Get code, name, lat and lon for a given country name or code."""
-  for row in GetAllCountryData():
-    if row['name'].lower() == country.lower() or row['code'].lower() == country.lower():
-      lat, lon = row['coords'].split(',')
-      return row['code'], row['name'], lat, lon
-
-def GetAllCountryData(filename='data/countries.csv'):
-  country_file = util.FindDataFile(filename)
-  reader = csv.DictReader(open(country_file), fieldnames=['name', 'code', 'coords'])
-  data = []
-  for row in reader:
-    data.append(row)
-  return data
-
 def GetNameServerData(filename='config/servers.csv'):
   server_file = util.FindDataFile(filename)
   ns_data = _ParseNameServerListing(open(server_file))

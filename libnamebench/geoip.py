@@ -14,6 +14,7 @@
 
 """Class used for determining GeoIP location."""
 
+import csv
 import re
 import tempfile
 
@@ -80,3 +81,46 @@ def GetGeoData():
     print 'Failed to get Geodata: %s' % util.GetLastExceptionString()
     return {}
 
+def GetInfoForCountry(country_name_or_code):
+  """Get code, name, lat and lon for a given country name or code."""
+  match = False
+  partial_match = False
+  if len(country_name_or_code) == 2:
+    country_code = country_name_or_code.upper()
+    country_name = False
+  else:
+    country_name = country_name_or_code
+    country_code = False
+
+  for row in ReadCountryData():
+    lat, lon = row['coords'].split(',')        
+    if country_code:
+      if row['code'] == country_code:
+        return row['code'], row['name'], lat, lon
+    elif country_name:
+      if re.match("^%s$" % country_name, row['name'], re.I):
+        return row['code'], row['name'], lat, lon
+      elif re.search('^%s \(' % country_name, row['name'], re.I):
+          return row['code'], row['name'], lat, lon
+      elif re.search('\(%s\)' % country_name, row['name'], re.I):
+        return row['code'], row['name'], lat, lon
+      elif re.match("^%s" % country_name, row['name'], re.I):
+        match = (row['code'], row['name'], lat, lon)
+      elif re.search(country_name, row['name'], re.I):
+        partial_match = (row['code'], row['name'], lat, lon)
+
+  if match:
+    print "Could not find explicit entry for '%s', good match: %s" % (country_name_or_code, match)
+    return match
+  elif partial_match:
+    print "Could not find explicit entry for '%s', partial match: %s" % (country_name_or_code, partial_match)
+    return partial_match   
+  else:
+    print "'%s' does not match any countries in our list." % country_name_or_code
+    return (None, None, None, None)
+
+def ReadCountryData(filename='data/countries.csv'):
+  """Read country data file, yielding rows of information."""
+  country_file = util.FindDataFile(filename)
+  for row in csv.DictReader(open(country_file), fieldnames=['name', 'code', 'coords']):
+    yield row
