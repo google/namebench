@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tricks that depend on a certain DNS provider. Likely to break."""
+"""Tricks that depend on a certain DNS provider.
+
+Tricks that require inheritence by nameserver.py must go here, otherwise,
+see providers.py for externally available functions.
+"""
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-OPENDNS_IP = '208.67.220.220'
-MY_RESOLVER_IP = '188.165.43.98'
-GOOGLE_IP = '8.8.8.8'
 
 class NameServerProvider(object):
 
   """Inherited by nameserver."""
-
+  
   # myresolver.info
   def GetMyResolverIpWithDuration(self):
     return self.GetIpFromNameWithDuration('self.myresolver.info.')
@@ -45,3 +46,4 @@ class NameServerProvider(object):
   # UltraDNS
   def GetUltraDnsNodeWithDuration(self):
     return self.GetNameFromNameWithDuration('whoareyou.ultradns.net.')
+

@@ -94,7 +94,7 @@ class BaseUI(object):
 
     asn = None
     domain = None    
-    client_ip = providers.AnyExternalIpHost().ClientIp()
+    client_ip = providers.GetExternalIp()
     if client_ip:
       self.UpdateStatus("Detected external IP as %s" % client_ip)
       local_ns = providers.SystemResolver()
