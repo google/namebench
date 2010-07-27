@@ -71,8 +71,8 @@ class DataSources(object):
         self.source_config[section] = {
             'name': None,
             'search_paths': set(),
-            # Store whether or not this data source contains personal data
             'full_hostnames': True,
+            # Store whether or not this data source contains personal data
             'synthetic': False,
             'include_duplicates': False,
             'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
@@ -307,7 +307,9 @@ class DataSources(object):
       return None
 
     size_mb = os.path.getsize(filename) / 1024.0 / 1024.0
-    self.msg('Reading %s: %s (%0.1fMB)' % (self.GetNameForSource(source), filename, size_mb))
+    # Minimize our output
+    if not self.source_config[source]['synthetic']:
+      self.msg('Reading %s: %s (%0.1fMB)' % (self.GetNameForSource(source), filename, size_mb))
     start_clock = DEFAULT_TIMER()
     if filename.endswith('.pcap') or filename.endswith('.tcp'):
       hosts = self._ExtractHostsFromPcapFile(filename)
@@ -424,7 +426,8 @@ class DataSources(object):
       newest = sorted(found, key=os.path.getmtime)[-1]
       age_days = (time.time() - os.path.getmtime(newest)) / 86400
       if max_mtime_age_days and age_days > max_mtime_age_days:
-        self.msg('Skipping %s (%2.0fd old)' % (newest, age_days))
+        pass
+#        self.msg('Skipping %s (%2.0fd old)' % (newest, age_days))
       else:
         return newest
     else:
