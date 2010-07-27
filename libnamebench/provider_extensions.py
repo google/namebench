@@ -39,7 +39,7 @@ class NameServerProvider(object):
   def GetOpenDnsInterceptionStateWithDuration(self):
     """Check if our packets are actually getting to the correct servers."""
     (node_id, duration) = self.GetOpenDnsNodeWithDuration()
-    if 'I am not an OpenDNS resolver' in node_id:
+    if node_id and 'I am not an OpenDNS resolver' in node_id:
       return (True, duration)
     return (False, duration)
 
