@@ -111,7 +111,8 @@ class NameBenchCli(base_ui.BaseUI):
       self.LoadDataSources()
       self.PrepareTestRecords()
       print '-' * 78
-      self.CheckNameServerHealth()
+      if not self.options.skip_health_checks:
+        self.CheckNameServerHealth()
       print 'Final list of nameservers considered:'
       print '-' * 78
       for n in self.nameservers.SortEnabledByFastest():
