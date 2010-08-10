@@ -209,9 +209,11 @@ class BaseUI(object):
 
   def DiscoverLocation(self):
     if not getattr(self, 'geodata', None):
+      self.UpdateStatus("Determining your location...")
       self.geodata = geoip.GetGeoData()
     # Try again
     if not self.geodata:
+      self.UpdateStatus("Determining your location (retry)...")
       self.geodata = geoip.GetGeoData()
       
     return self.geodata
