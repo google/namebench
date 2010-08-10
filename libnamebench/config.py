@@ -222,7 +222,7 @@ def GetAutoUpdatingConfigFile(conf_file):
       print '* Unable to read remote %s: %s' % (conf_file, util.GetLastExceptionString())
       return _ExpandConfigSections(local_config)
 
-  if int(remote_config.get('config', 'version')) > local_version:
+  if remote_config and remote_config.has_section('config') and int(remote_config.get('config', 'version')) > local_version:
     print '- Using %s' % url
     return _ExpandConfigSections(remote_config)
   else:
