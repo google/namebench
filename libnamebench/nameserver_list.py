@@ -39,8 +39,7 @@ PREFERRED_HEALTH_TIMEOUT_MULTIPLIER = 1.5
 SYSTEM_HEALTH_TIMEOUT_MULTIPLIER = 2
 TOO_DISTANT_MULTIPLIER = 4.75
 
-MAX_NEARBY_SERVERS = 500
-MAX_SERVERS_TO_CHECK = 350
+DEFAULT_MAX_SERVERS_TO_CHECK = 350
 
 
 # If we can't ping more than this, go into slowmode.
@@ -132,7 +131,7 @@ class QueryThreads(threading.Thread):
 
 class NameServers(list):
 
-  def __init__(self, thread_count=DEFAULT_THREAD_COUNT):
+  def __init__(self, thread_count=DEFAULT_THREAD_COUNT, max_servers_to_check=DEFAULT_MAX_SERVERS_TO_CHECK):
     self._ips = set()
     self.thread_count = thread_count 
     super(NameServers, self).__init__()
@@ -142,6 +141,7 @@ class NameServers(list):
     self.client_country = None
     self.client_domain = None
     self.client_asn = None
+    self.max_servers_to_check = max_servers_to_check
 
   @property
   def visible_servers(self):
@@ -259,10 +259,15 @@ class NameServers(list):
       self.msg("%s of %s nameservers have tags: %s" %
                (len(self.visible_servers), len(self), ', '.join(include_tags)))
 
+  def HasEnoughInCountryServers():
+    return len(self.country_servers) > self.max_servers_to_check
+
   def NearbyServers(self, max_distance):
     srv_by_dist = sorted([(x.DistanceFromCoordinates(self.client_latitude, self.client_longitude), x)
                           for x in self.HasVisibleTag('regional')], key=operator.itemgetter(0))
-    return [x[1] for x in srv_by_dist if x[0] <= max_distance]
+    for distance, ns in srv_by_dist:
+      if distance < float(max_distance):
+        yield ns
 
   def AddNetworkTags(self):
     """Add network tags for each nameserver."""
@@ -275,17 +280,20 @@ class NameServers(list):
       ns.AddNetworkTags(self.client_domain, provider, self.client_asn, self.client_country)
 
 
-  def AddLocalityTags(self, max_distance=1000, max_distance_overload=100, max_nearby=MAX_NEARBY_SERVERS):
-    if len(self.country_servers) >= max_nearby:
-      max_distance = max_distance_overload
-
+  def AddLocalityTags(self, max_distance):
     if self.client_latitude:
-      for ns in self.NearbyServers(max_distance)[0:max_nearby]:
+      count = 0
+      for ns in self.NearbyServers(max_distance):
+        count += 1
+        if count > self.max_servers_to_check:
+          break
         ns.tags.add('nearby')
   
-  def DisableSlowestSupplementalServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=MAX_SERVERS_TO_CHECK,
+  def DisableSlowestSupplementalServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=None,
                                         prefer_asn=None):
     """Disable servers who's fastest duration is multiplier * average of best 10 servers."""
+    if not max_servers:
+      max_servers = self.max_servers_to_check
 
     supplemental_servers = self.enabled_supplemental
     fastest = [x for x in self.SortEnabledByFastest()][:10]
@@ -358,7 +366,7 @@ class NameServers(list):
         if len(supplemental_servers_to_keep) >= nearest_needed:
           break
 
-    # Phase three is removing all of the slower secondary servers
+    # Phase three is hiding the slower secondary servers
     for ns in self.SortEnabledByFastest():
       if ns not in keepers and ns not in supplemental_servers_to_keep:
         supplemental_servers_to_keep.append(ns)
@@ -367,7 +375,6 @@ class NameServers(list):
 
     for ns in self.supplemental_servers:
       if ns not in supplemental_servers_to_keep and ns not in keepers:
-        self.msg("Hiding %s" % ns)
         ns.is_hidden = True
 
   def CheckHealth(self, sanity_checks=None, max_servers=11, prefer_asn=None):

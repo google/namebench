@@ -28,8 +28,6 @@ import providers
 import site_connector
 import util
 
-DEFAULT_DISTANCE_KM=2000
-
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 
@@ -108,9 +106,10 @@ class BaseUI(object):
       
       
 
-  def PrepareNameServers(self, distance=DEFAULT_DISTANCE_KM):
+  def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()
+    self.nameservers.max_servers_to_check = self.options.max_servers_to_check
     self.nameservers.thread_count = self.options.health_thread_count
     require_tags = set()
     include_tags = self.options.tags
@@ -121,12 +120,12 @@ class BaseUI(object):
     elif self.options.ipv4_only:
       require_tags.add('ipv4')
 
-    if self.options.tags.intersection(set(['regional','likely-isp','nearby'])):
+    if self.options.tags.intersection(set(['nearby', 'country', 'likely-isp', 'nearby'])):
       country_code, country_name, lat, lon = self.ConfiguredLocationData()
       if country_code:
         self.nameservers.SetClientLocation(lat, lon, country_code)
 
-    if self.options.tags.intersection(set(['regional','isp','network', 'dhcp'])):
+    if self.options.tags.intersection(set(['isp','network'])):
       domain, asn = self.GetExternalNetworkData()
       if asn:
         self.nameservers.SetNetworkLocation(domain, asn)
@@ -134,13 +133,19 @@ class BaseUI(object):
         self.nameservers.AddNetworkTags()
 
 
-    if 'regional' in self.options.tags and country_code:
-      include_tags.discard('regional')
+    if 'country' in self.options.tags:
+      include_tags.discard('country')
       include_tags.add('country_%s' % country_code.lower())
-      if lat:
-        self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (DEFAULT_DISTANCE_KM, lat, lon))
-        self.nameservers.AddLocalityTags(max_distance=DEFAULT_DISTANCE_KM)
-        include_tags.add('nearby')
+
+    if 'nearby' in self.options.tags and lat:
+      distance = self.options.distance
+      if 'country' in self.options.tags:
+        if self.nameservers.HasEnoughInCountryServers() and self.options.distance > self.options.overload_distance:
+          self.UpdateStatus("Looks like we already have >%s in-country servers, shortening nearby distance." % self.options.max_servers_to_check)
+          distance = self.options.overload_distance
+      
+      self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (distance, lat, lon))
+      self.nameservers.AddLocalityTags(max_distance=distance)
 
     self.nameservers.status_callback = self.UpdateStatus
     self.UpdateStatus("DNS server filter: %s %s" % (','.join(include_tags),

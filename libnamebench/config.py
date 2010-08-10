@@ -42,13 +42,14 @@ import version
 TRUNK_URL = 'http://namebench.googlecode.com/svn/trunk/'
 
 SETS_TO_TAGS_MAP = {
-  'system': ['system', 'dhcp'],
-  'global': ['global', 'preferred'],
+  'system':    ['system', 'dhcp'],
+  'global':    ['global', 'preferred'],
   'preferred': ['preferred'],
-  'all': ['global', 'regional', 'system', 'dhcp', 'internal', 'network', 'preferred', 'isp', 'likely-isp'],
-  'regional': ['internal', 'regional', 'nearby', 'network', 'isp', 'likely-isp'],
-  'isp': ['isp', 'dhcp', 'internal', 'likely-isp'],
-  'network': ['network', 'internal', 'dhcp'],
+  'nearby':    ['nearby', 'dhcp', 'internal'],
+  'all':       ['global', 'nearby', 'country', 'system', 'dhcp', 'internal', 'network', 'preferred', 'isp', 'likely-isp'],
+  'regional':  ['internal', 'country', 'nearby', 'network', 'isp', 'likely-isp'],
+  'isp':       ['isp', 'dhcp', 'internal', 'likely-isp'],
+  'network':   ['network', 'internal', 'dhcp'],
 }
 
 def ExpandSetsToTags(set_names):
@@ -84,7 +85,10 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
   parser.add_option('-I', '--ips', dest='servers', default=[], help='A list of ips to test (can also be passed as arguments)')
   parser.add_option('-j', '--health_threads', dest='health_thread_count', type='int', help='# of health check threads to use')
   parser.add_option('-J', '--benchmark_threads', dest='benchmark_thread_count', type='int', help='# of benchmark threads to use')
+  parser.add_option('-k', '--distance_km', dest='distance', default=1250, help='Distance in km for determining if server is nearby')
+  parser.add_option('-K', '--overload_distance_km', dest='overload_distance', default=250, help='Like -k, but used if the country already has >350 servers.')
   parser.add_option('-m', '--select_mode', dest='select_mode', default='automatic', help='Selection algorithm to use (weighted, random, chunk)')
+  parser.add_option('-M', '--max_servers_to_check', dest='max_servers_to_check', default=350, help='Maximum number of servers to inspect')
   parser.add_option('-n', '--num_servers', dest='num_servers', type='int', help='Number of nameservers to include in test')
   parser.add_option('-o', '--output', dest='output_file', default=None, help='Filename to write output to')
   parser.add_option('-O', '--csv_output', dest='csv_file', default=None, help='Filename to write query details to (CSV)')

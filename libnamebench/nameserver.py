@@ -54,7 +54,7 @@ MAX_WARNINGS = 10
 FAILURE_PRONE_RATE = 10
 
 # In order of most likely to be important.
-PROVIDER_TAGS = ['isp', 'network', 'likely-isp']
+PROVIDER_TAGS = ['isp', 'network', 'likely-isp', 'dhcp']
 
 # EVIL IMPORT-TIME SIDE EFFECT
 BEST_TIMER_FUNCTION = util.GetMostAccurateTimerFunction()
