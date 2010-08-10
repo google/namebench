@@ -49,8 +49,8 @@ if dns.version.hexversion < 17301744:
 
 # How many failures before we disable system nameservers
 MAX_NORMAL_FAILURES = 2
-MAX_KEEPER_FAILURES = 5
-MAX_WARNINGS = 8
+MAX_KEEPER_FAILURES = 8
+MAX_WARNINGS = 10
 FAILURE_PRONE_RATE = 10
 
 # In order of most likely to be important.
@@ -362,7 +362,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   def DisableWithMessage(self, message):
     self.is_disabled = True
-    if self.is_keeper:
+    if self.is_keeper and not self.HasTag('ipv6'):
       print "\nDISABLING %s: %s\n" % (self, message)
     else:
       self.hidden = True

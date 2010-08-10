@@ -164,6 +164,10 @@ class NameServers(list):
     return [x for x in self.enabled_servers if not x.is_keeper]
 
   @property
+  def supplemental_servers(self):
+    return [x for x in self if not x.is_keeper]
+
+  @property
   def country_servers(self):
     return [x for x in self if x.country_code == self.client_country]
 
@@ -323,11 +327,12 @@ class NameServers(list):
       if ns.HasTag('ipv6') and not ns.is_hidden:
         ns.is_hidden = True
 
-  def HideSlowSupplementalServers(self, target_count, delete_unwanted=False):
+  def HideSlowSupplementalServers(self, target_count):
     """Given a target count, delete nameservers that we do not plan to test."""
     # Magic secondary mixing algorithm:
     # - Half of them should be the "nearest" nameservers
     # - Half of them should be the "fastest average" nameservers
+    self.msg("Hiding all but %s servers" % target_count)
     keepers = self.enabled_keepers
     isp_keeper = self._FastestByLocalProvider()
     if isp_keeper:
@@ -360,8 +365,9 @@ class NameServers(list):
         if len(supplemental_servers_to_keep) >= supplemental_servers_needed:
           break
 
-    for ns in self.enabled_supplemental:
+    for ns in self.supplemental_servers:
       if ns not in supplemental_servers_to_keep and ns not in keepers:
+        self.msg("Hiding %s" % ns)
         ns.is_hidden = True
 
   def CheckHealth(self, sanity_checks=None, max_servers=11, prefer_asn=None):
@@ -372,8 +378,7 @@ class NameServers(list):
     self.RunHealthCheckThreads(sanity_checks['primary'])
     if len(self.enabled_servers) > max_servers:
       self._DemoteSecondaryGlobalNameServers()
-      self.HideSlowSupplementalServers(target_count=int(max_servers * NS_CACHE_SLACK),
-                                  delete_unwanted=True)
+      self.HideSlowSupplementalServers(int(max_servers * NS_CACHE_SLACK))
     # TODO(tstromberg): Insert caching here.
     if len(self.enabled_servers) > 1:
       self.CheckCacheCollusion()

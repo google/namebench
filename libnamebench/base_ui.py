@@ -126,11 +126,11 @@ class BaseUI(object):
       if country_code:
         self.nameservers.SetClientLocation(lat, lon, country_code)
 
-    if self.options.tags.intersection(set(['regional','isp','network'])):
+    if self.options.tags.intersection(set(['regional','isp','network', 'dhcp'])):
       domain, asn = self.GetExternalNetworkData()
       if asn:
         self.nameservers.SetNetworkLocation(domain, asn)
-        self.UpdateStatus("Detected ISP as %s (AS%s), looking for ISP nameservers" % (domain, asn))
+        self.UpdateStatus("Looking for nameservers within %s or AS%s" % (domain, asn))
         self.nameservers.AddNetworkTags()
 
 
@@ -154,10 +154,14 @@ class BaseUI(object):
       country_code, country_name, lat, lon = geoip.GetInfoForCountry(self.options.country)
       self.UpdateStatus("Set country to %s - %s (%s,%s)" % (country_code, country_name, lat, lon))
     else:
-      country_code, country_name = geoip.GetInfoForCountry(self.geodata.get('country_code'))[0:2]
+      country_code = self.geodata.get('country_code')
+      if not country_code:
+        return None, None, None, None
+      country_code, country_name = geoip.GetInfoForCountry(country_code)[0:2]
+      region = self.geodata.get('region_name')
       lat = self.geodata.get('latitude')
       lon = self.geodata.get('longitude')
-      self.UpdateStatus("Determined location as %s - %s (%s,%s)" % (country_code, country_name, lat, lon))
+      self.UpdateStatus("Determined location as %s: %s, %s (%s,%s)" % (country_code, region, country_name, lat, lon))
 
     return country_code, country_name, lat, lon
 
@@ -201,6 +205,10 @@ class BaseUI(object):
   def DiscoverLocation(self):
     if not getattr(self, 'geodata', None):
       self.geodata = geoip.GetGeoData()
+    # Try again
+    if not self.geodata:
+      self.geodata = geoip.GetGeoData()
+      
     return self.geodata
 
   def RunAndOpenReports(self):

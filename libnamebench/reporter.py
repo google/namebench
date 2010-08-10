@@ -70,7 +70,7 @@ class ReportGenerator(object):
 
     records = []
     for ns in self.results:
-      if ns.is_disabled:
+      if ns.is_disabled or ns.is_hidden:
         continue
       failure_count = 0
       nx_count = 0
@@ -128,7 +128,7 @@ class ReportGenerator(object):
     sorted_averages = sorted(self.ComputeAverages(), key=operator.itemgetter(1))
     hosts = [x[0] for x in sorted_averages]
     for host in hosts:
-      if not host.is_failure_prone:
+      if not host.is_failure_prone and not host.is_disabled:
         return host
     # return something if none of them are good.
     return hosts[0]
@@ -137,7 +137,7 @@ class ReportGenerator(object):
     """Return the nameservers with the least latency."""
     min_responses = sorted(self.FastestNameServerResult(),
                            key=operator.itemgetter(1))
-    return [x[0] for x in min_responses][0:count]
+    return [x[0] for x in min_responses if not x.is_disabled][0:count]
 
   def _LowestLatencyAsciiChart(self):
     """Return a simple set of tuples to generate an ASCII chart from."""

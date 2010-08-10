@@ -85,6 +85,9 @@ def GetInfoForCountry(country_name_or_code):
   """Get code, name, lat and lon for a given country name or code."""
   match = False
   partial_match = False
+  if not country_name_or_code:
+    return None
+  
   if len(country_name_or_code) == 2:
     country_code = country_name_or_code.upper()
     country_name = False

@@ -54,7 +54,7 @@ SETS_TO_TAGS_MAP = {
 def ExpandSetsToTags(set_names):
   tags = set()
   for set_name in set_names:
-    tags.update(set(SETS_TO_TAGS_MAP.get(set_name, set_name)))
+    tags.update(set(SETS_TO_TAGS_MAP.get(set_name, [set_name])))
   return tags
 
 def GetMergedConfiguration():
@@ -105,7 +105,11 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
 
   options, args = parser.parse_args()
   if options.server_sets:
-    options.tags = ExpandSetsToTags(options.server_sets.split(','))
+    if ',' in options.server_sets:
+      sets = options.server_sets.split(',')
+    else:
+      sets = [options.server_sets,]
+    options.tags = ExpandSetsToTags(sets)
   else:
     options.tags = set()
 
