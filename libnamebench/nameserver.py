@@ -97,7 +97,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.provider = provider
     self.instance = instance
     self.location = location
-    
+
     if self.location:
       self.country_code = location.split('/')[0]
       self.tags.add('country_%s' % self.country_code.lower())
@@ -110,16 +110,13 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.network_owner = network_owner
     self._hostname = hostname
 
-    self.is_hidden = False
-    self.is_disabled = False
-
     self.timeout = 5
     self.health_timeout = 5
     self.ping_timeout = 1
     self.ResetTestStatus()
     self._version = None
     self._node_ids = set()
-    
+
     self.timer = BEST_TIMER_FUNCTION
 
     if ':' in self.ip:
@@ -127,16 +124,23 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     elif '.' in self.ip:
       self.tags.add('ipv4')
 
-    if self.dhcp_position:
+    if self.dhcp_position is not None:
       self.tags.add('dhcp')
-    if self.system_position:
+    if self.system_position is not None:
       self.tags.add('system')
 
     if ip.endswith('.0') or ip.endswith('.255'):
       self.DisableWithMessage("IP appears to be a broadcast address.")
-      
+    elif self.is_bad:
+      self.DisableWithMessage("Known bad address.")
+
   def AddNetworkTags(self, domain, provider, asn, country_code):
-    my_domain = addr_util.GetDomainFromHostname(self.hostname)
+    if self.hostname:
+      my_domain = addr_util.GetDomainFromHostname(self.hostname)
+      hostname = self.hostname.lower()
+    else:
+      my_domain = 'UNKNOWN'
+      hostname = ''
     if provider:
       provider = provider.lower()
 
@@ -144,13 +148,13 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       self.tags.add('isp')
     if asn and self.asn == asn:
       self.tags.add('network')
-      
+
       if provider and 'isp' not in self.tags:
         if (provider in self.name.lower() or provider in self.hostname.lower()
             or (self.network_owner and provider in self.network_owner.lower())):
           self.tags.add('isp')
     elif provider and self.country_code == country_code and my_domain != domain:
-      if (provider in self.name.lower() or provider in self.hostname.lower()
+      if (provider in self.name.lower() or provider in hostname
         or (self.network_owner and provider in self.network_owner.lower())):
         self.tags.add('likely-isp')
 
@@ -158,7 +162,8 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     """Reset testing status of this host."""
     self.warnings = set()
     self.shared_with = set()
-    self.is_disabled = False
+    if self.is_disabled:
+      self.tags.remove('disabled')
     self.checks = []
     self.failed_test_count = 0
     self.share_check_count = 0
@@ -176,6 +181,19 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   @property
   def is_keeper(self):
     return bool(self.MatchesTags(['preferred', 'dhcp', 'system', 'specified']))
+
+  @property
+  def is_bad(self):
+    if not self.is_keeper and self.MatchesTags(['rejected', 'blacklist']):
+      return True
+
+  @property
+  def is_hidden(self):
+    return self.HasTag('hidden')
+
+  @property
+  def is_disabled(self):
+    return self.HasTag('disabled')
 
   @property
   def check_average(self):
@@ -220,11 +238,15 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     """Return a list of notes about this nameserver object."""
     my_notes = []
     if self.system_position == 0:
-      my_notes.append('The current preferred DNS server.')
+      my_notes.append('The current preferred DNS server')
     elif self.system_position:
-      my_notes.append('A backup DNS server for this system.')
+      my_notes.append('A backup DNS server for this system')
+    if self.dhcp_position is not None:
+      my_notes.append('Assigned by your network DHCP server')
     if self.is_failure_prone:
       my_notes.append('%s of %s queries failed' % (self.failure_count, self.request_count))
+    if self.HasTag('blacklist'):
+      my_notes.append('BEWARE: IP appears in DNS server blacklist')
     if self.is_disabled:
       my_notes.append(self.disabled_msg)
     else:
@@ -235,7 +257,12 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   @property
   def hostname(self):
-    if self._hostname is None:
+    if self._hostname is None and not self.is_disabled:
+      self.UpdateHostname()
+    return self._hostname
+
+  def UpdateHostname(self):
+    if not self.is_disabled:
       self._hostname = self.GetReverseIp(self.ip)
     return self._hostname
 
@@ -269,12 +296,13 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     """Return a set of node_ids seen on this system."""
     if self.is_disabled:
       return []
-    
-    # We use a slightly different pattern here because we want to
-    # append to our results each time this is called.
-    self._node_ids.add(self.GetNodeIdWithDuration()[0])
     # Only return non-blank entries
     return [x for x in self._node_ids if x]
+
+  def UpdateNodeIds(self):
+    node_id = self.GetNodeIdWithDuration()[0]
+    self._node_ids.add(node_id)
+    return node_id
 
   @property
   def partial_node_ids(self):
@@ -309,12 +337,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       return (float(self.failure_count) / float(self.request_count)) * 100
 
   def __str__(self):
-    if self.is_disabled:
-      return '%s [DIS:%s]' % (self.name, self.ip)
-    elif self.is_hidden:
-      return '%s [HID:%s]' % (self.name, self.ip)
-    else:
-      return '%s [%s]' % (self.name, self.ip)
+    return '%s [%s:%s]' % (self.name, self.ip, ','.join(self.tags))
 
   def __repr__(self):
     return self.__str__()
@@ -338,9 +361,10 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
     self.failed_test_count += 1
     if self.is_keeper:
+      respect_fatal = False
       # Be quiet if this is simply a 'preferred' ipv6 host.
       if self.HasTag('preferred') and self.HasTag('ipv6') and len(self.checks) <= 1:
-        self.is_disabled = True
+        self.tags.add('disabled')
       else:
         print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)
 
@@ -361,11 +385,11 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       self.AddFailure('Too many warnings (%s), probably broken.' % len(self.warnings), fatal=True)
 
   def DisableWithMessage(self, message):
-    self.is_disabled = True
+    self.tags.add('disabled')
     if self.is_keeper and not self.HasTag('ipv6'):
       print "\nDISABLING %s: %s\n" % (self, message)
     else:
-      self.hidden = True
+      self.tags.add('hidden')
     self.disabled_msg = message
 
   def CreateRequest(self, record, request_type, return_type):
@@ -470,7 +494,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   def GetReverseIp(self, ip, retries_left=2):
     """Request a hostname for a given IP address."""
     try:
-#      print "reverse: %s -> %s" % (ip, self)
+      print "reverse: %s -> %s" % (ip, self)
       answer = dns.resolver.query(dns.reversename.from_address(ip), 'PTR')
     except dns.resolver.NXDOMAIN:
       return ip
@@ -491,7 +515,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     if response and response.answer:
       return (response.answer[0].items[0].to_text().lstrip('"').rstrip('"'), duration)
     elif not response and retries_left:
-      print "* Failed to lookup %s (retries left: %s): %s" % (record, retries_left, util.GetLastExceptionString())      
+      print "* Failed to lookup %s (retries left: %s): %s" % (record, retries_left, util.GetLastExceptionString())
       return self.GetTxtRecordWithDuration(record, retries_left=retries_left-1)
     else:
       return (None, duration)

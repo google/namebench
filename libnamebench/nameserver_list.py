@@ -125,6 +125,10 @@ class QueryThreads(threading.Thread):
           self.results.put(ns.CheckCensorship(self.checks))
         elif self.action_type == 'store_wildcards':
           self.results.put(ns.StoreWildcardCache())
+        elif self.action_type == 'node_id':
+          self.results.put(ns.UpdateNodeIds())
+        elif self.action_type == 'update_hostname':
+          self.results.put(ns.UpdateHostname())
         else:
           raise ValueError('Invalid action type: %s' % self.action_type)
 
@@ -133,7 +137,7 @@ class NameServers(list):
 
   def __init__(self, thread_count=DEFAULT_THREAD_COUNT, max_servers_to_check=DEFAULT_MAX_SERVERS_TO_CHECK):
     self._ips = set()
-    self.thread_count = thread_count 
+    self.thread_count = thread_count
     super(NameServers, self).__init__()
 
     self.client_latitude = None
@@ -178,7 +182,7 @@ class NameServers(list):
   # Return a list of servers that match a particular tag
   def HasVisibleTag(self, tag):
     return [x for x in self.visible_servers if x.HasTag(tag)]
-    
+
   def SortEnabledByFastest(self):
     """Return a list of healthy servers in fastest-first order."""
     return sorted(self.enabled_servers, key=operator.attrgetter('check_average'))
@@ -196,21 +200,26 @@ class NameServers(list):
   def _GetObjectForIP(self, ip):
     return [x for x in self if x.ip == ip][0]
 
+  def _MergeNameServerData(self, ns):
+    existing = self._GetObjectForIP(ns.ip)
+    existing.tags.update(ns.tags)
+    if ns.system_position is not None:
+      existing.system_position = ns.system_position
+    elif ns.dhcp_position is not None:
+      existing.dhcp_position = ns.dhcp_position
+
   def append(self, ns):
     """Add a nameserver to the list, guaranteeing uniqueness."""
     if ns.ip in self._ips:
-      existing_ns = self._GetObjectForIP(ns.ip)
-      existing_ns.tags.update(ns.tags)
-#      print "Adding tags for %s: %s" % (ns, ns.tags)
+      self._MergeNameServerData(ns)
     else:
-#      print "Adding: %s [%s]" % (ns.name, ns.ip)
       super(NameServers, self).append(ns)
       self._ips.add(ns.ip)
 
   def SetTimeouts(self, timeout, ping_timeout, health_timeout):
     if len(self.enabled_servers) > 1:
       cq = conn_quality.ConnectionQuality(status_callback=self.status_callback)
-      (intercepted, unused_level, multiplier) = cq.CheckConnectionQuality()[0:3]
+      (intercepted, avg_latency, max_latency) = cq.CheckConnectionQuality()[0:3]
       if intercepted:
         raise OutgoingUdpInterception(
             'Your router or Internet Service Provider appears to be intercepting '
@@ -219,11 +228,13 @@ class NameServers(list):
             'router configuration or file a support request with your ISP.'
         )
 
-      if multiplier > 1:
-        health_timeout *= multiplier
-        ping_timeout *= multiplier
-        self.msg('Applied %.2fX timeout multiplier due to congestion: %2.1f ping, %2.1f health.'
-                 % (multiplier, ping_timeout, health_timeout))
+      if (max_latency * 2) > health_timeout:
+        health_timeout = max_latency * 2
+        self.msg('Set health timeout to %.2fs' % health_timeout)
+
+      if (max_latency * 1.1) > ping_timeout:
+        ping_timeout = avg_latency * 1.4
+        self.msg('Set ping timeout to %.2fs' % ping_timeout)
 
     for ns in self:
       ns.timeout = timeout
@@ -243,11 +254,11 @@ class NameServers(list):
     for ns in self:
       if include_tags:
         if not ns.MatchesTags(include_tags):
-          ns.is_hidden = True
+          ns.tags.add('hidden')
       if require_tags:
         for tag in require_tags:
           if not ns.HasTag(tag):
-            ns.is_hidden = True
+            ns.tags.add('hidden')
     if not self.enabled_servers:
       raise TooFewNameservers('No nameservers specified matched tags %s %s' % (include_tags, require_tags))
 
@@ -275,7 +286,7 @@ class NameServers(list):
       provider = self.client_domain.split('.')[0]
     else:
       provider = None
-      
+
     for ns in self:
       ns.AddNetworkTags(self.client_domain, provider, self.client_asn, self.client_country)
 
@@ -288,7 +299,7 @@ class NameServers(list):
         if count > self.max_servers_to_check:
           break
         ns.tags.add('nearby')
-  
+
   def DisableSlowestSupplementalServers(self, multiplier=TOO_DISTANT_MULTIPLIER, max_servers=None,
                                         prefer_asn=None):
     """Disable servers who's fastest duration is multiplier * average of best 10 servers."""
@@ -300,12 +311,12 @@ class NameServers(list):
     best_10 = util.CalculateListAverage([x.fastest_check_duration for x in fastest])
     cutoff = best_10 * multiplier
     self.msg("Removing secondary nameservers slower than %0.2fms (max=%s)" % (cutoff, max_servers))
-    
+
     for (idx, ns) in enumerate(self.SortEnabledByFastest()):
       hide = False
       if ns not in supplemental_servers:
         continue
-    
+
       if ns.fastest_check_duration > cutoff:
         hide = True
       if idx > max_servers:
@@ -316,7 +327,7 @@ class NameServers(list):
         if matches:
           self.msg("%s seems slow, but has tag: %s" % (ns, matches))
         else:
-          ns.is_hidden = True
+          ns.tags.add('hidden')
 
   def _FastestByLocalProvider(self):
     """Find the fastest DNS server by the client provider."""
@@ -327,13 +338,13 @@ class NameServers(list):
       for ns in fastest:
         if ns.HasTag(tag):
           return ns
-        
+
   def HideBrokenIPV6Servers(self):
     """Most people don't care about these."""
-    
+
     for ns in self.disabled_servers:
       if ns.HasTag('ipv6') and not ns.is_hidden:
-        ns.is_hidden = True
+        ns.tags.add('hidden')
 
   def HideSlowSupplementalServers(self, target_count):
     """Given a target count, delete nameservers that we do not plan to test."""
@@ -375,7 +386,7 @@ class NameServers(list):
 
     for ns in self.supplemental_servers:
       if ns not in supplemental_servers_to_keep and ns not in keepers:
-        ns.is_hidden = True
+        ns.tags.add('hidden')
 
   def CheckHealth(self, sanity_checks=None, max_servers=11, prefer_asn=None):
     """Filter out unhealthy or slow replica servers."""
@@ -386,13 +397,24 @@ class NameServers(list):
     if len(self.enabled_servers) > max_servers:
       self._DemoteSecondaryGlobalNameServers()
       self.HideSlowSupplementalServers(int(max_servers * NS_CACHE_SLACK))
-    # TODO(tstromberg): Insert caching here.
+
     if len(self.enabled_servers) > 1:
+      self.RunNodeIdThreads()
       self.CheckCacheCollusion()
+      self.RunNodeIdThreads()
       self.HideSlowSupplementalServers(max_servers)
 
     self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
+    self.RunNodeIdThreads()
     self.HideBrokenIPV6Servers()
+
+    # One more time!
+    if len(self.enabled_servers) > 1:
+      self.RunNodeIdThreads()
+      self.CheckCacheCollusion()
+
+    self.RunHostnameThreads()
+
     if not self.enabled_servers:
       raise TooFewNameservers('None of the nameservers tested are healthy')
 
@@ -428,7 +450,7 @@ class NameServers(list):
           if ns.HasTag('preferred'):
             self.msg('Making %s the primary anycast - faster than %s by %2.2fms' %
                      (faster_ns.name_and_node, ns.name_and_node, ns.check_average - faster_ns.check_average))
-          ns.is_hidden = True
+          ns.tags.add('hidden')
         else:
           seen[ns.provider] = ns
 
@@ -603,6 +625,16 @@ class NameServers(list):
     self.msg('%s of %s tested name servers are healthy' %
              (len(self.enabled_servers), len(test_servers)))
     return results
+
+  def RunNodeIdThreads(self):
+    """Update node id status on all servers."""
+    status_msg = 'Checking node ids on %s servers' % len(self.enabled_servers)
+    return self._LaunchQueryThreads('node_id', status_msg, list(self.enabled_servers))
+
+  def RunHostnameThreads(self):
+    """Update node id status on all servers."""
+    status_msg = 'Updating hostnames on %s servers' % len(self.enabled_servers)
+    return self._LaunchQueryThreads('update_hostname', status_msg, list(self.enabled_servers))
 
   def RunFinalHealthCheckThreads(self, checks):
     """Quickly ping nameservers to see which are healthy."""

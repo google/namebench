@@ -90,7 +90,7 @@ class BaseUI(object):
     """Return a domain and ASN for myself."""
 
     asn = None
-    domain = None    
+    domain = None
     client_ip = providers.GetExternalIp()
     if client_ip:
 #      self.UpdateStatus("Detected external IP as %s" % client_ip)
@@ -101,10 +101,10 @@ class BaseUI(object):
       else:
         domain = None
       asn = local_ns.GetAsnForIp(client_ip)
-      
+
     return (domain, asn)
-      
-      
+
+
 
   def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""
@@ -143,7 +143,7 @@ class BaseUI(object):
         if self.nameservers.HasEnoughInCountryServers() and self.options.distance > self.options.overload_distance:
           self.UpdateStatus("Looks like we already have >%s in-country servers, shortening nearby distance." % self.options.max_servers_to_check)
           distance = self.options.overload_distance
-      
+
       self.UpdateStatus("Adding locality flags for servers within %skm of %s,%s" % (distance, lat, lon))
       self.nameservers.AddLocalityTags(max_distance=distance)
 
@@ -201,7 +201,7 @@ class BaseUI(object):
         index = self.bmark.RunIndex(index_hosts)
       else:
         index = []
-      
+
       self.DiscoverLocation()
 
     self.reporter = reporter.ReportGenerator(self.options, self.nameservers,
@@ -215,7 +215,7 @@ class BaseUI(object):
     if not self.geodata:
       self.UpdateStatus("Determining your location (retry)...")
       self.geodata = geoip.GetGeoData()
-      
+
     return self.geodata
 
   def RunAndOpenReports(self):

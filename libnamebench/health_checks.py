@@ -32,7 +32,7 @@ SHARED_CACHE_TIMEOUT_MULTIPLIER = 1.25
 ROOT_SERVER_TIMEOUT_MULTIPLIER = 0.5
 CENSORSHIP_TIMEOUT = 30
 MAX_STORE_ATTEMPTS = 4
-TOTAL_WILDCARDS_TO_STORE = 2
+TOTAL_WILDCARDS_TO_STORE = 3
 
 FATAL_RCODES = ['REFUSED', 'NOTAUTH']
 
@@ -149,6 +149,7 @@ class NameServerHealthChecks(object):
     """Store a set of wildcard records."""
     timeout = self.health_timeout * SHARED_CACHE_TIMEOUT_MULTIPLIER
     attempted = []
+    self.cache_checks = []
 
     while len(self.cache_checks) != TOTAL_WILDCARDS_TO_STORE:
       if len(attempted) == MAX_STORE_ATTEMPTS:

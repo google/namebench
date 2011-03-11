@@ -54,26 +54,26 @@ class ConnectionQuality(object):
   def GetNegativeResponseDuration(self):
     """Use the built-in DNS server to query for a negative response."""
     if self.primary:
+      self.primary.health_timeout = 20
       return self.primary.TestNegativeResponse()
 
   def GetGoogleResponseDuration(self):
     """See how quickly we can query for www.google.com using a remote nameserver."""
     gdns = providers.GooglePublicDNS()
+    gdns.health_timeout = 20
     return gdns.TimedRequest('A', 'www.google.com.')
 
   def CheckConnectionQuality(self):
     """Look how healthy our DNS connection quality. Averages check durations."""
 
     is_connection_offline = True
-    durations = []
     self.msg('Checking query interception status...')
     odns = providers.OpenDNS()
     (intercepted, i_duration) = odns.InterceptionStateWithDuration()
     if i_duration:
       is_connection_offline = False
 
-    durations.append(i_duration)
-
+    durations = []
     try_count = 3
     for i in range(try_count):
       self.msg('Checking connection quality', count=i+1, total=try_count)
@@ -81,11 +81,12 @@ class ConnectionQuality(object):
         (broken, unused_warning, n_duration) = self.GetNegativeResponseDuration()
         if not broken:
           is_connection_offline = False
-        durations.append(n_duration)
+          durations.append(n_duration)
 
       (unused_response, g_duration, error_msg) = self.GetGoogleResponseDuration()
-      durations.append(g_duration)
+
       if not error_msg:
+        durations.append(g_duration)
         is_connection_offline = False
 
       if is_connection_offline and (i+1) != try_count:
@@ -97,15 +98,8 @@ class ConnectionQuality(object):
                               'namebench is not gettng a response for DNS queries to '
                               '%s, %s, or %s.' % (self.primary.ip, providers.GOOGLE_IP,
                                                   providers.OPENDNS_IP))
+    avg_latency_s =  util.CalculateListAverage(durations) / 1000.0
+    max_latency_s = max(durations) / 1000.0
+    self.msg("Average DNS lookup latency: %.2fs Maximum: %.2fs" % (avg_latency_s, max_latency_s))
+    return (intercepted, avg_latency_s, max_latency_s)
 
-    duration = util.CalculateListAverage(durations)
-    congestion = duration / EXPECTED_CONGESTION_DURATION
-    self.msg('Congestion level is %2.2fX (check duration: %2.2fms)' % (congestion, duration))
-    if congestion > 1:
-      # multiplier is
-      multiplier = 1 + ((congestion-1) * CONGESTION_OFFSET_MULTIPLIER)
-      if multiplier > MAX_CONGESTION_MULTIPLIER:
-        multiplier = MAX_CONGESTION_MULTIPLIER
-    else:
-      multiplier = 1
-    return (intercepted, congestion, multiplier, duration)

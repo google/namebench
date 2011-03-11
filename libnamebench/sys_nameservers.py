@@ -35,7 +35,9 @@ MAX_LEASE_AGE = 24 * 3600
 MIN_LEASE_FILE_SIZE = 1024
 
 def GetAllSystemNameServers():
-  return list(set(GetCurrentNameServers() + GetAssignedNameServers()))
+  servers = list(set(GetCurrentNameServers() + GetAssignedNameServers()))
+  print servers
+  return servers
 
 def GetCurrentNameServers():
   """Return list of DNS server IP's used by the host via dnspython"""
@@ -69,7 +71,7 @@ def _GetNameServersFromMacIpConfig():
 #        print "%s domain_name_server: %s" % (iface, line)
         servers.extend(addr_util.ExtractIPsFromString(line))
   return servers
-  
+
 
 def _GetNameServersFromWinIpConfig():
   """Return a list of DNS servers via ipconfig (Windows only)"""

@@ -57,6 +57,7 @@ class NameBenchCli(base_ui.BaseUI):
     elif self.last_msg[0] != msg:
       self.last_msg_count_posted = 0
       sys.stdout.write('- %s: %s/%s' % (msg, count, total))
+      self.start_ts = datetime.datetime.now()
       last_count = 0
     else:
       last_count = self.last_msg[1]
@@ -68,7 +69,7 @@ class NameBenchCli(base_ui.BaseUI):
         sys.stdout.write('.' * catch_up)
 
       if count == total:
-       sys.stdout.write('%s/%s\n' % (count, total))
+       sys.stdout.write('%s/%s in %s\n' % (count, total, datetime.datetime.now() - self.start_ts))
       elif total > 25 and count and (count - self.last_msg_count_posted > (total * 0.20)):
         sys.stdout.write(str(count))
         self.last_msg_count_posted = count
