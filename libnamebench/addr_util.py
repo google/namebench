@@ -20,7 +20,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import re
 import zlib
-import util
+from . import util
 
 # TODO(tstromberg): Find a way to combine the following two regexps.
 
@@ -66,7 +66,7 @@ def GetNetworkForIp(ip, reverse=False):
       bits.reverse()
     return '.'.join(bits)
   elif ':' in ip:
-    print "GetNetworkForIp() does not yet support IPv6"
+    print("GetNetworkForIp() does not yet support IPv6")
     return None
 
 def GetDomainFromHostname(hostname):
@@ -162,4 +162,4 @@ def MaskPrivateHost(ip, hostname, name):
   return (masked_ip, masked_hostname, masked_name)
 
 if __name__ == '__main__':
-  print MaskStringWithIPs('10.0.0.1 has a sharing relationship with 192.168.0.1 and 8.8.8.8')
+  print((MaskStringWithIPs('10.0.0.1 has a sharing relationship with 192.168.0.1 and 8.8.8.8')))

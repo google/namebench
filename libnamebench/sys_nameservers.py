@@ -29,14 +29,14 @@ if __name__ == '__main__':
 import dns.resolver
 
 # local libs
-import addr_util
+from . import addr_util
 
 MAX_LEASE_AGE = 24 * 3600
 MIN_LEASE_FILE_SIZE = 1024
 
 def GetAllSystemNameServers():
   servers = list(set(GetCurrentNameServers() + GetAssignedNameServers()))
-  print servers
+  print(servers)
   return servers
 
 def GetCurrentNameServers():
@@ -44,7 +44,7 @@ def GetCurrentNameServers():
   try:
     servers = dns.resolver.Resolver().nameservers
   except:
-    print "Unable to get list of internal DNS servers."
+    print("Unable to get list of internal DNS servers.")
     servers = []
 
   # dnspython does not always get things right on Windows, particularly in
@@ -79,7 +79,7 @@ def _GetNameServersFromWinIpConfig():
   output = subprocess.Popen(['ipconfig', '/all'], stdout=subprocess.PIPE).stdout.read()
   for line in output.split('\r\n'):
     if 'DNS Servers' in line:
-      print "ipconfig: %s" % line
+      print(("ipconfig: %s" % line))
       servers.extend(addr_util.ExtractIPsFromString(line))
   return servers
 
@@ -124,6 +124,6 @@ def _FindNewestDhclientLeaseFile():
     return None
 
 if __name__ == '__main__':
-  print "Current: %s" % GetCurrentNameServers()
-  print "Assigned: %s" % GetAssignedNameServers()
-  print "System: %s" % GetAllSystemNameServers()
+  print(("Current: %s" % GetCurrentNameServers()))
+  print(("Assigned: %s" % GetAssignedNameServers()))
+  print(("System: %s" % GetAllSystemNameServers()))

@@ -29,7 +29,7 @@ def GetUrlForNote(note):
   if not note:
     return None
   if not isinstance(note, str):
-    print "Odd: Got a non-string note: %s (%s)" % (note, type(note))
+    print(("Odd: Got a non-string note: %s (%s)" % (note, type(note))))
     return None
   url = None
   for keyword in NOTE_MAP:

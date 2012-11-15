@@ -24,12 +24,12 @@ import platform
 import jinja2
 import simplejson
 
-import addr_util
-import charts
-import nameserver
-import nameserver_list
-import url_map
-import util
+from . import addr_util
+from . import charts
+from . import nameserver
+from . import nameserver_list
+from . import url_map
+from . import util
 
 # Only bother showing a percentage if we have this many tests.
 MIN_RELEVANT_COUNT = 50
@@ -359,7 +359,7 @@ class ReportGenerator(object):
         else:
           nsdata[ns]['is_reference'] = True
 
-    self.cached_summary = sorted(nsdata.values(), key=operator.itemgetter('position'))
+    self.cached_summary = sorted(list(nsdata.values()), key=operator.itemgetter('position'))
     return self.cached_summary
 
   def _GenerateIndexSummary(self, ns):

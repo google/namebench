@@ -18,10 +18,10 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import time
 
-import nameserver
-import providers
-import sys_nameservers
-import util
+from . import nameserver
+from . import providers
+from . import sys_nameservers
+from . import util
 
 EXPECTED_CONGESTION_DURATION = 40.0
 CONGESTION_OFFSET_MULTIPLIER = 1
@@ -49,7 +49,7 @@ class ConnectionQuality(object):
     if self.status_callback:
       self.status_callback(msg, **kwargs)
     else:
-      print '- %s' % msg
+      print(('- %s' % msg))
 
   def GetNegativeResponseDuration(self):
     """Use the built-in DNS server to query for a negative response."""

@@ -17,7 +17,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import time
-import nameserver
+from . import nameserver
 
 # external dependencies (from third_party)
 import dns.message

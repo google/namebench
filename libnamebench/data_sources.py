@@ -15,7 +15,10 @@
 
 """Provides data sources to use for benchmarking."""
 
-import ConfigParser
+try:
+  import configparser
+except ImportError:
+  import ConfigParser as configparser
 import glob
 import os
 import os.path
@@ -26,9 +29,9 @@ import sys
 import time
 
 # relative
-import addr_util
-import selectors
-import util
+from . import addr_util
+from . import selectors
+from . import util
 
 # Pick the most accurate timer for a platform. Stolen from timeit.py:
 if sys.platform[:3] == 'win':
@@ -59,12 +62,12 @@ class DataSources(object):
     if self.status_callback:
       self.status_callback(msg, **kwargs)
     else:
-      print '- %s' % msg
+      print(('- %s' % msg))
 
   def _LoadConfigFromPath(self, path):
     """Load a configuration file describing data sources that may be available."""
     conf_file = util.FindDataFile(path)
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(conf_file)
     for section in config.sections():
       if section not in self.source_config:
@@ -435,7 +438,7 @@ class DataSources(object):
 
 if __name__ == '__main__':
   parser = DataSources()
-  print parser.ListSourceTypes()
-  print parser.ListSourcesWithDetails()
+  print((parser.ListSourceTypes()))
+  print((parser.ListSourcesWithDetails()))
   best = parser.ListSourcesWithDetails()[0][0]
-  print len(parser.GetRecordsFromSource(best))
+  print((len(parser.GetRecordsFromSource(best))))

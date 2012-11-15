@@ -23,11 +23,11 @@ import sys
 import traceback
 import webbrowser
 
-import util
+from . import util
 
 
 def output(string):
-  print string
+  print(string)
 
 
 def create_win32_http_cmd(url):
@@ -99,7 +99,7 @@ def open(url):
 #
 # If we are running on Windows, register the WindowsHttpDefault class.
 if sys.platform[:3] == 'win':
-  import _winreg
+  import winreg
   
   # We don't want to load this class by default, because Python 2.4 doesn't have BaseBrowser.
   

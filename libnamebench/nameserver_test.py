@@ -17,8 +17,8 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import mocks
-import nameserver
+from . import mocks
+from . import nameserver
 import unittest
 
 class TestNameserver(unittest.TestCase):

@@ -20,7 +20,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import random
 import sys
 import time
-import util
+from . import util
 
 from dns import rcode
 
@@ -184,7 +184,7 @@ class NameServerHealthChecks(object):
       return False
 
     if not other_ns.cache_checks:
-      print '%s has no cache checks (disabling - how did this happen?)' % other_ns
+      print(('%s has no cache checks (disabling - how did this happen?)' % other_ns))
       other_ns.DisableWithMessage('Unable to perform cache checks.')
       return False
 

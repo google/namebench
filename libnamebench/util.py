@@ -101,9 +101,9 @@ def FindDataFile(filename):
     if os.path.exists(path):
       return path
 
-  print 'I could not find "%s". Tried:' % filename
+  print(('I could not find "%s". Tried:' % filename))
   for path in other_places:
-    print '  %s' % path
+    print(('  %s' % path))
   return filename
 
 def GenerateOutputFilename(extension):
@@ -140,11 +140,11 @@ def GetLastExceptionString():
 def DoesClockGoBackwards():
   """Detect buggy Windows systems where time.clock goes backwards"""
   reference = 0
-  print "Checking if time.clock() goes backwards (broken hardware)..."
+  print("Checking if time.clock() goes backwards (broken hardware)...")
   for x in range(0, 200):
     counter = time.clock()
     if counter < reference:
-      print "Clock went backwards by %fms" % (counter - reference)
+      print(("Clock went backwards by %fms" % (counter - reference)))
       return True
     reference = counter
     time.sleep(random.random() / 500)

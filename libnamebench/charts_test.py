@@ -18,8 +18,8 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import unittest
-import nameserver
-import charts
+from . import nameserver
+from . import charts
 
 
 def _ExampleRunsData():

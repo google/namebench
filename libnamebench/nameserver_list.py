@@ -18,7 +18,10 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
 import operator
-import Queue
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 import random
 import sys
 import threading
@@ -26,10 +29,10 @@ import time
 
 # 3rd party libraries
 import dns.resolver
-import conn_quality
-import addr_util
-import nameserver
-import util
+from . import conn_quality
+from . import addr_util
+from . import nameserver
+from . import util
 
 NS_CACHE_SLACK = 2
 CACHE_VER = 4
@@ -96,7 +99,7 @@ class QueryThreads(threading.Thread):
       if self.action_type == 'wildcard_check':
         try:
           (ns, other_ns) = self.input.get_nowait()
-        except Queue.Empty:
+        except queue.Empty:
           return
         if ns.is_disabled or other_ns.is_disabled:
           self.results.put(None)
@@ -107,7 +110,7 @@ class QueryThreads(threading.Thread):
       else:
         try:
           ns = self.input.get_nowait()
-        except Queue.Empty:
+        except queue.Empty:
           return
 
         if ns.is_disabled:
@@ -195,7 +198,7 @@ class NameServers(list):
     if self.status_callback:
       self.status_callback(msg, count=count, total=total, **kwargs)
     else:
-      print '%s [%s/%s]' % (msg, count, total)
+      print(('%s [%s/%s]' % (msg, count, total)))
 
   def _GetObjectForIP(self, ip):
     return [x for x in self if x.ip == ip][0]
@@ -518,8 +521,8 @@ class NameServers(list):
       TooFewNameservers: If no tested nameservers are healthy.
     """
     threads = []
-    input_queue = Queue.Queue()
-    results_queue = Queue.Queue()
+    input_queue = queue.Queue()
+    results_queue = queue.Queue()
 
     # items are usually nameservers
     random.shuffle(items)

@@ -18,31 +18,31 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
 import os
-import Queue
+import queue
 import sys
 import threading
-import tkFont
+import tkinter.font
 # Wildcard imports are evil.
-from Tkinter import *
-import tkMessageBox
+from tkinter import *
+import tkinter.messagebox
 import traceback
 
-import addr_util
-import base_ui
-import conn_quality
-import nameserver_list
-import sys_nameservers
-import util
+from . import addr_util
+from . import base_ui
+from . import conn_quality
+from . import nameserver_list
+from . import sys_nameservers
+from . import util
 
 THREAD_UNSAFE_TK = 0
 LOG_FILE_PATH = util.GenerateOutputFilename('log')
 
 
 def closedWindowHandler():
-  print 'Au revoir, mes amis!'
+  print('Au revoir, mes amis!')
   sys.exit(1)
 
-global_message_queue = Queue.Queue()
+global_message_queue = queue.Queue()
 global_last_message = None
 
 
@@ -64,13 +64,13 @@ def AddMsg(message, master=None, backup_notifier=None, **kwargs):
       except TclError:
         # If we aren't thread safe, we already assume this won't work.
         if not THREAD_UNSAFE_TK:
-          print 'First TCL Error:'
+          print('First TCL Error:')
           traceback.print_exc()
         try:
           backup_notifier(-1)
           THREAD_UNSAFE_TK = 1
         except:
-          print 'Backup notifier failure:'
+          print('Backup notifier failure:')
           traceback.print_exc()
 
 
@@ -171,7 +171,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     try:
       self.log_file = open(LOG_FILE_PATH, 'w')
     except:
-      print 'Failed to open %s for write' % LOG_FILE_PATH
+      print(('Failed to open %s for write' % LOG_FILE_PATH))
     self.master.protocol('WM_DELETE_WINDOW', closedWindowHandler)
 
   def UpdateStatus(self, message, count=None, total=None, error=None, debug=False):
@@ -186,7 +186,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     else:
       state = message
 
-    print '> %s' % str(state)
+    print(('> %s' % str(state)))
     try:
       self.log_file.write('%s: %s\r\n' % (datetime.datetime.now(), state))
       self.log_file.flush()
@@ -221,7 +221,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     else:
       seperator_width = 585
 
-    bold_font = tkFont.Font(font=status['font'])
+    bold_font = tkinter.font.Font(font=status['font'])
     bold_font['weight'] = 'bold'
 
     ns_label = Label(inner_frame, text='Nameservers')
@@ -330,8 +330,8 @@ class MainWindow(Frame, base_ui.BaseUI):
       self.UpdateStatus(m.message, count=m.count, total=m.total, error=m.error, debug=m.debug)
 
   def ErrorPopup(self, title, message):
-    print 'Showing popup: %s' % title
-    tkMessageBox.showerror(str(title), str(message), master=self.master)
+    print(('Showing popup: %s' % title))
+    tkinter.messagebox.showerror(str(title), str(message), master=self.master)
 
   def UpdateRunState(self, running=True):
     """Update the run state of the window, using nasty threading hacks."""

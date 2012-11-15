@@ -28,7 +28,7 @@ import zlib
 import httplib2
 import simplejson
 
-import util
+from . import util
 
 RETRY_WAIT = 10
 
@@ -45,7 +45,7 @@ class SiteConnector(object):
     if self.status_callback:
       self.status_callback(msg, count=count, total=total, **kwargs)
     else:
-      print '%s [%s/%s]' % (msg, count, total)
+      print(('%s [%s/%s]' % (msg, count, total)))
 
   def GetIndexHosts(self):
     """Get a list of 'index' hosts for standardized testing."""
@@ -83,16 +83,16 @@ class SiteConnector(object):
         'data': json_data
     }
     try:
-      resp, content = h.request(url, 'POST', urllib.urlencode(post_data))
+      resp, content = h.request(url, 'POST', urllib.parse.urlencode(post_data))
       try:
         data = simplejson.loads(content)
         for note in data['notes']:
-          print '    * %s' % note
+          print(('    * %s' % note))
         return (''.join((self.url, data['url'])), data['state'])
       except:
         self.msg('BAD RESPONSE from %s: [%s]:\n  %s' % (url, resp, content))
-        print "DATA:"
-        print post_data
+        print("DATA:")
+        print(post_data)
     # See http://code.google.com/p/httplib2/issues/detail?id=62
     except AttributeError:
       self.msg('%s refused connection' % url)

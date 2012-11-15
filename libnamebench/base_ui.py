@@ -16,17 +16,17 @@
 
 import tempfile
 
-import addr_util
-import benchmark
-import better_webbrowser
-import config
-import data_sources
-import geoip
-import nameserver
-import reporter
-import providers
-import site_connector
-import util
+from . import addr_util
+from . import benchmark
+from . import better_webbrowser
+from . import config
+from . import data_sources
+from . import geoip
+from . import nameserver
+from . import reporter
+from . import providers
+from . import site_connector
+from . import util
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
@@ -55,7 +55,7 @@ class BaseUI(object):
     if hasattr(self, 'status_callback') and self.status_callback:
       self.status_callback(msg, **kwargs)
     else:
-      print msg
+      print(msg)
 
   def DebugMsg(self, message):
     self.UpdateStatus(message, debug=True)

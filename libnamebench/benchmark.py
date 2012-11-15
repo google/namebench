@@ -19,7 +19,10 @@ Designed to assist system administrators in selection and prioritization.
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import Queue
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 import random
 import threading
 import time
@@ -44,7 +47,7 @@ class BenchmarkThreads(threading.Thread):
 
         (response, duration, error_msg) = ns.TimedRequest(request_type, hostname)
         self.results.put((ns, request_type, hostname, response, duration, error_msg))
-      except Queue.Empty:
+      except queue.Empty:
         return
 
 
@@ -102,7 +105,7 @@ class Benchmark(object):
   def RunIndex(self, test_records):
     """Run index tests using the same mechanism as a standard benchmark."""
     if not test_records:
-      print 'No records to test.'
+      print('No records to test.')
       return None
 
     index_results, pending_tests = self._CheckForIndexHostsInResults(test_records)
@@ -137,7 +140,7 @@ class Benchmark(object):
     Returns:
       results: A dictionary of tuples, keyed by nameserver.
     """
-    input_queue = Queue.Queue()
+    input_queue = queue.Queue()
     shuffled_records = {}
     results = {}
     # Pre-compute the shuffled test records per-nameserver to avoid thread
@@ -167,7 +170,7 @@ class Benchmark(object):
 
   def _LaunchBenchmarkThreads(self, input_queue):
     """Launch and manage the benchmark threads."""
-    results_queue = Queue.Queue()
+    results_queue = queue.Queue()
     expected_total = input_queue.qsize()
     threads = []
     for unused_thread_num in range(0, self.thread_count):

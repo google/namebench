@@ -18,7 +18,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
-import util
+from . import util
 import unittest
 
 

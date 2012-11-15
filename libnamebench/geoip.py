@@ -22,7 +22,7 @@ import tempfile
 import httplib2
 import math
 import simplejson
-import util
+from . import util
 
 
 def GetFromGoogleLocAPI():
@@ -50,7 +50,7 @@ def GetFromGoogleLocAPI():
         'source': 'gloc'
     }
   except:
-    print '* Failed to use GoogleLocAPI: %s (content: %s)' % (util.GetLastExceptionString(), content)
+    print(('* Failed to use GoogleLocAPI: %s (content: %s)' % (util.GetLastExceptionString(), content)))
     return {}
 
 
@@ -78,7 +78,7 @@ def GetGeoData():
     json_data['longitude'] = '%.3f' % float(json_data['longitude'])
     return json_data
   except:
-    print 'Failed to get Geodata: %s' % util.GetLastExceptionString()
+    print(('Failed to get Geodata: %s' % util.GetLastExceptionString()))
     return {}
 
 def GetInfoForCountry(country_name_or_code):
@@ -113,13 +113,13 @@ def GetInfoForCountry(country_name_or_code):
         partial_match = (row['code'], row['name'], lat, lon)
 
   if match:
-    print "Could not find explicit entry for '%s', good match: %s" % (country_name_or_code, match)
+    print(("Could not find explicit entry for '%s', good match: %s" % (country_name_or_code, match)))
     return match
   elif partial_match:
-    print "Could not find explicit entry for '%s', partial match: %s" % (country_name_or_code, partial_match)
+    print(("Could not find explicit entry for '%s', partial match: %s" % (country_name_or_code, partial_match)))
     return partial_match   
   else:
-    print "'%s' does not match any countries in our list." % country_name_or_code
+    print(("'%s' does not match any countries in our list." % country_name_or_code))
     return (None, None, None, None)
 
 def ReadCountryData(filename='data/countries.csv'):

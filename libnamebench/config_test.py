@@ -18,7 +18,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import unittest
-import config
+from . import config
 import sys
 
 sys.path.append('..')

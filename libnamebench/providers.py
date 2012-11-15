@@ -24,10 +24,10 @@ if __name__ == '__main__':
   sys.path.append('..')
   import nb_third_party
 
-import addr_util
-import util
-import nameserver
-import sys_nameservers
+from . import addr_util
+from . import util
+from . import nameserver
+from . import sys_nameservers
 
 OPENDNS_IP = '208.67.220.220'
 GOOGLE_IP = '8.8.8.8'
@@ -70,7 +70,7 @@ class MyResolverInfo(nameserver.NameServer):
       try:
         ip = socket.gethostbyname(MY_RESOLVER_HOST)
       except:
-        print "Could not resolve %s: %s" % (MY_RESOLVER_HOST, util.GetLastExceptionString())
+        print(("Could not resolve %s: %s" % (MY_RESOLVER_HOST, util.GetLastExceptionString())))
         # TODO(tstromberg): Find a more elegant fallback solution.
         ip = '127.0.0.1'
            
@@ -94,7 +94,7 @@ class SystemResolver(nameserver.NameServer):
     if not internal:
       internal = sys_nameservers.GetAssignedNameServers()
     if not internal:
-      print 'Odd - no built-in nameservers found.'
+      print('Odd - no built-in nameservers found.')
       return None
     else:
       return internal[0]
@@ -116,6 +116,6 @@ class SystemResolver(nameserver.NameServer):
 
 
 if __name__ == '__main__':
-  print OpenDNS().InterceptionStateWithDuration()
-  print MyResolverInfo().ClientIp()
-  print SystemResolver().GetAsnForIp(MyResolverInfo().ClientIp())
+  print((OpenDNS().InterceptionStateWithDuration()))
+  print((MyResolverInfo().ClientIp()))
+  print((SystemResolver().GetAsnForIp(MyResolverInfo().ClientIp())))

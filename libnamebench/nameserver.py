@@ -35,10 +35,10 @@ import dns.resolver
 import dns.reversename
 import dns.version
 
-import health_checks
-import provider_extensions
-import addr_util
-import util
+from . import health_checks
+from . import provider_extensions
+from . import addr_util
+from . import util
 
 # Look for buggy system versions of namebench
 if dns.version.hexversion < 17301744:
@@ -223,11 +223,11 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   @property
   def errors(self):
-    return ['%s (%s requests)' % (_[0], _[1]) for _ in self.error_map.items() if _[0] != 'Timeout']
+    return ['%s (%s requests)' % (_[0], _[1]) for _ in list(self.error_map.items()) if _[0] != 'Timeout']
 
   @property
   def error_count(self):
-    return sum([_[1] for _ in self.error_map.items() if _[0] != 'Timeout'])
+    return sum([_[1] for _ in list(self.error_map.items()) if _[0] != 'Timeout'])
 
   @property
   def timeout_count(self):
@@ -366,7 +366,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       if self.HasTag('preferred') and self.HasTag('ipv6') and len(self.checks) <= 1:
         self.tags.add('disabled')
       else:
-        print "\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)
+        print(("\n* %s failed test #%s/%s: %s" % (self, self.failed_test_count, max_count, message)))
 
     if fatal and respect_fatal:
       self.DisableWithMessage(message)
@@ -377,7 +377,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     """Add a warning to a host."""
 
     if not isinstance(message, str):
-      print "Tried to add %s to %s (not a string)" % (message, self)
+      print(("Tried to add %s to %s (not a string)" % (message, self)))
       return None
 
     self.warnings.add(message)
@@ -387,7 +387,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   def DisableWithMessage(self, message):
     self.tags.add('disabled')
     if self.is_keeper and not self.HasTag('ipv6'):
-      print "\nDISABLING %s: %s\n" % (self, message)
+      print(("\nDISABLING %s: %s\n" % (self, message)))
     else:
       self.tags.add('hidden')
     self.disabled_msg = message
@@ -440,10 +440,10 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       start_time = self.timer()
       response = self.Query(request, timeout)
       duration = self.timer() - start_time
-    except (dns.exception.Timeout), exc:
+    except (dns.exception.Timeout) as exc:
       response = None
     except (dns.query.BadResponse, dns.message.TrailingJunk,
-            dns.query.UnexpectedSource), exc:
+            dns.query.UnexpectedSource) as exc:
       error_msg = util.GetLastExceptionString()
       response = None
     # This is pretty normal if someone runs namebench offline.
@@ -454,11 +454,11 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
       else:
         error_msg = util.GetLastExceptionString()
     # Pass these exceptions up the food chain
-    except (KeyboardInterrupt, SystemExit, SystemError), exc:
+    except (KeyboardInterrupt, SystemExit, SystemError) as exc:
       raise exc
     except:
       error_msg = util.GetLastExceptionString()
-      print "* Unusual error with %s:%s on %s: %s" % (type_string, record_string, self, error_msg)
+      print(("* Unusual error with %s:%s on %s: %s" % (type_string, record_string, self, error_msg)))
       response = None
 
     if not response:
@@ -494,13 +494,13 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
   def GetReverseIp(self, ip, retries_left=2):
     """Request a hostname for a given IP address."""
     try:
-      print "reverse: %s -> %s" % (ip, self)
+      print(("reverse: %s -> %s" % (ip, self)))
       answer = dns.resolver.query(dns.reversename.from_address(ip), 'PTR')
     except dns.resolver.NXDOMAIN:
       return ip
     except:
       if retries_left:
-        print "* Failed to get hostname for %s (retries left: %s): %s" % (ip, retries_left, util.GetLastExceptionString())
+        print(("* Failed to get hostname for %s (retries left: %s): %s" % (ip, retries_left, util.GetLastExceptionString())))
         return self.GetReverseIp(ip, retries_left=retries_left-1)
       else:
         return ip
@@ -515,7 +515,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     if response and response.answer:
       return (response.answer[0].items[0].to_text().lstrip('"').rstrip('"'), duration)
     elif not response and retries_left:
-      print "* Failed to lookup %s (retries left: %s): %s" % (record, retries_left, util.GetLastExceptionString())
+      print(("* Failed to lookup %s (retries left: %s): %s" % (record, retries_left, util.GetLastExceptionString())))
       return self.GetTxtRecordWithDuration(record, retries_left=retries_left-1)
     else:
       return (None, duration)
@@ -565,8 +565,8 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
 if __name__ == '__main__':
   ns = NameServer(sys.argv[1])
-  print "-" * 64
-  print "IP:      %s" % ns.ip
-  print "Host:    %s" % ns.hostname
-  print "Version: %s" % ns.version
-  print "Node:    %s" % ns.node_ids
+  print(("-" * 64))
+  print(("IP:      %s" % ns.ip))
+  print(("Host:    %s" % ns.hostname))
+  print(("Version: %s" % ns.version))
+  print(("Node:    %s" % ns.node_ids))

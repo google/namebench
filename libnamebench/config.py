@@ -17,13 +17,15 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-
-import ConfigParser
+try:
+  import configparser
+except ImportError:
+  import ConfigParser as configparser
 import csv
 import optparse
 import os.path
 import re
-import StringIO
+import io
 import tempfile
 
 import nb_third_party
@@ -31,13 +33,13 @@ import nb_third_party
 # from third_party
 import httplib2
 
-import addr_util
-import data_sources
-import nameserver
-import nameserver_list
-import sys_nameservers
-import util
-import version
+from . import addr_util
+from . import data_sources
+from . import nameserver
+from . import nameserver_list
+from . import sys_nameservers
+from . import util
+from . import version
 
 TRUNK_URL = 'http://namebench.googlecode.com/svn/trunk/'
 
@@ -96,7 +98,7 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
   parser.add_option('-P', '--ping_timeout', dest='ping_timeout', type='float', help='# of seconds ping requests timeout in.')
   parser.add_option('-q', '--query_count', dest='query_count', type='int', help='Number of queries per run.')
   parser.add_option('-r', '--runs', dest='run_count', default=1, type='int', help='Number of test runs to perform on each nameserver.')
-  parser.add_option('-s', '--sets', dest='server_sets', default=[], help='Comma-separated list of sets to test (%s)' % SETS_TO_TAGS_MAP.keys())
+  parser.add_option('-s', '--sets', dest='server_sets', default=[], help='Comma-separated list of sets to test (%s)' % list(SETS_TO_TAGS_MAP.keys()))
   parser.add_option('-T', '--template', dest='template', default='html', help='Template to use for output generation (ascii, html, resolv.conf)')
   parser.add_option('-U', '--site_url', dest='site_url', help='URL to upload results to (http://namebench.appspot.com/)')
   parser.add_option('-u', '--upload_results', dest='upload_results', action='store_true', help='Upload anonymized results to SITE_URL (False)')
@@ -189,7 +191,7 @@ def _GetLocalConfig(conf_file):
 def _ReadConfigFile(conf_file):
   """Read a local config file."""
   ref_file = util.FindDataFile(conf_file)
-  local_config = ConfigParser.ConfigParser()
+  local_config = configparser.ConfigParser()
   local_config.read(ref_file)
   return local_config
 
@@ -209,21 +211,21 @@ def GetAutoUpdatingConfigFile(conf_file):
   content = None
   try:
     _, content = h.request(url, 'GET')
-    remote_config = ConfigParser.ConfigParser()
+    remote_config = configparser.ConfigParser()
   except:
-    print '* Unable to fetch remote %s: %s' % (conf_file, util.GetLastExceptionString())
+    print(('* Unable to fetch remote %s: %s' % (conf_file, util.GetLastExceptionString())))
     return _ExpandConfigSections(local_config)
 
   if content and '[config]' in content:
-    fp = StringIO.StringIO(content)
+    fp = io.StringIO(content.decode())
     try:
       remote_config.readfp(fp)
     except:
-      print '* Unable to read remote %s: %s' % (conf_file, util.GetLastExceptionString())
+      print(('* Unable to read remote %s: %s' % (conf_file, util.GetLastExceptionString())))
       return _ExpandConfigSections(local_config)
 
   if remote_config and remote_config.has_section('config') and int(remote_config.get('config', 'version')) > local_version:
-    print '- Using %s' % url
+    print(('- Using %s' % url))
     return _ExpandConfigSections(remote_config)
   else:
     return _ExpandConfigSections(local_config)
@@ -244,7 +246,7 @@ def MergeConfigurationFileOptions(options):
   Raises:
     ValueError: If we are unable to find a usable configuration file.
   """
-  config = ConfigParser.ConfigParser()
+  config = configparser.ConfigParser()
   full_path = util.FindDataFile(options.config)
   config.read(full_path)
   if not config or not config.has_section('general'):

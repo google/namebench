@@ -19,6 +19,7 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 import itertools
 import math
 import re
+import sys
 import urllib
 
 # external dependencies (from nb_third_party)
@@ -32,6 +33,8 @@ BASE_COLORS = ('ff9900', '1a00ff', 'ff00e6', '80ff00', '00e6ff', 'fae30a',
                '051290', 'f3e000', '9030f0', 'f03060', 'e0a030', '4598cd')
 CHART_WIDTH = 720
 CHART_HEIGHT = 415
+
+
 
 
 def DarkenHexColorCode(color, shade=1):
@@ -60,7 +63,7 @@ def _GoodTicks(max_value, tick_size=2.5, num_ticks=10.0):
     else:
       return int(round(try_tick))
   # Fallback
-  print "Could not find good tick size for %s (size=%s, num=%s)" % (max_value, tick_size, num_ticks)
+  print(("Could not find good tick size for %s (size=%s, num=%s)" % (max_value, tick_size, num_ticks)))
   simple_value = int(max_value  / num_ticks)
   if simple_value > 0:
     return simple_value
@@ -96,7 +99,7 @@ def PerRunDurationBarGraph(run_data, scale=None):
         max_run_avg = run_avg
 
   if max_run_avg < 0:
-    print "No decent data to graph: %s" % run_data
+    print(("No decent data to graph: %s" % run_data))
     return None
 
   if not scale:
@@ -113,7 +116,7 @@ def PerRunDurationBarGraph(run_data, scale=None):
                     color=DarkenHexColorCode('4684ee', run_num*3))
 
   tick = _GoodTicks(scale, num_ticks=15.0)
-  labels = range(0, scale, tick) + [scale]
+  labels = list(range(0, scale, tick)) + [scale]
   chart.bottom.min = 0
   chart.display.enhanced_encoding = True
   bottom_axis = chart.AddAxis('x', common.Axis())
@@ -138,7 +141,7 @@ def MinimumDurationBarGraph(fastest_data, scale=None):
     scale = int(math.ceil(slowest_time / 5) * 5)
 
   tick = _GoodTicks(scale, num_ticks=15.0)
-  labels = range(0, scale, tick) + [scale]
+  labels = list(range(0, scale, tick)) + [scale]
   chart.bottom.min = 0
   chart.bottom.max = scale
   chart.display.enhanced_encoding = True
@@ -219,6 +222,13 @@ def _SortDistribution(a, b):
   return cmp(a[0].name, b[0].name)
 
 
+def _quote_plus(string):
+  """Python 2.x compatibility."""
+  if sys.version_info.major < 3:
+    return urllib.quote_plus(string)
+  else:
+    return urllib.parse.quote_plus(string)
+
 def DistributionLineGraph(run_data, scale=None, sort_by=None):
   """Return a Google Chart API URL showing duration distribution per ns."""
 
@@ -244,9 +254,9 @@ def DistributionLineGraph(run_data, scale=None, sort_by=None):
 
   for (ns, xy_pairs) in sorted(distribution, cmp=sort_by):
     if len(ns.name) > 1:
-      labels.append(urllib.quote_plus(ns.name))
+      labels.append(_quote_plus(ns.name))
     else:
-      labels.append(urllib.quote_plus(ns.ip))
+      labels.append(_quote_plus(ns.ip))
     x = []
     y = []
     for (percentage, duration) in xy_pairs:

@@ -18,8 +18,8 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import unittest
-import benchmark
-import mocks
+from . import benchmark
+from . import mocks
 
 class BenchmarkTest(unittest.TestCase):
   def testCreateTestsWeighted(self):

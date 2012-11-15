@@ -17,26 +17,26 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import selectors
+from . import selectors
 import unittest
 
 
 
 class SelectorsTest(unittest.TestCase):
   def testMaxRepeatCount(self):
-    self.assertEquals(selectors.MaxRepeatCount(range(1,10), 5),
+    self.assertEquals(selectors.MaxRepeatCount(list(range(1,10)), 5),
                       selectors.MAX_REPEAT)
-    self.assertEquals(selectors.MaxRepeatCount(range(1,10), 50),
+    self.assertEquals(selectors.MaxRepeatCount(list(range(1,10)), 50),
                       2**32)
 
   def testRandomSelect(self):
-    elements = range(10)
+    elements = list(range(10))
     result = selectors.RandomSelect(elements, 10)
     self.assertEquals(len(result), 10)
-    self.assertNotEquals(result, range(10))
+    self.assertNotEquals(result, list(range(10)))
 
   def testRandomSelectConstrained(self):
-    elements = range(5)
+    elements = list(range(5))
     result = selectors.RandomSelect(elements, 10)
     self.assertEquals(len(result), 10)
     ones = [x for x in result if x == 1]
@@ -46,7 +46,7 @@ class SelectorsTest(unittest.TestCase):
 
   def testRandomSelectVeryConstrained(self):
     """Test to make sure we don't infinite loop if count > len(elements)*3"""
-    elements = range(2)
+    elements = list(range(2))
     result = selectors.RandomSelect(elements, 20)
     self.assertEquals(len(result), 20)
     ones = [x for x in result if x == 1]
@@ -56,7 +56,7 @@ class SelectorsTest(unittest.TestCase):
 
   def testWeightedDistribution(self):
     """Ensure that a weighted distribution is indeed weighted."""
-    elements = range(20)
+    elements = list(range(20))
     result = selectors.WeightedDistribution(elements, 10)
     self.assertEquals(len(result), 10)
     zeros = [x for x in result if x == 0]
@@ -71,14 +71,14 @@ class SelectorsTest(unittest.TestCase):
     self.assertTrue(len(high) <= 2)
 
   def testChuckSelect(self):
-    elements = range(10000)
+    elements = list(range(10000))
     result = selectors.ChunkSelect(elements, 5)
     self.assertEquals(len(result), 5)
     # Make sure our segment is a subset
     self.assertTrue(set(result).issubset(set(elements)))
 
     # Make sure our segment is contiguous
-    self.assertEquals(result, range(result[0], result[0]+5))
+    self.assertEquals(result, list(range(result[0], result[0]+5)))
 
 
     result2 = selectors.ChunkSelect(elements, 5)
@@ -88,7 +88,7 @@ class SelectorsTest(unittest.TestCase):
 
   def testChunkSelectConstrained(self):
     """Make sure we aren't inventing bogus data."""
-    elements = range(20)
+    elements = list(range(20))
     result = selectors.ChunkSelect(elements, 25)
     self.assertEquals(len(result), 20)
     self.assertEquals(elements, result)
