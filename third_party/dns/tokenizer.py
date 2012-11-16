@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009-2011 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -62,9 +62,9 @@ class Token(object):
 
         @param ttype: The token type
         @type ttype: int
-        @ivar value: The token value
+        @param value: The token value
         @type value: string
-        @ivar has_escape: Does the token value contain escapes?
+        @param has_escape: Does the token value contain escapes?
         @type has_escape: bool
         """
         self.ttype = ttype

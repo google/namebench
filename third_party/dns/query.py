@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2007, 2009, 2010 Nominum, Inc.
+# Copyright (C) 2003-2007, 2009-2011 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -45,7 +45,65 @@ def _compute_expiration(timeout):
     else:
         return time.time() + timeout
 
-def _wait_for(ir, iw, ix, expiration):
+def _poll_for(fd, readable, writable, error, timeout):
+    """Poll polling backend.
+    @param fd: File descriptor
+    @type fd: int
+    @param readable: Whether to wait for readability
+    @type readable: bool
+    @param writable: Whether to wait for writability
+    @type writable: bool
+    @param timeout: Deadline timeout (expiration time, in seconds)
+    @type timeout: float
+    @return True on success, False on timeout
+    """
+    event_mask = 0
+    if readable:
+        event_mask |= select.POLLIN
+    if writable:
+        event_mask |= select.POLLOUT
+    if error:
+        event_mask |= select.POLLERR
+
+    pollable = select.poll()
+    pollable.register(fd, event_mask)
+
+    if timeout:
+        event_list = pollable.poll(long(timeout * 1000))
+    else:
+        event_list = pollable.poll()
+
+    return bool(event_list)
+
+def _select_for(fd, readable, writable, error, timeout):
+    """Select polling backend.
+    @param fd: File descriptor
+    @type fd: int
+    @param readable: Whether to wait for readability
+    @type readable: bool
+    @param writable: Whether to wait for writability
+    @type writable: bool
+    @param timeout: Deadline timeout (expiration time, in seconds)
+    @type timeout: float
+    @return True on success, False on timeout
+    """
+    rset, wset, xset = [], [], []
+
+    if readable:
+        rset = [fd]
+    if writable:
+        wset = [fd]
+    if error:
+        xset = [fd]
+
+    if timeout is None:
+        (rcount, wcount, xcount) = select.select(rset, wset, xset)
+    else:
+        (rcount, wcount, xcount) = select.select(rset, wset, xset, timeout)
+
+    return bool((rcount or wcount or xcount))
+
+def _wait_for(fd, readable, writable, error, expiration):
     done = False
     while not done:
         if expiration is None:
@@ -55,22 +113,34 @@ def _wait_for(ir, iw, ix, expiration):
             if timeout <= 0.0:
                 raise dns.exception.Timeout
         try:
-            if timeout is None:
-                (r, w, x) = select.select(ir, iw, ix)
-            else:
-                (r, w, x) = select.select(ir, iw, ix, timeout)
+            if not _polling_backend(fd, readable, writable, error, timeout):
+                raise dns.exception.Timeout
         except select.error, e:
             if e.args[0] != errno.EINTR:
                 raise e
         done = True
-        if len(r) == 0 and len(w) == 0 and len(x) == 0:
-            raise dns.exception.Timeout
+
+def _set_polling_backend(fn):
+    """
+    Internal API. Do not use.
+    """
+    global _polling_backend
+
+    _polling_backend = fn
+
+if hasattr(select, 'poll'):
+    # Prefer poll() on platforms that support it because it has no
+    # limits on the maximum value of a file descriptor (plus it will
+    # be more efficient for high values).
+    _polling_backend = _poll_for
+else:
+    _polling_backend = _select_for
 
 def _wait_for_readable(s, expiration):
-    _wait_for([s], [], [s], expiration)
+    _wait_for(s, True, False, True, expiration)
 
 def _wait_for_writable(s, expiration):
-    _wait_for([], [s], [s], expiration)
+    _wait_for(s, False, True, True, expiration)
 
 def _addresses_equal(af, a1, a2):
     # Convert the first value of the tuple, which is a textual format
@@ -79,6 +149,28 @@ def _addresses_equal(af, a1, a2):
     n1 = dns.inet.inet_pton(af, a1[0])
     n2 = dns.inet.inet_pton(af, a2[0])
     return n1 == n2 and a1[1:] == a2[1:]
+
+def _destination_and_source(af, where, port, source, source_port):
+    # Apply defaults and compute destination and source tuples
+    # suitable for use in connect(), sendto(), or bind().
+    if af is None:
+        try:
+            af = dns.inet.af_for_address(where)
+        except:
+            af = dns.inet.AF_INET
+    if af == dns.inet.AF_INET:
+        destination = (where, port)
+        if source is not None or source_port != 0:
+            if source is None:
+                source = '0.0.0.0'
+            source = (source, source_port)
+    elif af == dns.inet.AF_INET6:
+        destination = (where, port, 0, 0)
+        if source is not None or source_port != 0:
+            if source is None:
+                source = '::'
+            source = (source, source_port, 0, 0)
+    return (af, destination, source)
 
 def udp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
         ignore_unexpected=False, one_rr_per_rrset=False):
@@ -98,7 +190,7 @@ def udp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
     If the inference attempt fails, AF_INET is used.
     @type af: int
     @rtype: dns.message.Message object
-    @param source: source address.  The default is the IPv4 wildcard address.
+    @param source: source address.  The default is the wildcard address.
     @type source: string
     @param source_port: The port from which to send the message.
     The default is 0.
@@ -111,19 +203,8 @@ def udp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
     """
 
     wire = q.to_wire()
-    if af is None:
-        try:
-            af = dns.inet.af_for_address(where)
-        except:
-            af = dns.inet.AF_INET
-    if af == dns.inet.AF_INET:
-        destination = (where, port)
-        if source is not None:
-            source = (source, source_port)
-    elif af == dns.inet.AF_INET6:
-        destination = (where, port, 0, 0)
-        if source is not None:
-            source = (source, source_port, 0, 0)
+    (af, destination, source) = _destination_and_source(af, where, port, source,
+                                                        source_port)
     s = socket.socket(af, socket.SOCK_DGRAM, 0)
     try:
         expiration = _compute_expiration(timeout)
@@ -206,7 +287,7 @@ def tcp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
     If the inference attempt fails, AF_INET is used.
     @type af: int
     @rtype: dns.message.Message object
-    @param source: source address.  The default is the IPv4 wildcard address.
+    @param source: source address.  The default is the wildcard address.
     @type source: string
     @param source_port: The port from which to send the message.
     The default is 0.
@@ -216,19 +297,8 @@ def tcp(q, where, timeout=None, port=53, af=None, source=None, source_port=0,
     """
 
     wire = q.to_wire()
-    if af is None:
-        try:
-            af = dns.inet.af_for_address(where)
-        except:
-            af = dns.inet.AF_INET
-    if af == dns.inet.AF_INET:
-        destination = (where, port)
-        if source is not None:
-            source = (source, source_port)
-    elif af == dns.inet.AF_INET6:
-        destination = (where, port, 0, 0)
-        if source is not None:
-            source = (source, source_port, 0, 0)
+    (af, destination, source) = _destination_and_source(af, where, port, source,
+                                                        source_port)
     s = socket.socket(af, socket.SOCK_STREAM, 0)
     try:
         expiration = _compute_expiration(timeout)
@@ -293,7 +363,7 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
     take.
     @type lifetime: float
     @rtype: generator of dns.message.Message objects.
-    @param source: source address.  The default is the IPv4 wildcard address.
+    @param source: source address.  The default is the wildcard address.
     @type source: string
     @param source_port: The port from which to send the message.
     The default is 0.
@@ -310,7 +380,7 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
 
     if isinstance(zone, (str, unicode)):
         zone = dns.name.from_text(zone)
-    if isinstance(rdtype, str):
+    if isinstance(rdtype, (str, unicode)):
         rdtype = dns.rdatatype.from_text(rdtype)
     q = dns.message.make_query(zone, rdtype, rdclass)
     if rdtype == dns.rdatatype.IXFR:
@@ -320,19 +390,8 @@ def xfr(where, zone, rdtype=dns.rdatatype.AXFR, rdclass=dns.rdataclass.IN,
     if not keyring is None:
         q.use_tsig(keyring, keyname, algorithm=keyalgorithm)
     wire = q.to_wire()
-    if af is None:
-        try:
-            af = dns.inet.af_for_address(where)
-        except:
-            af = dns.inet.AF_INET
-    if af == dns.inet.AF_INET:
-        destination = (where, port)
-        if source is not None:
-            source = (source, source_port)
-    elif af == dns.inet.AF_INET6:
-        destination = (where, port, 0, 0)
-        if source is not None:
-            source = (source, source_port, 0, 0)
+    (af, destination, source) = _destination_and_source(af, where, port, source,
+                                                        source_port)
     if use_udp:
         if rdtype != dns.rdatatype.IXFR:
             raise ValueError('cannot do a UDP AXFR')

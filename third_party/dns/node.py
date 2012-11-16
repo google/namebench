@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.
+# Copyright (C) 2001-2007, 2009-2011 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -23,18 +23,18 @@ import dns.renderer
 
 class Node(object):
     """A DNS node.
-    
+
     A node is a set of rdatasets
 
     @ivar rdatasets: the node's rdatasets
     @type rdatasets: list of dns.rdataset.Rdataset objects"""
 
     __slots__ = ['rdatasets']
-    
+
     def __init__(self):
         """Initialize a DNS node.
         """
-        
+
         self.rdatasets = [];
 
     def to_text(self, name, **kw):
@@ -46,7 +46,7 @@ class Node(object):
         @type name: dns.name.Name object
         @rtype: string
         """
-        
+
         s = StringIO.StringIO()
         for rds in self.rdatasets:
             print >> s, rds.to_text(name, **kw)
@@ -54,7 +54,7 @@ class Node(object):
 
     def __repr__(self):
         return '<DNS node ' + str(id(self)) + '>'
-    
+
     def __eq__(self, other):
         """Two nodes are equal if they have the same rdatasets.
 
@@ -73,7 +73,7 @@ class Node(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-        
+
     def __len__(self):
         return len(self.rdatasets)
 
@@ -159,7 +159,7 @@ class Node(object):
 
     def replace_rdataset(self, replacement):
         """Replace an rdataset.
-        
+
         It is not an error if there is no rdataset matching I{replacement}.
 
         Ownership of the I{replacement} object is transferred to the node;
@@ -167,6 +167,8 @@ class Node(object):
         at the node, it stores I{replacement} itself.
         """
 
+        if not isinstance(replacement, dns.rdataset.Rdataset):
+            raise ValueError, 'replacement is not an rdataset'
         self.delete_rdataset(replacement.rdclass, replacement.rdtype,
                              replacement.covers)
         self.rdatasets.append(replacement)

@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2007, 2009, 2010 Nominum, Inc.
+# Copyright (C) 2001-2007, 2009-2011 Nominum, Inc.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose with or without fee is hereby granted,
@@ -21,6 +21,7 @@ import struct
 import sys
 import time
 
+import dns.edns
 import dns.exception
 import dns.flags
 import dns.name
@@ -33,6 +34,7 @@ import dns.rdatatype
 import dns.rrset
 import dns.renderer
 import dns.tsig
+import dns.wiredata
 
 class ShortHeader(dns.exception.FormError):
     """Raised if the DNS packet passed to from_wire() is too short."""
@@ -92,8 +94,11 @@ class Message(object):
     @type keyring: dict
     @ivar keyname: The TSIG keyname to use.  The default is None.
     @type keyname: dns.name.Name object
-    @ivar keyalgorithm: The TSIG key algorithm to use.  The default is
-    dns.tsig.default_algorithm.
+    @ivar keyalgorithm: The TSIG algorithm to use; defaults to
+    dns.tsig.default_algorithm.  Constants for TSIG algorithms are defined
+    in dns.tsig, and the currently implemented algorithms are
+    HMAC_MD5, HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, and
+    HMAC_SHA512.
     @type keyalgorithm: string
     @ivar request_mac: The TSIG MAC of the request message associated with
     this message; used when validating TSIG signatures.   @see: RFC 2845 for
@@ -566,20 +571,23 @@ class _WireReader(object):
     @type updating: bool
     @ivar one_rr_per_rrset: Put each RR into its own RRset?
     @type one_rr_per_rrset: bool
+    @ivar ignore_trailing: Ignore trailing junk at end of request?
+    @type ignore_trailing: bool
     @ivar zone_rdclass: The class of the zone in messages which are
     DNS dynamic updates.
     @type zone_rdclass: int
     """
 
     def __init__(self, wire, message, question_only=False,
-                 one_rr_per_rrset=False):
-        self.wire = wire
+                 one_rr_per_rrset=False, ignore_trailing=False):
+        self.wire = dns.wiredata.maybe_wrap(wire)
         self.message = message
         self.current = 0
         self.updating = False
         self.zone_rdclass = dns.rdataclass.IN
         self.question_only = question_only
         self.one_rr_per_rrset = one_rr_per_rrset
+        self.ignore_trailing = ignore_trailing
 
     def _get_question(self, qcount):
         """Read the next I{qcount} records from the wire data and add them to
@@ -682,7 +690,7 @@ class _WireReader(object):
                     deleting = None
                 if deleting == dns.rdataclass.ANY or \
                    (deleting == dns.rdataclass.NONE and \
-                    section == self.message.answer):
+                    section is self.message.answer):
                     covers = dns.rdatatype.NONE
                     rd = None
                 else:
@@ -717,7 +725,7 @@ class _WireReader(object):
         self._get_section(self.message.answer, ancount)
         self._get_section(self.message.authority, aucount)
         self._get_section(self.message.additional, adcount)
-        if self.current != l:
+        if not self.ignore_trailing and self.current != l:
             raise TrailingJunk
         if self.message.multi and self.message.tsig_ctx and \
                not self.message.had_tsig:
@@ -726,7 +734,8 @@ class _WireReader(object):
 
 def from_wire(wire, keyring=None, request_mac='', xfr=False, origin=None,
               tsig_ctx = None, multi = False, first = True,
-              question_only = False, one_rr_per_rrset = False):
+              question_only = False, one_rr_per_rrset = False,
+              ignore_trailing = False):
     """Convert a DNS wire format message into a message
     object.
 
@@ -752,6 +761,8 @@ def from_wire(wire, keyring=None, request_mac='', xfr=False, origin=None,
     @type question_only: bool
     @param one_rr_per_rrset: Put each RR into its own RRset
     @type one_rr_per_rrset: bool
+    @param ignore_trailing: Ignore trailing junk at end of request?
+    @type ignore_trailing: bool
     @raises ShortHeader: The message is less than 12 octets long.
     @raises TrailingJunk: There were octets in the message past the end
     of the proper DNS message.
@@ -770,7 +781,8 @@ def from_wire(wire, keyring=None, request_mac='', xfr=False, origin=None,
     m.multi = multi
     m.first = first
 
-    reader = _WireReader(wire, m, question_only, one_rr_per_rrset)
+    reader = _WireReader(wire, m, question_only, one_rr_per_rrset,
+                         ignore_trailing)
     reader.read()
 
     return m
@@ -1010,7 +1022,8 @@ def from_file(f):
     return m
 
 def make_query(qname, rdtype, rdclass = dns.rdataclass.IN, use_edns=None,
-               want_dnssec=False):
+               want_dnssec=False, ednsflags=0, payload=1280,
+               request_payload=None, options=None):
     """Make a query message.
 
     The query name, type, and class may all be specified either
@@ -1031,19 +1044,30 @@ def make_query(qname, rdtype, rdclass = dns.rdataclass.IN, use_edns=None,
     @type use_edns: int or bool or None
     @param want_dnssec: Should the query indicate that DNSSEC is desired?
     @type want_dnssec: bool
+    @param ednsflags: EDNS flag values.
+    @type ednsflags: int
+    @param payload: The EDNS sender's payload field, which is the maximum
+    size of UDP datagram the sender can handle.
+    @type payload: int
+    @param request_payload: The EDNS payload size to use when sending
+    this message.  If not specified, defaults to the value of payload.
+    @type request_payload: int or None
+    @param options: The EDNS options
+    @type options: None or list of dns.edns.Option objects
+    @see: RFC 2671
     @rtype: dns.message.Message object"""
 
     if isinstance(qname, (str, unicode)):
         qname = dns.name.from_text(qname)
-    if isinstance(rdtype, str):
+    if isinstance(rdtype, (str, unicode)):
         rdtype = dns.rdatatype.from_text(rdtype)
-    if isinstance(rdclass, str):
+    if isinstance(rdclass, (str, unicode)):
         rdclass = dns.rdataclass.from_text(rdclass)
     m = Message()
     m.flags |= dns.flags.RD
     m.find_rrset(m.question, qname, rdclass, rdtype, create=True,
                  force_unique=True)
-    m.use_edns(use_edns)
+    m.use_edns(use_edns, ednsflags, payload, request_payload, options)
     m.want_dnssec(want_dnssec)
     return m
 
