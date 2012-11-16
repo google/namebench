@@ -16,12 +16,12 @@
 #
 import cgi
 import datetime
+import json
 import os
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
-from django.utils import simplejson
 
 import models
 

@@ -16,6 +16,7 @@
 #
 import cgi
 import datetime
+import json
 import os
 import re
 from google.appengine.ext import db
@@ -23,7 +24,6 @@ from google.appengine.api import memcache
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
-from django.utils import simplejson
 
 import models
 
@@ -98,7 +98,7 @@ class SubmitHandler(webapp.RequestHandler):
     notes = []
     client_id = int(self.request.get('client_id'))
     submit_id = int(self.request.get('submit_id'))
-    data = simplejson.loads(self.request.get('data'))
+    data = json.loads(self.request.get('data'))
     ip = self.request.remote_addr
     class_c = '.'.join(ip.split('.')[0:3])
     cached_index_hosts = self.get_cached_index_hosts()
@@ -107,7 +107,7 @@ class SubmitHandler(webapp.RequestHandler):
     # A special handler for the unlikely case of a duplicate submit_id. 
     if excess_listings == -1:
       response = {'state': 'dupe', 'url': '/', 'notes': ["Duplicate submit_id. How'd that happen?"]}
-      return self.response.out.write(simplejson.dumps(response))
+      return self.response.out.write(json.dumps(response))
     
     return db.run_in_transaction(self.insert_data, class_c, submit_id, client_id, data, ns_map,
                                  cached_index_hosts, excess_listings=excess_listings)
@@ -169,7 +169,7 @@ class SubmitHandler(webapp.RequestHandler):
     submission.class_c = class_c
     # Hide from the main index. 
     hide_me = self.request.get('hidden', False)
-    # simplejson does not seem to convert booleans
+    # json does not seem to convert booleans
     if hide_me and hide_me != 'False':
       notes.append("Hidden on request: %s [%s]" % (hide_me, type(hide_me)))
       submission.hidden = True
@@ -286,4 +286,4 @@ class SubmitHandler(webapp.RequestHandler):
         'url': '/id/%s' % submission.key().id(),
         'notes': notes
     }
-    self.response.out.write(simplejson.dumps(response))
+    self.response.out.write(json.dumps(response))

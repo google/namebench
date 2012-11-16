@@ -14,16 +14,17 @@
 
 """Class used for determining GeoIP location."""
 
+
 import csv
+import json
+import math
 import re
 import tempfile
 
-# external dependencies (from nb_third_party)
-import httplib2
-import math
-import simplejson
 from . import util
 
+# external dependencies (from nb_third_party)
+import httplib2
 
 def GetFromGoogleLocAPI():
   """Use the Google Loc JSON API from Google Gears.
@@ -37,9 +38,9 @@ def GetFromGoogleLocAPI():
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   url = 'http://www.google.com/loc/json'
   post_data = {'request_address': 'true', 'version': '1.1.0', 'source': 'namebench'}
-  unused_resp, content = h.request(url, 'POST', simplejson.dumps(post_data))
+  unused_resp, content = h.request(url, 'POST', json.dumps(post_data))
   try:
-    data = simplejson.loads(content)['location']
+    data = json.loads(content)['location']
     return {
         'region_name': data['address'].get('region'),
         'country_name': data['address'].get('country'),

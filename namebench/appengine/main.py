@@ -16,6 +16,7 @@
 #
 import cgi
 import datetime
+import json
 import logging
 import os
 
@@ -24,7 +25,6 @@ from google.appengine.api import memcache
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
-from django.utils import simplejson
 
 import models
 import nameserver
@@ -68,7 +68,7 @@ class IndexHostsHandler(webapp.RequestHandler):
     hosts = []
     for record in db.GqlQuery("SELECT * FROM IndexHost WHERE listed=True"):
       hosts.append((str(record.record_type), str(record.record_name)))
-    self.response.out.write(simplejson.dumps(hosts))
+    self.response.out.write(json.dumps(hosts))
 
 
 

@@ -16,20 +16,20 @@
 
 import csv
 import datetime
+import json
 import operator
 import os.path
 import platform
 
 # external dependencies (from third_party)
 import jinja2
-import simplejson
 
 from . import addr_util
-from ..common import charts
 from . import nameserver
 from . import nameserver_list
-from ..common import url_map
 from . import util
+from ..common import charts
+from ..common import url_map
 
 # Only bother showing a percentage if we have this many tests.
 MIN_RELEVANT_COUNT = 50
@@ -407,7 +407,7 @@ class ReportGenerator(object):
 
   def CreateJsonData(self):
     sharing_data = self._CreateSharingData()
-    return simplejson.dumps(sharing_data)
+    return json.dumps(sharing_data)
 
   def _ResponseToCountTtlText(self, response):
     """For a given DNS response, parse the most important details out.

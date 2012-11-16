@@ -16,10 +16,10 @@
 #
 import cgi
 import datetime
+import json
 import operator
 import os
 import logging
-from django.utils import simplejson
 from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import webapp
