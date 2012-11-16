@@ -23,7 +23,7 @@ import tempfile
 
 from . import util
 
-# external dependencies (from nb_third_party)
+# third_party dependencies
 import httplib2
 
 def GetFromGoogleLocAPI():
@@ -88,7 +88,7 @@ def GetInfoForCountry(country_name_or_code):
   partial_match = False
   if not country_name_or_code:
     return None
-  
+
   if len(country_name_or_code) == 2:
     country_code = country_name_or_code.upper()
     country_name = False
@@ -97,7 +97,7 @@ def GetInfoForCountry(country_name_or_code):
     country_code = False
 
   for row in ReadCountryData():
-    lat, lon = row['coords'].split(',')        
+    lat, lon = row['coords'].split(',')
     if country_code:
       if row['code'] == country_code:
         return row['code'], row['name'], lat, lon
@@ -118,7 +118,7 @@ def GetInfoForCountry(country_name_or_code):
     return match
   elif partial_match:
     print(("Could not find explicit entry for '%s', partial match: %s" % (country_name_or_code, partial_match)))
-    return partial_match   
+    return partial_match
   else:
     print(("'%s' does not match any countries in our list." % country_name_or_code))
     return (None, None, None, None)

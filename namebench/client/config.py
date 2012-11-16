@@ -28,9 +28,6 @@ import re
 import io
 import tempfile
 
-# from third_party
-import httplib2
-
 from . import addr_util
 from . import data_sources
 from . import nameserver
@@ -178,11 +175,10 @@ def _ParseNameServerListing(fp):
   return ns_data
 
 def GetSanityChecks():
-  return GetAutoUpdatingConfigFile('config/sanity_checks.cfg')
+  return _GetLocalConfig('config/sanity_checks.cfg')
 
 def _GetLocalConfig(conf_file):
   """Read a simple local config file."""
-
   local_config = _ReadConfigFile(conf_file)
   return _ExpandConfigSections(local_config)
 
@@ -192,41 +188,6 @@ def _ReadConfigFile(conf_file):
   local_config = configparser.ConfigParser()
   local_config.read(ref_file)
   return local_config
-
-
-def GetAutoUpdatingConfigFile(conf_file):
-  """Get the latest copy of the config file"""
-
-  local_config = _ReadConfigFile(conf_file)
-  download_latest = int(local_config.get('config', 'download_latest'))
-  local_version = int(local_config.get('config', 'version'))
-
-  if download_latest == 0:
-    return _ExpandConfigSections(local_config)
-
-  h = httplib2.Http(tempfile.gettempdir(), timeout=10)
-  url = '%s/%s' % (TRUNK_URL, conf_file)
-  content = None
-  try:
-    _, content = h.request(url, 'GET')
-    remote_config = configparser.ConfigParser()
-  except:
-    print(('* Unable to fetch remote %s: %s' % (conf_file, util.GetLastExceptionString())))
-    return _ExpandConfigSections(local_config)
-
-  if content and '[config]' in content:
-    fp = io.StringIO(content.decode())
-    try:
-      remote_config.readfp(fp)
-    except:
-      print(('* Unable to read remote %s: %s' % (conf_file, util.GetLastExceptionString())))
-      return _ExpandConfigSections(local_config)
-
-  if remote_config and remote_config.has_section('config') and int(remote_config.get('config', 'version')) > local_version:
-    print(('- Using %s' % url))
-    return _ExpandConfigSections(remote_config)
-  else:
-    return _ExpandConfigSections(local_config)
 
 def _ExpandConfigSections(config):
   return dict([ (y, config.items(y)) for y in config.sections() if y != 'config' ])

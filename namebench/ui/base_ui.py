@@ -104,8 +104,6 @@ class BaseUI(object):
 
     return (domain, asn)
 
-
-
   def PrepareNameServers(self):
     """Setup self.nameservers to have a list of healthy fast servers."""
     self.nameservers = self.GatherNameServerData()

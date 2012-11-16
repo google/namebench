@@ -3,6 +3,9 @@
 # C extensions
 *.so
 
+# vim
+*.swp
+
 # Packages
 *.egg
 *.egg-info
