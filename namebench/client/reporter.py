@@ -25,10 +25,10 @@ import jinja2
 import simplejson
 
 from . import addr_util
-from . import charts
+from ..common import charts
 from . import nameserver
 from . import nameserver_list
-from . import url_map
+from ..common import url_map
 from . import util
 
 # Only bother showing a percentage if we have this many tests.

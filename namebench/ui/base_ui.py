@@ -16,17 +16,17 @@
 
 import tempfile
 
-from . import addr_util
-from . import benchmark
-from . import better_webbrowser
-from . import config
-from . import data_sources
-from . import geoip
-from . import nameserver
-from . import reporter
-from . import providers
-from . import site_connector
-from . import util
+from ..client import addr_util
+from ..client import benchmark
+from ..client import better_webbrowser
+from ..client import config
+from ..client import data_sources
+from ..client import geoip
+from ..client import nameserver
+from ..client import reporter
+from ..client import providers
+from ..client import site_connector
+from ..client import util
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 

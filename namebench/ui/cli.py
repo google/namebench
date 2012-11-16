@@ -26,8 +26,8 @@ import math
 import sys
 
 from . import base_ui
-from . import conn_quality
-from . import nameserver_list
+from ..client import conn_quality
+from ..client import nameserver_list
 
 
 class NameBenchCli(base_ui.BaseUI):

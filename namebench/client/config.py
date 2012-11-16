@@ -28,8 +28,6 @@ import re
 import io
 import tempfile
 
-import nb_third_party
-
 # from third_party
 import httplib2
 

@@ -23,15 +23,15 @@ import platform
 import sys
 
 # Check before we start importing internal dependencies
-if sys.version < '2.4':
+if sys.version < '2.7':
   your_version = sys.version.split(' ')[0]
-  print(('* Your Python version (%s) is too old! Please upgrade to 2.6+!' % your_version))
+  print('* The version of Python on your system is very old (%s). Please upgrade to 2.7 or higher.')
   sys.exit(1)
 elif sys.version >= '3.0':
   print('* namebench is currently incompatible with Python 3.0 - trying anyways')
 
-from libnamebench import cli
-from libnamebench import config
+from namebench.ui import cli
+from namebench.client import config
 
 if __name__ == '__main__':
   options = config.GetMergedConfiguration()
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
   if use_tk:
     print('Starting graphical interface for namebench (use -x to force command-line usage)')
-    from libnamebench import tk
+    from namebench.ui import tk
     interface = tk.NameBenchGui
   else:
     interface = cli.NameBenchCli

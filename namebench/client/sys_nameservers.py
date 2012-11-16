@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2009 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +24,7 @@ import sys
 import time
 
 if __name__ == '__main__':
-  sys.path.append('../nb_third_party')
+  sys.path.append('../../third_party')
 
 # 3rd party libraries
 import dns.resolver
