@@ -12,8 +12,15 @@
 """
 import sys
 import traceback
+from types import TracebackType
 from jinja2.utils import CodeType, missing, internal_code
 from jinja2.exceptions import TemplateSyntaxError
+
+# on pypy we can take advantage of transparent proxies
+try:
+    from __pypy__ import tproxy
+except ImportError:
+    tproxy = None
 
 
 # how does the raise helper look like?
@@ -30,17 +37,22 @@ class TracebackFrameProxy(object):
 
     def __init__(self, tb):
         self.tb = tb
+        self._tb_next = None
 
-    def _set_tb_next(self, next):
-        if tb_set_next is not None:
-            tb_set_next(self.tb, next and next.tb or None)
-        self._tb_next = next
-
-    def _get_tb_next(self):
+    @property
+    def tb_next(self):
         return self._tb_next
 
-    tb_next = property(_get_tb_next, _set_tb_next)
-    del _get_tb_next, _set_tb_next
+    def set_next(self, next):
+        if tb_set_next is not None:
+            try:
+                tb_set_next(self.tb, next and next.tb or None)
+            except Exception:
+                # this function can fail due to all the hackery it does
+                # on various python implementations.  We just catch errors
+                # down and ignore them if necessary.
+                pass
+        self._tb_next = next
 
     @property
     def is_jinja_frame(self):
@@ -50,8 +62,22 @@ class TracebackFrameProxy(object):
         return getattr(self.tb, name)
 
 
+def make_frame_proxy(frame):
+    proxy = TracebackFrameProxy(frame)
+    if tproxy is None:
+        return proxy
+    def operation_handler(operation, *args, **kwargs):
+        if operation in ('__getattribute__', '__getattr__'):
+            return getattr(proxy, args[0])
+        elif operation == '__setattr__':
+            proxy.__setattr__(*args, **kwargs)
+        else:
+            return getattr(proxy, operation)(*args, **kwargs)
+    return tproxy(TracebackType, operation_handler)
+
+
 class ProcessedTraceback(object):
-    """Holds a Jinja preprocessed traceback for priting or reraising."""
+    """Holds a Jinja preprocessed traceback for printing or reraising."""
 
     def __init__(self, exc_type, exc_value, frames):
         assert frames, 'no frames for this traceback?'
@@ -59,14 +85,13 @@ class ProcessedTraceback(object):
         self.exc_value = exc_value
         self.frames = frames
 
-    def chain_frames(self):
-        """Chains the frames.  Requires ctypes or the speedups extension."""
+        # newly concatenate the frames (which are proxies)
         prev_tb = None
         for tb in self.frames:
             if prev_tb is not None:
-                prev_tb.tb_next = tb
+                prev_tb.set_next(tb)
             prev_tb = tb
-        prev_tb.tb_next = None
+        prev_tb.set_next(None)
 
     def render_as_text(self, limit=None):
         """Return a string with the traceback."""
@@ -95,7 +120,12 @@ class ProcessedTraceback(object):
     @property
     def standard_exc_info(self):
         """Standard python exc_info for re-raising"""
-        return self.exc_type, self.exc_value, self.frames[0].tb
+        tb = self.frames[0]
+        # the frame will be an actual traceback (or transparent proxy) if
+        # we are on pypy or a python implementation with support for tproxy
+        if type(tb) is not TracebackType:
+            tb = tb.tb
+        return self.exc_type, self.exc_value, tb
 
 
 def make_traceback(exc_info, source_hint=None):
@@ -152,7 +182,7 @@ def translate_exception(exc_info, initial_skip=0):
             tb = fake_exc_info(exc_info[:2] + (tb,), template.filename,
                                lineno)[2]
 
-        frames.append(TracebackFrameProxy(tb))
+        frames.append(make_frame_proxy(tb))
         tb = next
 
     # if we don't have any exceptions in the frames left, we have to
@@ -161,10 +191,7 @@ def translate_exception(exc_info, initial_skip=0):
     if not frames:
         raise exc_info[0], exc_info[1], exc_info[2]
 
-    traceback = ProcessedTraceback(exc_info[0], exc_info[1], frames)
-    if tb_set_next is not None:
-        traceback.chain_frames()
-    return traceback
+    return ProcessedTraceback(exc_info[0], exc_info[1], frames)
 
 
 def fake_exc_info(exc_info, filename, lineno):
@@ -239,7 +266,8 @@ def fake_exc_info(exc_info, filename, lineno):
 def _init_ugly_crap():
     """This function implements a few ugly things so that we can patch the
     traceback objects.  The function returned allows resetting `tb_next` on
-    any python traceback object.
+    any python traceback object.  Do not attempt to use this on non cpython
+    interpreters
     """
     import ctypes
     from types import TracebackType
@@ -259,7 +287,7 @@ def _init_ugly_crap():
     ]
 
     # python with trace
-    if object.__basicsize__ != ctypes.sizeof(_PyObject):
+    if hasattr(sys, 'getobjects'):
         class _PyObject(ctypes.Structure):
             pass
         _PyObject._fields_ = [
@@ -297,12 +325,15 @@ def _init_ugly_crap():
     return tb_set_next
 
 
-# try to get a tb_set_next implementation
-try:
-    from jinja2._speedups import tb_set_next
-except ImportError:
+# try to get a tb_set_next implementation if we don't have transparent
+# proxies.
+tb_set_next = None
+if tproxy is None:
     try:
-        tb_set_next = _init_ugly_crap()
-    except:
-        tb_set_next = None
-del _init_ugly_crap
+        from jinja2._debugsupport import tb_set_next
+    except ImportError:
+        try:
+            tb_set_next = _init_ugly_crap()
+        except:
+            pass
+    del _init_ugly_crap

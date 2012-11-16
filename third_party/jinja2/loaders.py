@@ -251,8 +251,7 @@ class PackageLoader(BaseLoader):
             for filename in self.provider.resource_listdir(path):
                 fullname = path + '/' + filename
                 if self.provider.resource_isdir(fullname):
-                    for item in _walk(fullname):
-                        results.append(item)
+                    _walk(fullname)
                 else:
                     results.append(fullname[offset:].lstrip('/'))
         _walk(path)
@@ -331,18 +330,32 @@ class PrefixLoader(BaseLoader):
         self.mapping = mapping
         self.delimiter = delimiter
 
-    def get_source(self, environment, template):
+    def get_loader(self, template):
         try:
             prefix, name = template.split(self.delimiter, 1)
             loader = self.mapping[prefix]
         except (ValueError, KeyError):
             raise TemplateNotFound(template)
+        return loader, name
+
+    def get_source(self, environment, template):
+        loader, name = self.get_loader(template)
         try:
             return loader.get_source(environment, name)
         except TemplateNotFound:
             # re-raise the exception with the correct fileame here.
             # (the one that includes the prefix)
             raise TemplateNotFound(template)
+
+    @internalcode
+    def load(self, environment, name, globals=None):
+        loader, local_name = self.get_loader(name)
+        try:
+            return loader.load(environment, local_name)
+        except TemplateNotFound:
+            # re-raise the exception with the correct fileame here.
+            # (the one that includes the prefix)
+            raise TemplateNotFound(name)
 
     def list_templates(self):
         result = []
@@ -377,6 +390,15 @@ class ChoiceLoader(BaseLoader):
                 pass
         raise TemplateNotFound(template)
 
+    @internalcode
+    def load(self, environment, name, globals=None):
+        for loader in self.loaders:
+            try:
+                return loader.load(environment, name, globals)
+            except TemplateNotFound:
+                pass
+        raise TemplateNotFound(name)
+
     def list_templates(self):
         found = set()
         for loader in self.loaders:
@@ -397,6 +419,8 @@ class ModuleLoader(BaseLoader):
     ...     ModuleLoader('/path/to/compiled/templates'),
     ...     FileSystemLoader('/path/to/templates')
     ... ])
+
+    Templates can be precompiled with :meth:`Environment.compile_templates`.
     """
 
     has_source_access = False

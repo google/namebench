@@ -12,6 +12,10 @@ import re
 import sys
 import errno
 try:
+    from urllib.parse import quote_from_bytes as url_quote
+except ImportError:
+    from urllib import quote as url_quote
+try:
     from thread import allocate_lock
 except ImportError:
     from dummy_thread import allocate_lock
@@ -53,7 +57,7 @@ except TypeError, _error:
         def concat(gen):
             try:
                 return _concat(list(gen))
-            except:
+            except Exception:
                 # this hack is needed so that the current frame
                 # does not show up in the traceback.
                 exc_type, exc_value, tb = sys.exc_info()
@@ -63,7 +67,7 @@ except TypeError, _error:
     del _test_gen_bug, _error
 
 
-# for python 2.x we create outselves a next() function that does the
+# for python 2.x we create ourselves a next() function that does the
 # basics without exception catching.
 try:
     next = next
@@ -128,7 +132,7 @@ def contextfunction(f):
 
 
 def evalcontextfunction(f):
-    """This decoraotr can be used to mark a function or method as an eval
+    """This decorator can be used to mark a function or method as an eval
     context callable.  This is similar to the :func:`contextfunction`
     but instead of passing the context, an evaluation context object is
     passed.  For more information about the eval context, see
@@ -191,7 +195,7 @@ def clear_caches():
 
 
 def import_string(import_name, silent=False):
-    """Imports an object based on a string.  This use useful if you want to
+    """Imports an object based on a string.  This is useful if you want to
     use import paths as endpoints or something similar.  An import path can
     be specified either in dotted notation (``xml.sax.saxutils.escape``)
     or with a colon as object delimiter (``xml.sax.saxutils:escape``).
@@ -236,7 +240,8 @@ def object_type_repr(obj):
         return 'None'
     elif obj is Ellipsis:
         return 'Ellipsis'
-    if obj.__class__.__module__ == '__builtin__':
+    # __builtin__ in 2.x, builtins in 3.x
+    if obj.__class__.__module__ in ('__builtin__', 'builtins'):
         name = obj.__class__.__name__
     else:
         name = obj.__class__.__module__ + '.' + obj.__class__.__name__
@@ -348,203 +353,19 @@ def generate_lorem_ipsum(n=5, html=True, min=20, max=100):
     return Markup(u'\n'.join(u'<p>%s</p>' % escape(x) for x in result))
 
 
-class Markup(unicode):
-    r"""Marks a string as being safe for inclusion in HTML/XML output without
-    needing to be escaped.  This implements the `__html__` interface a couple
-    of frameworks and web applications use.  :class:`Markup` is a direct
-    subclass of `unicode` and provides all the methods of `unicode` just that
-    it escapes arguments passed and always returns `Markup`.
+def unicode_urlencode(obj, charset='utf-8'):
+    """URL escapes a single bytestring or unicode string with the
+    given charset if applicable to URL safe quoting under all rules
+    that need to be considered under all supported Python versions.
 
-    The `escape` function returns markup objects so that double escaping can't
-    happen.  If you want to use autoescaping in Jinja just enable the
-    autoescaping feature in the environment.
-
-    The constructor of the :class:`Markup` class can be used for three
-    different things:  When passed an unicode object it's assumed to be safe,
-    when passed an object with an HTML representation (has an `__html__`
-    method) that representation is used, otherwise the object passed is
-    converted into a unicode string and then assumed to be safe:
-
-    >>> Markup("Hello <em>World</em>!")
-    Markup(u'Hello <em>World</em>!')
-    >>> class Foo(object):
-    ...  def __html__(self):
-    ...   return '<a href="#">foo</a>'
-    ... 
-    >>> Markup(Foo())
-    Markup(u'<a href="#">foo</a>')
-
-    If you want object passed being always treated as unsafe you can use the
-    :meth:`escape` classmethod to create a :class:`Markup` object:
-
-    >>> Markup.escape("Hello <em>World</em>!")
-    Markup(u'Hello &lt;em&gt;World&lt;/em&gt;!')
-
-    Operations on a markup string are markup aware which means that all
-    arguments are passed through the :func:`escape` function:
-
-    >>> em = Markup("<em>%s</em>")
-    >>> em % "foo & bar"
-    Markup(u'<em>foo &amp; bar</em>')
-    >>> strong = Markup("<strong>%(text)s</strong>")
-    >>> strong % {'text': '<blink>hacker here</blink>'}
-    Markup(u'<strong>&lt;blink&gt;hacker here&lt;/blink&gt;</strong>')
-    >>> Markup("<em>Hello</em> ") + "<foo>"
-    Markup(u'<em>Hello</em> &lt;foo&gt;')
+    If non strings are provided they are converted to their unicode
+    representation first.
     """
-    __slots__ = ()
-
-    def __new__(cls, base=u'', encoding=None, errors='strict'):
-        if hasattr(base, '__html__'):
-            base = base.__html__()
-        if encoding is None:
-            return unicode.__new__(cls, base)
-        return unicode.__new__(cls, base, encoding, errors)
-
-    def __html__(self):
-        return self
-
-    def __add__(self, other):
-        if hasattr(other, '__html__') or isinstance(other, basestring):
-            return self.__class__(unicode(self) + unicode(escape(other)))
-        return NotImplemented
-
-    def __radd__(self, other):
-        if hasattr(other, '__html__') or isinstance(other, basestring):
-            return self.__class__(unicode(escape(other)) + unicode(self))
-        return NotImplemented
-
-    def __mul__(self, num):
-        if isinstance(num, (int, long)):
-            return self.__class__(unicode.__mul__(self, num))
-        return NotImplemented
-    __rmul__ = __mul__
-
-    def __mod__(self, arg):
-        if isinstance(arg, tuple):
-            arg = tuple(imap(_MarkupEscapeHelper, arg))
-        else:
-            arg = _MarkupEscapeHelper(arg)
-        return self.__class__(unicode.__mod__(self, arg))
-
-    def __repr__(self):
-        return '%s(%s)' % (
-            self.__class__.__name__,
-            unicode.__repr__(self)
-        )
-
-    def join(self, seq):
-        return self.__class__(unicode.join(self, imap(escape, seq)))
-    join.__doc__ = unicode.join.__doc__
-
-    def split(self, *args, **kwargs):
-        return map(self.__class__, unicode.split(self, *args, **kwargs))
-    split.__doc__ = unicode.split.__doc__
-
-    def rsplit(self, *args, **kwargs):
-        return map(self.__class__, unicode.rsplit(self, *args, **kwargs))
-    rsplit.__doc__ = unicode.rsplit.__doc__
-
-    def splitlines(self, *args, **kwargs):
-        return map(self.__class__, unicode.splitlines(self, *args, **kwargs))
-    splitlines.__doc__ = unicode.splitlines.__doc__
-
-    def unescape(self):
-        r"""Unescape markup again into an unicode string.  This also resolves
-        known HTML4 and XHTML entities:
-
-        >>> Markup("Main &raquo; <em>About</em>").unescape()
-        u'Main \xbb <em>About</em>'
-        """
-        from jinja2.constants import HTML_ENTITIES
-        def handle_match(m):
-            name = m.group(1)
-            if name in HTML_ENTITIES:
-                return unichr(HTML_ENTITIES[name])
-            try:
-                if name[:2] in ('#x', '#X'):
-                    return unichr(int(name[2:], 16))
-                elif name.startswith('#'):
-                    return unichr(int(name[1:]))
-            except ValueError:
-                pass
-            return u''
-        return _entity_re.sub(handle_match, unicode(self))
-
-    def striptags(self):
-        r"""Unescape markup into an unicode string and strip all tags.  This
-        also resolves known HTML4 and XHTML entities.  Whitespace is
-        normalized to one:
-
-        >>> Markup("Main &raquo;  <em>About</em>").striptags()
-        u'Main \xbb About'
-        """
-        stripped = u' '.join(_striptags_re.sub('', self).split())
-        return Markup(stripped).unescape()
-
-    @classmethod
-    def escape(cls, s):
-        """Escape the string.  Works like :func:`escape` with the difference
-        that for subclasses of :class:`Markup` this function would return the
-        correct subclass.
-        """
-        rv = escape(s)
-        if rv.__class__ is not cls:
-            return cls(rv)
-        return rv
-
-    def make_wrapper(name):
-        orig = getattr(unicode, name)
-        def func(self, *args, **kwargs):
-            args = _escape_argspec(list(args), enumerate(args))
-            _escape_argspec(kwargs, kwargs.iteritems())
-            return self.__class__(orig(self, *args, **kwargs))
-        func.__name__ = orig.__name__
-        func.__doc__ = orig.__doc__
-        return func
-
-    for method in '__getitem__', 'capitalize', \
-                  'title', 'lower', 'upper', 'replace', 'ljust', \
-                  'rjust', 'lstrip', 'rstrip', 'center', 'strip', \
-                  'translate', 'expandtabs', 'swapcase', 'zfill':
-        locals()[method] = make_wrapper(method)
-
-    # new in python 2.5
-    if hasattr(unicode, 'partition'):
-        partition = make_wrapper('partition'),
-        rpartition = make_wrapper('rpartition')
-
-    # new in python 2.6
-    if hasattr(unicode, 'format'):
-        format = make_wrapper('format')
-
-    # not in python 3
-    if hasattr(unicode, '__getslice__'):
-        __getslice__ = make_wrapper('__getslice__')
-
-    del method, make_wrapper
-
-
-def _escape_argspec(obj, iterable):
-    """Helper for various string-wrapped functions."""
-    for key, value in iterable:
-        if hasattr(value, '__html__') or isinstance(value, basestring):
-            obj[key] = escape(value)
-    return obj
-
-
-class _MarkupEscapeHelper(object):
-    """Helper for Markup.__mod__"""
-
-    def __init__(self, obj):
-        self.obj = obj
-
-    __getitem__ = lambda s, x: _MarkupEscapeHelper(s.obj[x])
-    __str__ = lambda s: str(escape(s.obj))
-    __unicode__ = lambda s: unicode(escape(s.obj))
-    __repr__ = lambda s: str(escape(repr(s.obj)))
-    __int__ = lambda s: int(s.obj)
-    __float__ = lambda s: float(s.obj)
+    if not isinstance(obj, basestring):
+        obj = unicode(obj)
+    if isinstance(obj, unicode):
+        obj = obj.encode(charset)
+    return unicode(url_quote(obj))
 
 
 class LRUCache(object):
@@ -591,7 +412,7 @@ class LRUCache(object):
         return (self.capacity,)
 
     def copy(self):
-        """Return an shallow copy of the instance."""
+        """Return a shallow copy of the instance."""
         rv = self.__class__(self.capacity)
         rv._mapping.update(self._mapping)
         rv._queue = deque(self._queue)
@@ -641,7 +462,7 @@ class LRUCache(object):
         """Get an item from the cache. Moves the item up so that it has the
         highest priority then.
 
-        Raise an `KeyError` if it does not exist.
+        Raise a `KeyError` if it does not exist.
         """
         rv = self._mapping[key]
         if self._queue[-1] != key:
@@ -676,7 +497,7 @@ class LRUCache(object):
 
     def __delitem__(self, key):
         """Remove an item from the cache dict.
-        Raise an `KeyError` if it does not exist.
+        Raise a `KeyError` if it does not exist.
         """
         self._wlock.acquire()
         try:
@@ -775,33 +596,14 @@ class Joiner(object):
         return self.sep
 
 
-# we have to import it down here as the speedups module imports the
-# markup type which is define above.
+# try markupsafe first, if that fails go with Jinja2's bundled version
+# of markupsafe.  Markupsafe was previously Jinja2's implementation of
+# the Markup object but was moved into a separate package in a patchlevel
+# release
 try:
-    from jinja2._speedups import escape, soft_unicode
+    from markupsafe import Markup, escape, soft_unicode
 except ImportError:
-    def escape(s):
-        """Convert the characters &, <, >, ' and " in string s to HTML-safe
-        sequences.  Use this if you need to display text that might contain
-        such characters in HTML.  Marks return value as markup string.
-        """
-        if hasattr(s, '__html__'):
-            return s.__html__()
-        return Markup(unicode(s)
-            .replace('&', '&amp;')
-            .replace('>', '&gt;')
-            .replace('<', '&lt;')
-            .replace("'", '&#39;')
-            .replace('"', '&#34;')
-        )
-
-    def soft_unicode(s):
-        """Make a string unicode if it isn't already.  That way a markup
-        string is not converted back to unicode.
-        """
-        if not isinstance(s, unicode):
-            s = unicode(s)
-        return s
+    from jinja2._markupsafe import Markup, escape, soft_unicode
 
 
 # partials

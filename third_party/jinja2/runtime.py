@@ -8,12 +8,10 @@
     :copyright: (c) 2010 by the Jinja Team.
     :license: BSD.
 """
-import sys
 from itertools import chain, imap
-from jinja2.nodes import EvalContext
+from jinja2.nodes import EvalContext, _context_function_types
 from jinja2.utils import Markup, partial, soft_unicode, escape, missing, \
-     concat, MethodType, FunctionType, internalcode, next, \
-     object_type_repr
+     concat, internalcode, next, object_type_repr
 from jinja2.exceptions import UndefinedError, TemplateRuntimeError, \
      TemplateNotFound
 
@@ -21,17 +19,18 @@ from jinja2.exceptions import UndefinedError, TemplateRuntimeError, \
 # these variables are exported to the template runtime
 __all__ = ['LoopContext', 'TemplateReference', 'Macro', 'Markup',
            'TemplateRuntimeError', 'missing', 'concat', 'escape',
-           'markup_join', 'unicode_join', 'to_string',
+           'markup_join', 'unicode_join', 'to_string', 'identity',
            'TemplateNotFound']
-
-
-#: the types we support for context functions
-_context_function_types = (FunctionType, MethodType)
 
 #: the name of the function that is used to convert something into
 #: a string.  2to3 will adopt that automatically and the generated
 #: code can take advantage of it.
 to_string = unicode
+
+#: the identity function.  Useful for certain things in the environment
+identity = lambda x: x
+
+_last_iteration = object()
 
 
 def markup_join(seq):
@@ -78,8 +77,6 @@ class TemplateReference(object):
 
     def __getitem__(self, name):
         blocks = self.__context.blocks[name]
-        wrap = self.__context.eval_ctx.autoescape and \
-               Markup or (lambda x: x)
         return BlockReference(name, self.__context, blocks, 0)
 
     def __repr__(self):
@@ -181,12 +178,18 @@ class Context(object):
                 args = (__self.eval_ctx,) + args
             elif getattr(__obj, 'environmentfunction', 0):
                 args = (__self.environment,) + args
-        return __obj(*args, **kwargs)
+        try:
+            return __obj(*args, **kwargs)
+        except StopIteration:
+            return __self.environment.undefined('value was undefined because '
+                                                'a callable raised a '
+                                                'StopIteration exception')
 
     def derived(self, locals=None):
         """Internal helper function to create a derived context."""
         context = new_context(self.environment, self.name, {},
                               self.parent, True, None, locals)
+        context.vars.update(self.vars)
         context.eval_ctx = self.eval_ctx
         context.blocks.update((k, list(v)) for k, v in self.blocks.iteritems())
         return context
@@ -269,6 +272,7 @@ class LoopContext(object):
     def __init__(self, iterable, recurse=None):
         self._iterator = iter(iterable)
         self._recurse = recurse
+        self._after = self._safe_next()
         self.index0 = -1
 
         # try to get the length of the iterable early.  This must be done
@@ -287,7 +291,7 @@ class LoopContext(object):
         return args[self.index0 % len(args)]
 
     first = property(lambda x: x.index0 == 0)
-    last = property(lambda x: x.index0 + 1 == x.length)
+    last = property(lambda x: x._after is _last_iteration)
     index = property(lambda x: x.index0 + 1)
     revindex = property(lambda x: x.length - x.index0)
     revindex0 = property(lambda x: x.length - x.index)
@@ -297,6 +301,12 @@ class LoopContext(object):
 
     def __iter__(self):
         return LoopContextIterator(self)
+
+    def _safe_next(self):
+        try:
+            return next(self._iterator)
+        except StopIteration:
+            return _last_iteration
 
     @internalcode
     def loop(self, iterable):
@@ -343,11 +353,15 @@ class LoopContextIterator(object):
     def next(self):
         ctx = self.context
         ctx.index0 += 1
-        return next(ctx._iterator), ctx
+        if ctx._after is _last_iteration:
+            raise StopIteration()
+        next_elem = ctx._after
+        ctx._after = ctx._safe_next()
+        return next_elem, ctx
 
 
 class Macro(object):
-    """Wraps a macro."""
+    """Wraps a macro function."""
 
     def __init__(self, environment, func, name, arguments, defaults,
                  catch_kwargs, catch_varargs, caller):
@@ -363,20 +377,24 @@ class Macro(object):
 
     @internalcode
     def __call__(self, *args, **kwargs):
-        arguments = []
-        for idx, name in enumerate(self.arguments):
-            try:
-                value = args[idx]
-            except:
+        # try to consume the positional arguments
+        arguments = list(args[:self._argument_count])
+        off = len(arguments)
+
+        # if the number of arguments consumed is not the number of
+        # arguments expected we start filling in keyword arguments
+        # and defaults.
+        if off != self._argument_count:
+            for idx, name in enumerate(self.arguments[len(arguments):]):
                 try:
                     value = kwargs.pop(name)
-                except:
+                except KeyError:
                     try:
-                        value = self.defaults[idx - self._argument_count]
-                    except:
+                        value = self.defaults[idx - self._argument_count + off]
+                    except IndexError:
                         value = self._environment.undefined(
                             'parameter %r was not provided' % name, name=name)
-            arguments.append(value)
+                arguments.append(value)
 
         # it's important that the order of these arguments does not change
         # if not also changed in the compiler's `function_scoping` method.
@@ -451,11 +469,17 @@ class Undefined(object):
             hint = self._undefined_hint
         raise self._undefined_exception(hint)
 
+    @internalcode
+    def __getattr__(self, name):
+        if name[:2] == '__':
+            raise AttributeError(name)
+        return self._fail_with_undefined_error()
+
     __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
     __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
     __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
-    __getattr__ = __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
-    __int__ = __float__ = __complex__ = __pow__ = __rpow__ = \
+    __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = __int__ = \
+    __float__ = __complex__ = __pow__ = __rpow__ = \
         _fail_with_undefined_error
 
     def __str__(self):
@@ -529,7 +553,7 @@ class StrictUndefined(Undefined):
     """
     __slots__ = ()
     __iter__ = __unicode__ = __str__ = __len__ = __nonzero__ = __eq__ = \
-        __ne__ = Undefined._fail_with_undefined_error
+        __ne__ = __bool__ = Undefined._fail_with_undefined_error
 
 
 # remove remaining slots attributes, after the metaclass did the magic they
