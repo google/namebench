@@ -22,7 +22,7 @@ __contributors__ = ["Thomas Broyer (t.broyer@ltgt.net)",
     "Sam Ruby",
     "Louis Nyffenegger"]
 __license__ = "MIT"
-__version__ = "0.7.6"
+__version__ = "0.7.7"
 
 import re
 import sys
@@ -763,67 +763,6 @@ class ProxyInfo(object):
     def isgood(self):
         return (self.proxy_host != None) and (self.proxy_port != None)
 
-    @classmethod
-    def from_environment(cls, method='http'):
-        """
-        Read proxy info from the environment variables.
-        """
-        if method not in ['http', 'https']:
-          return
-
-        env_var = method + '_proxy'
-        url = os.environ.get(env_var, os.environ.get(env_var.upper()))
-        if not url:
-          return
-        pi = cls.from_url(url, method)
-
-        no_proxy = os.environ.get('no_proxy', os.environ.get('NO_PROXY', ''))
-        bypass_hosts = []
-        if no_proxy:
-          bypass_hosts = no_proxy.split(',')
-        # special case, no_proxy=* means all hosts bypassed
-        if no_proxy == '*':
-          bypass_hosts = AllHosts
-
-        pi.bypass_hosts = bypass_hosts
-        return pi
-
-    @classmethod
-    def from_url(cls, url, method='http'):
-        """
-        Construct a ProxyInfo from a URL (such as http_proxy env var)
-        """
-        url = urlparse.urlparse(url)
-        username = None
-        password = None
-        port = None
-        if '@' in url[1]:
-          ident, host_port = url[1].split('@', 1)
-          if ':' in ident:
-            username, password = ident.split(':', 1)
-          else:
-            password = ident
-        else:
-          host_port = url[1]
-        if ':' in host_port:
-          host, port = host_port.split(':', 1)
-        else:
-          host = host_port
-
-        if port:
-            port = int(port)
-        else:
-            port = dict(https=443, http=80)[method]
-
-        proxy_type = 3 # socks.PROXY_TYPE_HTTP
-        return cls(
-            proxy_type = proxy_type,
-            proxy_host = host,
-            proxy_port = port,
-            proxy_user = username or None,
-            proxy_pass = password or None,
-        )
-
     def applies_to(self, hostname):
         return not self.bypass_host(hostname)
 
@@ -838,6 +777,66 @@ class ProxyInfo(object):
             bypass = True
 
         return bypass
+
+
+def proxy_info_from_environment(method='http'):
+    """
+    Read proxy info from the environment variables.
+    """
+    if method not in ['http', 'https']:
+      return
+
+    env_var = method + '_proxy'
+    url = os.environ.get(env_var, os.environ.get(env_var.upper()))
+    if not url:
+      return
+    pi = proxy_info_from_url(url, method)
+
+    no_proxy = os.environ.get('no_proxy', os.environ.get('NO_PROXY', ''))
+    bypass_hosts = []
+    if no_proxy:
+      bypass_hosts = no_proxy.split(',')
+    # special case, no_proxy=* means all hosts bypassed
+    if no_proxy == '*':
+      bypass_hosts = AllHosts
+
+    pi.bypass_hosts = bypass_hosts
+    return pi
+
+def proxy_info_from_url(url, method='http'):
+    """
+    Construct a ProxyInfo from a URL (such as http_proxy env var)
+    """
+    url = urlparse.urlparse(url)
+    username = None
+    password = None
+    port = None
+    if '@' in url[1]:
+      ident, host_port = url[1].split('@', 1)
+      if ':' in ident:
+        username, password = ident.split(':', 1)
+      else:
+        password = ident
+    else:
+      host_port = url[1]
+    if ':' in host_port:
+      host, port = host_port.split(':', 1)
+    else:
+      host = host_port
+
+    if port:
+        port = int(port)
+    else:
+        port = dict(https=443, http=80)[method]
+
+    proxy_type = 3 # socks.PROXY_TYPE_HTTP
+    return ProxyInfo(
+        proxy_type = proxy_type,
+        proxy_host = host,
+        proxy_port = port,
+        proxy_user = username or None,
+        proxy_pass = password or None,
+    )
 
 
 class HTTPConnectionWithTimeout(httplib.HTTPConnection):
@@ -1064,16 +1063,15 @@ try:
     raise ImportError  # Bail out; we're not actually running on App Engine.
   from google.appengine.api.urlfetch import fetch
   from google.appengine.api.urlfetch import InvalidURLError
-  from google.appengine.api.urlfetch import DownloadError
-  from google.appengine.api.urlfetch import ResponseTooLargeError
-  from google.appengine.api.urlfetch import SSLCertificateError
-
 
   class ResponseDict(dict):
-    """Is a dictionary that also has a read() method, so
-    that it can pass itself off as an httlib.HTTPResponse()."""
+    """Dictionary with a read() method; can pass off as httplib.HTTPResponse."""
+    def __init__(self, *args, **kwargs):
+      self.content = kwargs.pop('content', None)
+      return super(ResponseDict, self).__init__(*args, **kwargs)
+
     def read(self):
-      pass
+      return self.content
 
 
   class AppEngineHttpConnection(object):
@@ -1110,17 +1108,14 @@ try:
             headers=headers, allow_truncated=False, follow_redirects=False,
             deadline=self.timeout,
             validate_certificate=self.validate_certificate)
-        self.response = ResponseDict(response.headers)
+        self.response = ResponseDict(response.headers, content=response.content)
         self.response['status'] = str(response.status_code)
         self.response['reason'] = httplib.responses.get(response.status_code, 'Ok')
         self.response.status = response.status_code
-        setattr(self.response, 'read', lambda : response.content)
 
       # Make sure the exceptions raised match the exceptions expected.
       except InvalidURLError:
         raise socket.gaierror('')
-      except (DownloadError, ResponseTooLargeError, SSLCertificateError):
-        raise httplib.HTTPException()
 
     def getresponse(self):
       if self.response:
@@ -1171,7 +1166,7 @@ class Http(object):
 and more.
     """
     def __init__(self, cache=None, timeout=None,
-                 proxy_info=ProxyInfo.from_environment,
+                 proxy_info=proxy_info_from_environment,
                  ca_certs=None, disable_ssl_certificate_validation=False):
         """If 'cache' is a string then it is used as a directory name for
         a disk cache. Otherwise it must be an object that supports the
@@ -1185,7 +1180,7 @@ and more.
         `proxy_info` may be:
           - a callable that takes the http scheme ('http' or 'https') and
             returns a ProxyInfo instance per request. By default, uses
-            ProxyInfo.from_environment.
+            proxy_nfo_from_environment.
           - a ProxyInfo instance (static proxy config).
           - None (proxy disabled).
 
@@ -1238,6 +1233,20 @@ and more.
 
         # Keep Authorization: headers on a redirect.
         self.forward_authorization_headers = False
+
+    def __getstate__(self):
+        state_dict = copy.copy(self.__dict__)
+        # In case request is augmented by some foreign object such as
+        # credentials which handle auth
+        if 'request' in state_dict:
+            del state_dict['request']
+        if 'connections' in state_dict:
+            del state_dict['connections']
+        return state_dict
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.connections = {}
 
     def _auth_from_challenge(self, host, request_uri, headers, response, content):
         """A generator that creates Authorization objects
