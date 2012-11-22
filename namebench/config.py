@@ -25,10 +25,8 @@ import csv
 import optparse
 import os.path
 import re
-import io
-import tempfile
 
-from . import addr_util
+from . import ip_util
 from . import data_sources
 from . import nameserver
 from . import nameserver_list
@@ -115,7 +113,7 @@ def ParseCommandLineArguments(default_config_file='config/namebench.cfg'):
     options.tags = set()
 
   if args:
-    options.servers.extend(addr_util.ExtractIPsFromString(' '.join(args)))
+    options.servers.extend(ip_util.extract_ips(' '.join(args)))
     options.tags.add('specified')
 
   return options

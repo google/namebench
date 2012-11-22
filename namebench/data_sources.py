@@ -29,7 +29,8 @@ import sys
 import time
 
 # relative
-from . import addr_util
+from . import ip_util
+from . import hostname
 from . import selectors
 from . import util
 
@@ -48,6 +49,8 @@ MIN_FILE_SIZE = 10000
 MIN_RECOMMENDED_RECORD_COUNT = 200
 MAX_FQDN_SYNTHESIZE_PERCENT = 4
 
+IP_RE = re.compile('^[0-9.]+$')
+
 
 class DataSources(object):
   """A collection of methods related to available hostname data sources."""
@@ -65,7 +68,7 @@ class DataSources(object):
       print(('- %s' % msg))
 
   def _LoadConfigFromPath(self, path):
-    """Load a configuration file describing data sources that may be available."""
+    """Load a configuration file describing possible data sources."""
     conf_file = util.FindDataFile(path)
     config = configparser.ConfigParser()
     config.read(conf_file)
@@ -77,7 +80,7 @@ class DataSources(object):
             'full_hostnames': True,
             # Store whether or not this data source contains personal data
             'synthetic': False,
-            'include_duplicates': False,
+            'include_dups': False,
             'max_mtime_days': MAX_FILE_MTIME_AGE_DAYS
         }
 
@@ -88,8 +91,8 @@ class DataSources(object):
           self.source_config[section]['full_hostnames'] = False
         elif key == 'max_mtime_days':
           self.source_config[section]['max_mtime_days'] = int(value)
-        elif key == 'include_duplicates':
-          self.source_config[section]['include_duplicates'] = bool(value)
+        elif key == 'include_dups':
+          self.source_config[section]['include_dups'] = bool(value)
         elif key == 'synthetic':
           self.source_config[section]['synthetic'] = bool(value)
         else:
@@ -152,53 +155,40 @@ class DataSources(object):
   def GetCachedRecordCountForSource(self, source):
     return len(self.source_cache[source])
 
-  def _CreateRecordsFromHostEntries(self, entries, include_duplicates=False):
+  def _ProcessEntries(self, entries, include_dups=False):
     """Create records from hosts, removing duplicate entries and IP's.
 
     Args:
-      entries: A list of test-data entries.
-      include_duplicates: Whether or not to filter duplicates (optional: False)
+      entries: A list of hostnames or (record_type, hostname)
+      include_dups: Whether or not to filter duplicates (optional: False)
 
     Returns:
-      A tuple of (filtered records, full_host_names (Boolean)
+      list of tuples of (record_type, record)
 
     Raises:
       ValueError: If no records could be grokked from the input.
     """
     last_entry = None
-
     records = []
-    full_host_count = 0
     for entry in entries:
-      if entry == last_entry and not include_duplicates:
+      if entry == last_entry and not include_dups:
         continue
-      else:
-        last_entry = entry
+      last_entry = entry
 
-      if ' ' in entry:
-        (record_type, host) = entry.split(' ')
-      else:
+      if ' ' not in entry:
         record_type = 'A'
         host = entry
+      else:
+        (record_type, host) = entry.split(' ')
 
-      if not addr_util.IP_RE.match(host) and not addr_util.INTERNAL_RE.search(host):
+      if not IP_RE.match(host) and not hostname.is_internal(host):
         if not host.endswith('.'):
           host += '.'
         records.append((record_type, host))
 
-        if addr_util.FQDN_RE.match(host):
-          full_host_count += 1
-
     if not records:
       raise ValueError('No records could be created from: %s' % entries)
-
-    # Now that we've read everything, are we dealing with domains or full hostnames?
-    full_host_percent = full_host_count / float(len(records)) * 100
-    if full_host_percent < MAX_FQDN_SYNTHESIZE_PERCENT:
-      full_host_names = True
-    else:
-      full_host_names = False
-    return (records, full_host_names)
+    return records
 
   def GetTestsFromSource(self, source, count=50, select_mode=None):
     """Parse records from source, and return tuples to use for testing.
@@ -213,32 +203,24 @@ class DataSources(object):
 
     Raises:
       ValueError: If no usable records are found from the data source.
-
-    This is tricky because we support 3 types of input data:
-
-    - List of domains
-    - List of hosts
-    - List of record_type + hosts
     """
-    records = []
-
     if source in self.source_config:
-      include_duplicates = self.source_config[source].get('include_duplicates', False)
+      include_dups = self.source_config[source].get('include_dups', False)
     else:
-      include_duplicates = False
+      include_dups = False
 
-    records = self._GetHostsFromSource(source)
+    self.msg('Generating tests from (%s records, selecting %s %s)'
+             % (self.GetNameForSource(source), count, select_mode))
+    records = self._ProcessEntries(self._GetHostsFromSource(source),
+                                   include_dups=include_dups)
     if not records:
-      raise ValueError('Unable to generate records from %s (nothing found)' % source)
+      raise ValueError('Unable to generate records from %s (nothing found)'
+                       % source)
 
-    self.msg('Generating tests from %s (%s records, selecting %s %s)'
-             % (self.GetNameForSource(source), len(records), count, select_mode))
-    (records, are_records_fqdn) = self._CreateRecordsFromHostEntries(records,
-                                                                     include_duplicates=include_duplicates)
     # First try to resolve whether to use weighted or random.
     if select_mode in ('weighted', 'automatic', None):
-      # If we are in include_duplicates mode (cachemiss, cachehit, etc.), we have different rules.
-      if include_duplicates:
+      # If we are in include_dups mode (cachemiss, cachehit, etc.), we have different rules.
+      if include_dups:
         if count > len(records):
           select_mode = 'random'
         else:
@@ -257,25 +239,14 @@ class DataSources(object):
     elif select_mode == 'chunk':
       records = selectors.ChunkSelect(records, count)
     elif select_mode == 'random':
-      records = selectors.RandomSelect(records, count, include_duplicates=include_duplicates)
+      records = selectors.RandomSelect(records, count, include_dups=include_dups)
     else:
       raise ValueError('No such final selection mode: %s' % select_mode)
 
     # For custom filenames
     if source not in self.source_config:
       self.source_config[source] = {'synthetic': True}
-
-    if are_records_fqdn:
-      self.source_config[source]['full_hostnames'] = False
-      self.msg('%s input appears to be predominantly domain names. Synthesizing FQDNs' % source)
-      synthesized = []
-      for (req_type, hostname) in records:
-        if not addr_util.FQDN_RE.match(hostname):
-          hostname = self._GenerateRandomHostname(hostname)
-        synthesized.append((req_type, hostname))
-      return synthesized
-    else:
-      return records
+    return records
 
   def _GenerateRandomHostname(self, domain):
     """Generate a random hostname f or a given domain."""
@@ -289,7 +260,8 @@ class DataSources(object):
     else:
       return 'cache-%s.%s' % (random.randint(0, 10), domain)
 
-  def _GetHostsFromSource(self, source, min_file_size=None, max_mtime_age_days=None):
+  def _GetHostsFromSource(self, source, min_file_size=None,
+                          max_mtime_age_days=None):
     """Get data for a particular source. This needs to be fast.
 
     Args:

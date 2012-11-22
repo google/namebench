@@ -37,14 +37,8 @@ import dns.version
 
 from . import health_checks
 from . import provider_extensions
-from . import addr_util
+from . import hostname
 from . import util
-
-# Look for buggy system versions of namebench
-if dns.version.hexversion < 17301744:
-  raise ValueError('dnspython 1.8.0+ required, while only %s was found. The '
-                   'namebench source bundles 1.8.0, so use it.' % dns.version.version)
-
 
 
 # How many failures before we disable system nameservers
@@ -136,7 +130,7 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
 
   def AddNetworkTags(self, domain, provider, asn, country_code):
     if self.hostname:
-      my_domain = addr_util.GetDomainFromHostname(self.hostname)
+      my_domain = hostname.get_domain_name(self.hostname)
       hostname = self.hostname.lower()
     else:
       my_domain = 'UNKNOWN'

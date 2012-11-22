@@ -16,18 +16,20 @@
 
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
-import re
 import socket
 import sys
 
-if __name__ == '__main__':
-  sys.path.append('..')
-  import nb_third_party
+if __name__ == "__main__":
+  sys.path.append('../third_party')
 
-from . import addr_util
-from . import util
-from . import nameserver
-from . import sys_nameservers
+# local
+import util
+import ip_util
+import nameserver
+import sys_nameservers
+
+# third_party
+from dns import reversename
 
 OPENDNS_IP = '208.67.220.220'
 GOOGLE_IP = '8.8.8.8'
@@ -42,10 +44,11 @@ def GetExternalIp():
     if answer:
       return answer
 
+
 class OpenDNS(nameserver.NameServer):
-  
+
   """Any OpenDNS specific functions."""
-  
+
   def __init__(self, ip=OPENDNS_IP):
     super(OpenDNS, self).__init__(ip=ip)
 
@@ -70,18 +73,21 @@ class MyResolverInfo(nameserver.NameServer):
       try:
         ip = socket.gethostbyname(MY_RESOLVER_HOST)
       except:
-        print(("Could not resolve %s: %s" % (MY_RESOLVER_HOST, util.GetLastExceptionString())))
+        print("Could not resolve %s: %s" % (MY_RESOLVER_HOST,
+              util.GetLastExceptionString()))
         # TODO(tstromberg): Find a more elegant fallback solution.
         ip = '127.0.0.1'
-           
+
     super(MyResolverInfo, self).__init__(ip=ip)
 
   def GetClientIp(self):
     return self.GetMyResolverIpWithDuration()[0]
 
+
 class GooglePublicDNS(nameserver.NameServer):
   def __init__(self, ip=GOOGLE_IP):
     super(GooglePublicDNS, self).__init__(ip=ip)
+
 
 class SystemResolver(nameserver.NameServer):
   def __init__(self, ip=None):
@@ -100,8 +106,26 @@ class SystemResolver(nameserver.NameServer):
       return internal[0]
     return None
 
+
+
+class CymruAsn(SystemResolver):
+
+  def _OriginRecord(ip):
+    """Calculate the hostname to lookup for an IP.
+
+    >>> _OriginRecord('8.8.8.8')
+    'moo'
+    """
+    revname = reversename.from_address(ip).to_text()
+    v4_index = revname.find('in-addr.arpa.')
+    if v4_index:
+      return revname[:v4_index] + 'origin.asn.cymru.com.'
+    v6_index = revname.find('ip6.arpa.')
+    if v6_index:
+      return revname[:v6_index] + 'origin6.asn.cymru.com.'
+
   def GetNetworkDataForIp(self, ip):
-    class_c = addr_util.GetNetworkForIp(ip, reverse=True)
+    class_c = ip_util.GetNetworkForIp(ip, reverse=True)
     host = '%s.origin.asn.cymru.com.' % class_c
     answer = self.GetTxtRecordWithDuration(host)
     if answer and answer[0] and '|' in answer[0]:
@@ -116,6 +140,8 @@ class SystemResolver(nameserver.NameServer):
 
 
 if __name__ == '__main__':
+  import doctest
+  doctest.testmod()
   print((OpenDNS().InterceptionStateWithDuration()))
   print((MyResolverInfo().ClientIp()))
   print((SystemResolver().GetAsnForIp(MyResolverInfo().ClientIp())))

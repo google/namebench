@@ -27,15 +27,25 @@ import util
 
 
 # Used to decide whether or not to benchmark a name
-INTERNAL_RE = re.compile('^0|\.pro[md]z*\.|\.corp|\.bor|\.hot$|internal|dmz|'
-                         '\._[ut][dc]p\.|intra|\.\w$|\.\w{5,}$', re.IGNORECASE)
+INTERNAL_RE = re.compile(
+    '\.\w$'
+    '\._[ut][dc]p\.|'
+    '\.bor|'
+    '\.corp|'
+    '\.hot$|'
+    '\.local'
+    '\.pro[md]z*\.|'
+    '^0|'
+    '^\w+d[cs]\.|'
+    '^\w+nt\.|'
+    '^\w+sv\.|'
+    'dmz|'
+    'internal|'
+    'intranet|'
+    'intra|'
+    '\.\w{5,}$',
+    re.IGNORECASE)
 
-# Used to decide if a hostname should be censored later.
-PRIVATE_RE = re.compile('^\w+dc\.|^\w+ds\.|^\w+sv\.|^\w+nt\.|\.corp|internal|'
-                        'intranet|\.local', re.IGNORECASE)
-
-# ^.*[\w-]+\.[\w-]+\.[\w-]+\.[a-zA-Z]+\.$|^[\w-]+\.[\w-]{3,}\.[a-zA-Z]+\.$
-FQDN_RE = re.compile('^.*\..*\..*\..*\.$|^.*\.[\w-]*\.\w{3,4}\.$|^[\w-]+\.[\w-]{4,}\.\w+\.')
 
 _SUFFIX_RULES_PATH = util.FindDataFile('data/effective_tld_names.dat')
 _LOADED_SUFFIX_RULES = set()
@@ -131,23 +141,19 @@ def get_provider_name(hostname):
   return None
 
 
-def is_private(hostname):
+def is_internal(hostname):
   """Guess if the hostname is 'internal' and should be filtered before sharing.
 
-  >>> is_private('internal.rtci.com.')
+  >>> is_internal('internal.rtci.com.')
   True
-  >>> is_private('ntserver.corporate')
+  >>> is_internal('ntserver.corporate')
   True
-  >>> is_private('www.google.com')
+  >>> is_internal('www.google.com')
   False
   """
-  if PRIVATE_RE.search(hostname):
-    return True
-  else:
-    return False
+  return bool(INTERNAL_RE.search(hostname))
 
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-

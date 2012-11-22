@@ -16,7 +16,7 @@
 
 import tempfile
 
-from ..client import addr_util
+from ..client import hostname
 from ..client import benchmark
 from ..client import better_webbrowser
 from ..client import config
@@ -97,7 +97,7 @@ class BaseUI(object):
       local_ns = providers.SystemResolver()
       hostname = local_ns.GetReverseIp(client_ip)
       if hostname != client_ip:
-        domain = addr_util.GetDomainFromHostname(hostname)
+        domain = hostname.get_domain_name(hostname)
       else:
         domain = None
       asn = local_ns.GetAsnForIp(client_ip)
