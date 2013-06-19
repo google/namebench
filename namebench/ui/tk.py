@@ -18,21 +18,33 @@ __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import datetime
 import os
-import queue
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 import sys
 import threading
-import tkinter.font
+try:
+  import tkinter.font
+except ImportError:
+  import tkFont
 # Wildcard imports are evil.
-from tkinter import *
-import tkinter.messagebox
+try:
+  from tkinter import *
+except ImportError:
+  from Tkinter import *
+try:
+  import tkinter.messagebox
+except ImportError:
+  import tkMessageBox
 import traceback
 
-from . import addr_util
+from ..client import addr_util
 from . import base_ui
-from . import conn_quality
-from . import nameserver_list
-from . import sys_nameservers
-from . import util
+from ..client import conn_quality
+from ..client import nameserver_list
+from ..client import sys_nameservers
+from ..client import util
 
 THREAD_UNSAFE_TK = 0
 LOG_FILE_PATH = util.GenerateOutputFilename('log')
@@ -93,17 +105,13 @@ class StatusMessage(object):
 class WorkerThread(threading.Thread, base_ui.BaseUI):
   """Handle benchmarking and preparation in a separate UI thread."""
 
-  def __init__(self, supplied_ns, global_ns, regional_ns, options, data_source=None, master=None,
-               backup_notifier=None):
+  def __init__(self, options, data_source=None, master=None, backup_notifier=None):
     threading.Thread.__init__(self)
     self.SetupDataStructures()
     self.status_callback = self.msg
     self.data_src = data_source
     self.backup_notifier = backup_notifier
     self.include_internal = False
-    self.supplied_ns = supplied_ns
-    self.global_ns = global_ns
-    self.regional_ns = regional_ns
     self.master = master
     self.options = options
     self.resource_dir = os.path.dirname(os.path.dirname(__file__))
@@ -139,17 +147,12 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
 class NameBenchGui(object):
   """The main GUI."""
 
-  def __init__(self, options, supplied_ns, global_ns, regional_ns, version=None):
+  def __init__(self, options):
     self.options = options
-    self.supplied_ns = supplied_ns
-    self.global_ns = global_ns
-    self.regional_ns = regional_ns
-    self.version = version
 
   def Execute(self):
     self.root = Tk()
-    app = MainWindow(self.root, self.options, self.supplied_ns, self.global_ns,
-                     self.regional_ns, self.version)
+    app = MainWindow(self.root, self.options)
     app.DrawWindow()
     self.root.bind('<<msg>>', app.MessageHandler)
     self.root.mainloop()
@@ -158,16 +161,12 @@ class NameBenchGui(object):
 class MainWindow(Frame, base_ui.BaseUI):
   """The main Tk GUI class."""
 
-  def __init__(self, master, options, supplied_ns, global_ns, regional_ns, version=None):
+  def __init__(self, master, options):
     """TODO(tstromberg): Remove duplication from NameBenchGui class."""
     Frame.__init__(self)
     self.SetupDataStructures()
     self.master = master
     self.options = options
-    self.supplied_ns = supplied_ns
-    self.global_ns = global_ns
-    self.regional_ns = regional_ns
-    self.version = version
     try:
       self.log_file = open(LOG_FILE_PATH, 'w')
     except:
@@ -221,7 +220,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     else:
       seperator_width = 585
 
-    bold_font = tkinter.font.Font(font=status['font'])
+    bold_font = tkFont.Font(font=status['font'])
     bold_font['weight'] = 'bold'
 
     ns_label = Label(inner_frame, text='Nameservers')
@@ -232,7 +231,7 @@ class MainWindow(Frame, base_ui.BaseUI):
                         textvariable=self.nameserver_form,
                         width=80)
     nameservers.grid(row=1, columnspan=2, sticky=W, padx=4, pady=2)
-    self.nameserver_form.set(', '.join(nameserver_list.InternalNameServers()))
+    #self.nameserver_form.set(', '.join(nameserver_list.InternalNameServers()))
 
     global_button = Checkbutton(inner_frame,
                                 text='Include global DNS providers (Google Public DNS, OpenDNS, UltraDNS, etc.)',
@@ -280,7 +279,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     source_titles = self.data_src.ListSourceTitles()
     left_dropdown_width = max([len(x) for x in source_titles]) - 3
 
-    location_choices = [self.country, '(Other)']
+    location_choices = [self.geodata.get('country_name', None), '(Other)']
     location = OptionMenu(inner_frame, self.location, *location_choices)
     location.configure(width=left_dropdown_width)
     location.grid(row=11, column=0, sticky=W)
@@ -315,7 +314,7 @@ class MainWindow(Frame, base_ui.BaseUI):
     self.button.grid(row=15, sticky=E, column=1, pady=4, padx=1)
     self.UpdateRunState(running=True)
     self.UpdateRunState(running=False)
-    self.UpdateStatus('namebench %s is ready!' % self.version)
+    self.UpdateStatus('namebench %s is ready!' % self.options.version)
 
   def MessageHandler(self, unused_event):
     """Pinged when there is a new message in our queue to handle."""
@@ -331,7 +330,7 @@ class MainWindow(Frame, base_ui.BaseUI):
 
   def ErrorPopup(self, title, message):
     print(('Showing popup: %s' % title))
-    tkinter.messagebox.showerror(str(title), str(message), master=self.master)
+    tkMessageBox.showerror(str(title), str(message), master=self.master)
 
   def UpdateRunState(self, running=True):
     """Update the run state of the window, using nasty threading hacks."""
@@ -362,19 +361,19 @@ class MainWindow(Frame, base_ui.BaseUI):
     """Events that get called when the Start button is pressed."""
 
     self.ProcessForm()
-    thread = WorkerThread(self.supplied_ns, self.global_ns, self.regional_ns, self.options,
-                          data_source=self.data_src,
+    thread = WorkerThread(self.options, data_source=self.data_src,
                           master=self.master, backup_notifier=self.MessageHandler)
     thread.start()
 
   def ProcessForm(self):
     """Read form and populate instance variables."""
 
-    self.supplied_ns = addr_util.ExtractIPTuplesFromString(self.nameserver_form.get())
-    if not self.use_global.get():
-      self.global_ns = []
-    if not self.use_regional.get():
-      self.regional_ns = []
+    self.options.servers = addr_util.ExtractIPsFromString(self.nameserver_form.get())
+    if self.use_global.get():
+      self.options.tags.add('global')
+    if self.use_regional.get():
+      self.options.tags.add('regional')
+    self.options.tags.add('specified')
 
     if 'Slow' in self.health_performance.get():
       self.options.health_thread_count = 10

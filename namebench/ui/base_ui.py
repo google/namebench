@@ -93,7 +93,7 @@ class BaseUI(object):
     domain = None
     client_ip = providers.GetExternalIp()
     if client_ip:
-#      self.UpdateStatus("Detected external IP as %s" % client_ip)
+      self.UpdateStatus("Detected external IP as %s" % client_ip)
       local_ns = providers.SystemResolver()
       hostname = local_ns.GetReverseIp(client_ip)
       if hostname != client_ip:

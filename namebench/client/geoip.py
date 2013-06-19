@@ -26,35 +26,6 @@ from . import util
 # third_party dependencies
 import httplib2
 
-def GetFromGoogleLocAPI():
-  """Use the Google Loc JSON API from Google Gears.
-
-  Returns:
-    A dictionary containing geolocation information
-
-  NOTE: This is in violation of the Gears Terms of Service. See:
-  http://code.google.com/p/gears/wiki/GeolocationAPI
-  """
-  h = httplib2.Http(tempfile.gettempdir(), timeout=10)
-  url = 'http://www.google.com/loc/json'
-  post_data = {'request_address': 'true', 'version': '1.1.0', 'source': 'namebench'}
-  unused_resp, content = h.request(url, 'POST', json.dumps(post_data))
-  try:
-    data = json.loads(content)['location']
-    return {
-        'region_name': data['address'].get('region'),
-        'country_name': data['address'].get('country'),
-        'country_code': data['address'].get('country_code'),
-        'city': data['address'].get('city'),
-        'latitude': data['latitude'],
-        'longitude': data['longitude'],
-        'source': 'gloc'
-    }
-  except:
-    print(('* Failed to use GoogleLocAPI: %s (content: %s)' % (util.GetLastExceptionString(), content)))
-    return {}
-
-
 def GetFromMaxmindJSAPI():
   h = httplib2.Http(tempfile.gettempdir(), timeout=10)
   unused_resp, content = h.request('http://j.maxmind.com/app/geoip.js', 'GET')
@@ -70,9 +41,7 @@ def GetFromMaxmindJSAPI():
 def GetGeoData():
   """Get geodata from any means necessary. Sanitize as necessary."""
   try:
-    json_data = GetFromGoogleLocAPI()
-    if not json_data:
-      json_data = GetFromMaxmindJSAPI()
+    json_data = GetFromMaxmindJSAPI()
 
     # Make our data less accurate. We don't need any more than that.
     json_data['latitude'] = '%.3f' % float(json_data['latitude'])

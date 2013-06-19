@@ -49,17 +49,20 @@ if __name__ == '__main__':
       use_tk = True
 
   if use_tk:
+    # Workaround for unicode path errors.
+    # See http://code.google.com/p/namebench/issues/detail?id=41
+    if hasattr(sys, 'winver') and hasattr(sys, 'frozen'):
+      os.environ['TCL_LIBRARY'] = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.5')
+      os.environ['TK_LIBRARY'] = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tk8.5')
     try:
-      # Workaround for unicode path errors.
-      # See http://code.google.com/p/namebench/issues/detail?id=41
-      if hasattr(sys, 'winver') and hasattr(sys, 'frozen'):
-        os.environ['TCL_LIBRARY'] = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.5')
-        os.environ['TK_LIBRARY'] = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tk8.5')
       import tkinter
     except ImportError:
-      if len(sys.argv) == 1:
-        print("- The python-tk (tkinter) library is missing, using the command-line interface.\n")
-      use_tk = False
+      try:
+        import _tkinter
+      except ImportError:
+        if len(sys.argv) == 1:
+          print("- The python-tk (tkinter) library is missing, using the command-line interface.\n")
+        use_tk = False
 
   if use_tk:
     print('Starting graphical interface for namebench (use -x to force command-line usage)')
