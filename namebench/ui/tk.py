@@ -125,6 +125,8 @@ class WorkerThread(threading.Thread, base_ui.BaseUI):
     try:
       self.PrepareTestRecords()
       self.PrepareNameServers()
+      if not self.options.skip_health_checks:
+        self.CheckNameServerHealth()
       self.PrepareBenchmark()
       self.RunAndOpenReports()
     except nameserver_list.OutgoingUdpInterception:

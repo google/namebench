@@ -408,6 +408,7 @@ class NameServers(list):
       self.HideSlowSupplementalServers(max_servers)
 
     self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
+    #self.RunCensorshipCheckThreads(sanity_checks['censorship'])
     self.RunNodeIdThreads()
     self.HideBrokenIPV6Servers()
 
