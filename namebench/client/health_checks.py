@@ -23,6 +23,7 @@ import time
 from . import util
 
 from dns import rcode
+import shell_ping
 
 WILDCARD_DOMAINS = ('live.com.', 'blogspot.com.', 'wordpress.com.')
 LIKELY_HIJACKS = ['www.google.com.', 'windowsupdate.microsoft.com.', 'www.paypal.com.']
@@ -105,6 +106,38 @@ class NameServerHealthChecks(object):
         error_msg = 'No response'
       is_broken = True
 
+    return (is_broken, error_msg, duration)
+
+  def TestCDNAnswers(self, record_type, record, timeout=None):
+    """Test to see that an answer returns correct IP's.
+
+    Args:
+      record_type: text record type for NS query (A, CNAME, etc)
+      record: string to query for
+      timeout: timeout for query in seconds (int)
+
+    Returns:
+      (is_broken, error_msg, duration)
+    """
+    is_broken = False
+    error_msg = ''
+    duration = -1
+    host = ''
+    if not timeout:
+      timeout = self.health_timeout
+    (response, duration, error_msg) = self.TimedRequest(record_type, record, timeout)
+    if response and not rcode.to_text(response.rcode()) in FATAL_RCODES and response.answer:
+      for answer in response.answer:
+        for rdata in answer:
+          if rdata.rdtype == 1:
+            host = str(rdata.address)
+            duration = shell_ping.ping(host, times=5)[2]
+            break
+    if duration == -1:
+        is_broken = True
+        error_msg = '%s is failed to resolve' % record.rstrip('.')
+    else:
+        error_msg = '%dms ping time to CDN host %s(%s)' % (duration, record.rstrip('.'), host)
     return (is_broken, error_msg, duration)
 
   def TestBindVersion(self):
@@ -224,6 +257,17 @@ class NameServerHealthChecks(object):
                                               timeout=CENSORSHIP_TIMEOUT)[0:2]
       if warning:
         self.AddWarning(warning, penalty=False)
+
+  def CheckCDN(self, tests):
+    """Check the quality of CDN result from a nameserver."""
+    for (check, expected) in tests:
+      (req_type, req_name) = check.split(' ')
+      is_broken, warning = self.TestCDNAnswers(req_type.upper(), req_name, timeout=CENSORSHIP_TIMEOUT)[0:2]
+      if is_broken:
+        is_broken, warning = self.TestCDNAnswers(req_type.upper(), req_name, timeout=CENSORSHIP_TIMEOUT)[0:2]
+      if warning:
+        self.AddWarning(warning, penalty=False)
+    return self.is_disabled
 
   def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):
     """Qualify a nameserver to see if it is any good."""

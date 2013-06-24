@@ -126,6 +126,8 @@ class QueryThreads(threading.Thread):
           self.results.put(ns.CheckHealth(sanity_checks=self.checks, port_check=True))
         elif self.action_type == 'censorship':
           self.results.put(ns.CheckCensorship(self.checks))
+        elif self.action_type == 'cdn':
+          self.results.put(ns.CheckCDN(self.checks))
         elif self.action_type == 'store_wildcards':
           self.results.put(ns.StoreWildcardCache())
         elif self.action_type == 'node_id':
@@ -409,6 +411,7 @@ class NameServers(list):
 
     self.RunFinalHealthCheckThreads(sanity_checks['secondary'])
     #self.RunCensorshipCheckThreads(sanity_checks['censorship'])
+    self.RunCDNCheckThreads(sanity_checks['CDN'])
     self.RunNodeIdThreads()
     self.HideBrokenIPV6Servers()
 
@@ -649,6 +652,11 @@ class NameServers(list):
     """Quickly ping nameservers to see which are healthy."""
     status_msg = 'Running censorship checks on %s servers' % len(self.enabled_servers)
     return self._LaunchQueryThreads('censorship', status_msg, list(self.enabled_servers), checks=checks)
+
+  def RunCDNCheckThreads(self, checks):
+    """Check ping time of CDN hostname."""
+    status_msg = 'Running CDN checks on %s servers' % len(self.enabled_servers)
+    return self._LaunchQueryThreads('cdn', status_msg, list(self.enabled_servers), checks=checks)
 
   def RunPortBehaviorThreads(self):
     """Get port behavior data."""
