@@ -316,7 +316,7 @@ class ReportGenerator(object):
       }
 
     # Fill the scores in.
-    for (ns, unused_avg, run_averages, fastest, slowest, unused_failures, nx_count, unused_total) in sorted_averages:
+    for (ns, overall_average, run_averages, fastest, slowest, unused_failures, nx_count, unused_total) in sorted_averages:
       placed_at += 1
 
       durations = []
@@ -325,7 +325,10 @@ class ReportGenerator(object):
 
       nsdata[ns].update({
           'position': placed_at,
-          'overall_average': util.CalculateListAverage(run_averages),
+          'overall_average': overall_average,
+          'cdn_result_min': ns.cdn_ping_min,
+          'cdn_result_avg': ns.cdn_ping_avg,
+          'cdn_result_max': ns.cdn_ping_max,
           'averages': run_averages,
           'duration_min': float(fastest),
           'duration_max': slowest,

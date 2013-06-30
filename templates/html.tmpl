@@ -47,6 +47,9 @@
   <td>Descr.</td>
   <td nowrap="nowrap">Hostname</td>
   <td nowrap="nowrap">Avg (ms)</td>
+  <td nowrap="nowrap">CDN_min(ms)</td>
+  <td nowrap="nowrap">CDN_avg(ms)</td>
+  <td nowrap="nowrap">CDN_max(ms)</td>
   <td nowrap="nowrap">Diff</td>
 	<td nowrap="nowrap">Min</td>
 	<td nowrap="nowrap">Max</td>
@@ -63,6 +66,9 @@
   <td class="name_cell">{{ row.name }}</td>
   <td class="hostname_cell"><a href="http://www.google.com/search?q={{ row.hostname}}" class="info">{{ row.hostname }}{% if row.node_ids %}<span>{% for node in row.node_ids %}{{ node }} {% endfor %}</span>{% endif %}</a></td>
   <td>{% if row.overall_average %}{{ "%0.2f"|format(row.overall_average) }}{% else %}{{ "%0.2f"|format(row.check_average) }}{% endif %}</td>
+  <td>{% if row.cdn_result_min %}{{ "%0.2f"|format(row.cdn_result_min) }}{% else %}{{ "%0.2f"|format(-1) }}{% endif %}</td>
+  <td>{% if row.cdn_result_avg %}{{ "%0.2f"|format(row.cdn_result_avg) }}{% else %}{{ "%0.2f"|format(-1) }}{% endif %}</td>
+  <td>{% if row.cdn_result_max %}{{ "%0.2f"|format(row.cdn_result_max) }}{% else %}{{ "%0.2f"|format(-1) }}{% endif %}</td>
   <td>{% if row.diff %}{{ "%0.1f"|format(row.diff) }}%{% endif %}</td>
   <td>{% if row.duration_min %}{{ "%0.1f"|format(row.duration_min) }}{% endif %}</td>
   <td>{% if row.duration_max %}{{ "%0.1f"|format(row.duration_max) }}{% endif %}</td>

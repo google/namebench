@@ -8,9 +8,8 @@ def ping(target, times=4):
     e.g.
         '192.168.1.1' or 'www.google.com'
 
-    return target, ip, time, lost
-        target: IP/hostname
-        ip: IP address, default is 0.0.0.0
+    return ip, time_min, time_avg, time_max, lost
+        ip: IP address of target, default is 0.0.0.0
         time_min: min ping time(ms), default is -1
         time_avg: avg ping time(ms), default is -1
         time_max: max ping time(ms), default is -1
@@ -22,7 +21,7 @@ def ping(target, times=4):
     if os.name == 'nt':  # win32
         cmd = 'ping ' + target
     else:  # unix/linux
-        cmd = 'LC_CTYPE=C ping -c %d %s' % (times, target)
+        cmd = 'ping -c%d -W2000 %s' % (times, target)
 
     # execute ping command and get stdin thru pipe
     pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()[0]
@@ -30,10 +29,10 @@ def ping(target, times=4):
         if os.name == 'nt':  # win32
             cmd = 'ping ' + target
         else:  # unix/linux
-            cmd = 'LC_CTYPE=C ping6 -c %d %s' % (times, target)
+            cmd = 'ping6 -c%d -W2000 %s' % (times, target)
         pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()[0]
         if not pipe:
-            return target, '0.0.0.0', -1, -1, -1, 100
+            return '0.0.0.0', -1, -1, -1, 100
 
     # replace CR/LF
     text = pipe.replace('\r\n', '\n').replace('\r', '\n')
@@ -59,4 +58,4 @@ def ping(target, times=4):
     lost = re.findall(r'\d+(?=%)', text)
     lost = int(round(float(lost[0]))) if lost else 100
 
-    return target, ip, time_min, time_avg, time_max, lost
+    return ip, time_min, time_avg, time_max, lost

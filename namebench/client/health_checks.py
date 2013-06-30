@@ -131,7 +131,8 @@ class NameServerHealthChecks(object):
         for rdata in answer:
           if rdata.rdtype == 1:
             host = str(rdata.address)
-            duration = shell_ping.ping(host, times=5)[2]
+            # ip, time_min, time_avg, time_max, lost
+            duration = shell_ping.ping(host, times=5)[1] # the min ping time among the results
             break
     if duration == -1:
         is_broken = True
@@ -262,11 +263,23 @@ class NameServerHealthChecks(object):
     """Check the quality of CDN result from a nameserver."""
     for (check, expected) in tests:
       (req_type, req_name) = check.split(' ')
-      is_broken, warning = self.TestCDNAnswers(req_type.upper(), req_name, timeout=CENSORSHIP_TIMEOUT)[0:2]
+      is_broken, warning, duration = self.TestCDNAnswers(req_type.upper(), req_name, timeout=CENSORSHIP_TIMEOUT)
       if is_broken:
-        is_broken, warning = self.TestCDNAnswers(req_type.upper(), req_name, timeout=CENSORSHIP_TIMEOUT)[0:2]
+        is_broken, warning, duration = self.TestCDNAnswers(req_type.upper(), req_name, timeout=CENSORSHIP_TIMEOUT)
       if warning:
         self.AddWarning(warning, penalty=False)
+      if is_broken:
+        self.is_disabled = True
+        self.cdn_ping_avg = 0
+        self.cdn_ping_min = 65535
+        self.cdn_ping_max = 0
+        self.AddWarning('Failed to ping CDN host %s, so removed from final comparison list.' % (req_name), penalty=False)
+        break
+      else:
+        self.cdn_ping_avg += duration
+        self.cdn_ping_min = min(self.cdn_ping_min, duration)
+        self.cdn_ping_max = max(self.cdn_ping_max, duration)
+    self.cdn_ping_avg /= float(len(tests))
     return self.is_disabled
 
   def CheckHealth(self, sanity_checks=None, fast_check=False, final_check=False, port_check=False):

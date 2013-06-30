@@ -169,6 +169,9 @@ class NameServer(health_checks.NameServerHealthChecks, provider_extensions.NameS
     self.share_check_count = 0
     self.cache_checks = []
     self.is_slower_replica = False
+    self.cdn_ping_max = 0
+    self.cdn_ping_min = 65535
+    self.cdn_ping_avg = 0
     self.ResetErrorCounts()
 
   def ResetErrorCounts(self):
