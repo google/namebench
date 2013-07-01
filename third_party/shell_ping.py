@@ -1,5 +1,5 @@
-import re
 import os
+import re
 import subprocess
 
 def ping(target, times=4):
@@ -37,7 +37,7 @@ def ping(target, times=4):
     # replace CR/LF
     text = pipe.replace('\r\n', '\n').replace('\r', '\n')
 
-    # match IP adddres in format: [192.168.1.1] (192.168.1.1)
+    # match IP address in format: [192.168.1.1] (192.168.1.1)
     ip = re.findall(r'(?<=\(|\[)\d+\.\d+\.\d+\.\d+(?=\)|\])', text)
     ip = ip[0] if ip else '0.0.0.0'
 
