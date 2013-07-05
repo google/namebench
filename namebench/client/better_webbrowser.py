@@ -99,7 +99,10 @@ def open(url):
 #
 # If we are running on Windows, register the WindowsHttpDefault class.
 if sys.platform[:3] == 'win':
-  import winreg
+  try:
+    import winreg
+  except ImportError:
+    import _winreg
   
   # We don't want to load this class by default, because Python 2.4 doesn't have BaseBrowser.
   
