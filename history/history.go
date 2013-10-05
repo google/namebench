@@ -1,3 +1,4 @@
+// the history package is a collection of functions for reading history files from browsers.
 package history
 
 import (
@@ -11,7 +12,7 @@ import (
 )
 
 // unlockAndOpen is a bad hack for opening potentially locked SQLite databases.
-func unlockAndOpenDatabase(path str) (db string, err error) {
+func unlockAndOpenDatabase(path string) (db *sql.DB, err error) {
 	f, err := os.Open(path)
 	defer f.Close()
 	if err != nil {

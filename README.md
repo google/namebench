@@ -6,3 +6,11 @@ WARNING: This tool is undergoing a major refactor. The master branch is not cons
 We hope this inconvenience will be rectified shortly.
 
 For stable binaries, please see https://code.google.com/p/namebench/
+
+BUILDING:
+=========
+Collect your dependencies:
+
+export GOPATH=`pwd`
+go get github.com/mattn/go-sqlite3
+

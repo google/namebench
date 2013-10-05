@@ -1,6 +1,6 @@
 {
   "name": "namebench",
-  "main": "menu.html",
+  "main": "redirect.html",
   "window": {
     "toolbar": false,
     "resizable": false,
