@@ -17,10 +17,10 @@
 
 tmp=$$
 cd /tmp
-svn checkout http://namebench.googlecode.com/svn/trunk/ namebench-$$ || exit
+svn checkout http://namebench.googlecode.com/svn/trunk/ namebench-$$
 version=`grep '^VERSION' namebench-$$/libnamebench/version.py | cut -d\' -f2`
 mv namebench-$$ namebench-$version
-cd namebench-$version || exit
+cd namebench-$version
 svn log > ChangeLog.txt &
 ./namebench.py -q5 -j50 -x -o /tmp/$$.csv -O 8.8.8.8
 echo "Waiting for changelog"

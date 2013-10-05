@@ -18,10 +18,8 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 
-import csv
-import re
 import sys
-import GeoIP
+import pygeoip
 sys.path.append('..')
 sys.path.append('/Users/tstromberg/namebench')
 import third_party
@@ -31,22 +29,19 @@ from libnamebench import addr_util
 
 import check_nameserver_popularity
 
-gi = GeoIP.open('/usr/local/share/GeoLiteCity.dat', GeoIP.GEOIP_MEMORY_CACHE)
-asn_lookup = GeoIP.open('/usr/local/share/GeoIPASNum.dat', GeoIP.GEOIP_MEMORY_CACHE)
-
-existing_nameservers = config.GetLocalNameServerList()
+(options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
+has_ip = [ x[0] for x in regional_ns ]
+has_ip.extend([ x[0] for x in global_ns ])
 check_ns = []
-output = csv.writer(open('output.csv', 'w'))
 
 for line in sys.stdin:
   ips = addr_util.ExtractIPsFromString(line)
   for ip in ips:
     print ip
-    # disable IPV6 until we can improve our regular expression matching
+    # disable IPV6 by default
     if ':' in ip:
       continue
-
-    if ip not in existing_nameservers:
+    if ip not in has_ip:
       check_ns.append((ip, ip))
 
 if not check_ns:
@@ -55,74 +50,40 @@ if not check_ns:
 else:
   print "%s servers to check" % len(check_ns)
 print '-' * 80
-nameserver_list.MAX_INITIAL_HEALTH_THREAD_COUNT = 100
-nameservers = nameserver_list.NameServers([],
-    global_servers=check_ns,
-    timeout=10,
-    health_timeout=10,
-    threads=100,
-    num_servers=5000,
+
+nameservers = nameserver_list.NameServers(
+    check_ns,
+    timeout=8,
+    health_timeout=8,
+    threads=60,
     skip_cache_collusion_checks=True,
 )
 nameservers.min_healthy_percent = 0
-sanity_checks = config.GetLocalSanityChecks()
+(primary_checks, secondary_checks, censor_tests) = config.GetLatestSanityChecks()
 try:
-  nameservers.CheckHealth(sanity_checks['primary'], sanity_checks['secondary'])
+  nameservers.CheckHealth(primary_checks, secondary_checks)
 except nameserver_list.TooFewNameservers:
   pass
 print '-' * 80
+geo_city = pygeoip.GeoIP('/usr/local/share/GeoLiteCity.dat')
 
 for ns in nameservers:
-  try:
-    details = gi.record_by_addr(ns.ip)
-  except:
-    pass
-
+  if ':' in ns.ip:
+    details = {}
+  else:
+    try:
+      details = geo_city.record_by_addr(ns.ip)
+    except:
+      pass
+    
   if not details:
     details = {}
-
   city = details.get('city', '')
-  if city:
-    city = city.decode('latin-1')
-  latitude = details.get('latitude', '')
-  longitude = details.get('longitude', '')
   country = details.get('country_name', '')
-  if country:
-    country = country.decode('latin-1')
   country_code = details.get('country_code', '')
   region = details.get('region_name', '')
-  if region:
-    region = region.decode('latin-1')
-  
-  try:
-    results = check_nameserver_popularity.CheckPopularity(ns.ip)
-    urls = [ x['Url'] for x in results ]
-  except:
-    urls = ['(exception)']
-  num_urls = len(urls)
-  main = "%s=UNKNOWN" % ns.ip
-
-  if 'Responded with: REFUSED' in ns.warnings:
-    note = '_REFUSED_'
-  elif 'a.root-servers.net.: Timeout' in ns.warnings:
-    note = '_TIMEOUT_'
-  elif 'No answer (NOERROR): a.root-servers.net.' in ns.warnings:
-    note = '_NOANSWER_'
-  elif ns.warnings:
-    note = '_WARNING/%s_' % '/'.join(list(ns.warnings))
-  else:
-    note = ''
-
-  if ns.hostname != ns.ip:
-    domain = addr_util.GetDomainPartOfHostname(ns.hostname)
-    if domain:
-      good_urls = [x for x in urls if re.search(domain, x, re.I)]
-      if good_urls:
-        urls = good_urls
-
-  geo = '/'.join([x for x in [country_code, region, city] if x and not x.isdigit()]).encode('utf-8')
-  coords = ','.join(map(str, [latitude,longitude]))
-  asn = asn_lookup.org_by_addr(ns.ip)
-  row = [ns.ip, 'regional', 'UNKNOWN', '', ns.hostname, geo, coords, asn, note, num_urls, ' '.join(urls[:2]), ns.version]
-  print row
-  output.writerow(row)
+  results = check_nameserver_popularity.CheckPopularity(ns.ip)
+  urls = [ x['Url'] for x in results ]
+  if urls:   
+    print "%s=%s %s %s # %s: %s %s" % (ns.ip, ns.hostname, country_code, city, len(urls),
+                                       ns.warnings_comment, urls[:2])

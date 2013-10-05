@@ -19,7 +19,7 @@
 __author__ = 'tstromberg@google.com (Thomas Stromberg)'
 
 import os
-from namebench import version
+from libnamebench import version
 from distutils.core import setup
 try:
     import py2exe
@@ -28,20 +28,21 @@ except ImportError:
 
 # If you don't want 3rd party libraries included, set this in your environment.  
 if os.getenv('NO_THIRD_PARTY', None):
-  packages=['namebench']
+  packages=['libnamebench']
 else:
   packages = [
-      'namebench',
-      'third_party',
-      'third_party/dns',
-      'third_party/dns/rdtypes',
-      'third_party/dns/rdtypes/ANY',
-      'third_party/dns/rdtypes/IN',
-      'third_party/graphy',
-      'third_party/jinja2',
-      'third_party/httplib2',
-      'third_party/graphy/backends',
-      'third_party/graphy/backends/google_chart_api'
+      'libnamebench',
+      'nb_third_party',
+      'nb_third_party/dns',
+      'nb_third_party/dns/rdtypes',
+      'nb_third_party/dns/rdtypes/ANY',
+      'nb_third_party/dns/rdtypes/IN',
+      'nb_third_party/graphy',
+      'nb_third_party/jinja2',
+      'nb_third_party/httplib2',
+      'nb_third_party/simplejson',
+      'nb_third_party/graphy/backends',
+      'nb_third_party/graphy/backends/google_chart_api'
   ]
 
 
@@ -139,8 +140,8 @@ setup(name='namebench',
             'py2exe': {
                 'bundle_files': 3, # 1 nor 2 does not work
                 'ascii': False,
-                'packages': ['third_party'],
-                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2', 'tcl'],
+                'packages': ['nb_third_party'],
+                'excludes': ['dns', 'jinja2', 'graphy', 'httplib2', 'tcl', 'simplejson'],
                 'dll_excludes': ["w9xpopen.exe","MSVCP90.dll", "MSVCR90.DLL"],
             }
         },

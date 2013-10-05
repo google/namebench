@@ -23,21 +23,22 @@ import platform
 import sys
 
 # Check before we start importing internal dependencies
-if sys.version < '2.7':
+if sys.version < '2.4':
   your_version = sys.version.split(' ')[0]
-  print('* The version of Python on your system is very old (%s). Please upgrade to 2.7 or higher.')
+  print '* Your Python version (%s) is too old! Please upgrade to 2.6+!' % your_version
   sys.exit(1)
 elif sys.version >= '3.0':
-  print('* namebench is currently incompatible with Python 3.0 - trying anyways')
+  print '* namebench is currently incompatible with Python 3.0 - trying anyways'
 
-from namebench.ui import cli
-from namebench.client import config
+from libnamebench import cli
+from libnamebench import config
+from libnamebench import version
 
 if __name__ == '__main__':
-  options = config.GetMergedConfiguration()
+  (options, supplied_ns, global_ns, regional_ns) = config.GetConfiguration()
   use_tk = False
 
-  if len(sys.argv) == 1:
+  if not options.no_gui:
     if os.getenv('DISPLAY', None):
       use_tk = True
     # Macs get a special Cocoa binary
@@ -55,19 +56,19 @@ if __name__ == '__main__':
       if hasattr(sys, 'winver') and hasattr(sys, 'frozen'):
         os.environ['TCL_LIBRARY'] = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tcl8.5')
         os.environ['TK_LIBRARY'] = os.path.join(os.path.dirname(sys.executable), 'tcl', 'tk8.5')
-      import tkinter
+      import Tkinter
     except ImportError:
       if len(sys.argv) == 1:
-        print("- The python-tk (tkinter) library is missing, using the command-line interface.\n")
+        print "- The python-tk (tkinter) library is missing, using the command-line interface.\n"
       use_tk = False
 
   if use_tk:
-    print('Starting graphical interface for namebench (use -x to force command-line usage)')
-    from namebench.ui import tk
+    print 'Starting Tk interface for namebench...'
+    from libnamebench import tk
     interface = tk.NameBenchGui
   else:
     interface = cli.NameBenchCli
 
-  namebench = interface(options)
+  namebench = interface(options, supplied_ns, global_ns, regional_ns, version=version.VERSION)
   namebench.Execute()
 

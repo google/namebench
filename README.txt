@@ -40,10 +40,12 @@ to the command-line, or edit namebench.cfg:
 
 namebench includes some wonderful third party software:
 
- * dnspython (http://www.dnspython.org/)
- * httplib2 (http://code.google.com/p/httplib2/)
- * graphy (http://graphy.googlecode.com/)
- * jinja2 (http://jinja.pocoo.org/2/)
+ * dnspython 1.8.0 (http://www.dnspython.org/)
+ * httplib2 0.6.0 (http://code.google.com/p/httplib2/)
+ * graphy 1.0 (http://graphy.googlecode.com/)
+ * jinja2 2.2.1 (http://jinja.pocoo.org/2/)
+ * python 2.5 pkg_resources (http://www.python.org/) 
+ * simplejson 2.1.1 (http://code.google.com/p/simplejson/)
  * Crystal SVG icons (http://www.everaldo.com/crystal/)
 
 For licensing information, see the LICENSE file within the appropriate
