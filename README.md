@@ -13,4 +13,5 @@ Collect your dependencies:
 
 export GOPATH=`pwd`
 go get github.com/mattn/go-sqlite3
+go get code.google.com/p/go.net/publicsuffix
 

@@ -14,7 +14,8 @@ func RegisterHandlers() {
 
 // Index handles /
 func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, fmt.Sprintf("Yes, we are a template, to!"))
+	records, err := history.Chrome(30, 3000)
+	fmt.Fprintf(w, fmt.Sprintf("%s: %s", err, history.ExternalHostnames(records)))
 	return
 }
 

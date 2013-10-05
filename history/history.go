@@ -11,21 +11,26 @@ import (
 	"os"
 )
 
-// unlockAndOpen is a bad hack for opening potentially locked SQLite databases.
-func unlockAndOpenDatabase(path string) (db *sql.DB, err error) {
+// unlockDatabase is a bad hack for opening potentially locked SQLite databases.
+func unlockDatabase(path string) (unlocked_path string, err error) {
 	f, err := os.Open(path)
-	defer f.Close()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
+	defer f.Close()
 
 	t, err := ioutil.TempFile("", "")
-	io.Copy(t, f)
-	t.Close()
-	defer os.Remove(t.Name())
+	if err != nil {
+		return "", err
+	}
+	defer t.Close()
 
-	log.Printf("Opening %s", t.Name())
-	return sql.Open("sqlite3", t.Name())
+	written, err := io.Copy(t, f)
+	if err != nil {
+		return "", err
+	}
+	log.Printf("%d bytes written to %s", written, t.Name())
+	return t.Name(), err
 }
 
 // Chrome returns an array of URLs found in Chrome's history within X days, limited by Y.
@@ -49,27 +54,33 @@ func Chrome(days, limit int) (urls []string, err error) {
 		path := os.ExpandEnv(p)
 		log.Printf("Checking %s", path)
 		_, err := os.Stat(path)
-		if err == nil {
-			db, err := unlockAndOpenDatabase(path)
-			if err != nil {
-				return nil, err
-			}
-			db.Query("PRAGMA query_only = true;")
-			db.Query("PRAGMA read_uncommitted = true;")
-			log.Printf("%s", query)
-			rows, err := db.Query(query)
-			if err != nil {
-				log.Printf("Query failed: %s", err)
-				return nil, err
-			}
-			var url string
-			for rows.Next() {
-				rows.Scan(&url)
-				urls = append(urls, url)
-			}
-			rows.Close()
-			return urls, err
+		if err != nil {
+			continue
 		}
+
+		unlocked_path, err := unlockDatabase(path)
+		if err != nil {
+			return nil, err
+		}
+		defer os.Remove(unlocked_path)
+
+		db, err := sql.Open("sqlite3", unlocked_path)
+		if err != nil {
+			return nil, err
+		}
+
+		rows, err := db.Query(query)
+		if err != nil {
+			log.Printf("Query failed: %s", err)
+			return nil, err
+		}
+		var url string
+		for rows.Next() {
+			rows.Scan(&url)
+			urls = append(urls, url)
+		}
+		rows.Close()
+		return urls, err
 	}
 	return
 }
