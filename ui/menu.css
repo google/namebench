@@ -1,0 +1,14 @@
+body {
+  font-family: 'Open Sans', sans-serif;
+}
+
+label {
+  color: #666;
+  font-size: 75%;
+}
+
+.jumbotron {
+  background-color: #F5F5FE;
+  border: 1px solid #999;
+}
+
