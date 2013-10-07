@@ -33,8 +33,8 @@ func unlockDatabase(path string) (unlocked_path string, err error) {
 	return t.Name(), err
 }
 
-// Chrome returns an array of URLs found in Chrome's history within X days, limited by Y.
-func Chrome(days, limit int) (urls []string, err error) {
+// Chrome returns an array of URLs found in Chrome's history within X days
+func Chrome(days int) (urls []string, err error) {
 	paths := []string{
 		"${HOME}/Library/Application Support/Google/Chrome/Default/History",
 		"${HOME}/.config/google-chrome/Default/History",
@@ -47,8 +47,7 @@ func Chrome(days, limit int) (urls []string, err error) {
 		 LEFT JOIN urls ON visits.url = urls.id
 		 WHERE (visit_time - 11644473600000000 >
 			    strftime('%%s', date('now', '-%d day')) * 1000000)
-		 ORDER BY RANDOM()
-		 LIMIT %d;`, days, limit)
+		 ORDER BY RANDOM();`, days)
 
 	for _, p := range paths {
 		path := os.ExpandEnv(p)

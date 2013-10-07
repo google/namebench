@@ -19,8 +19,9 @@ BUILDING:
 =========
 Collect your dependencies:
 
-export GOPATH=`pwd`
-go get github.com/mattn/go-sqlite3
-go get code.google.com/p/go.net/publicsuffix
-go build namebench
+  export GOPATH=`pwd`
+  go get github.com/mattn/go-sqlite3
+  go get code.google.com/p/go.net/publicsuffix
+  go get github.com/miekg/dns
+  go build namebench
 

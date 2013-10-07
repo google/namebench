@@ -26,7 +26,10 @@ func isPossiblyInternal(addr string) bool {
 	return false
 }
 
-func ExternalHostnames(entries []string) (hostnames []string) {
+// Filter out external hostnames from history, with a limit of X records (may be 0).
+func ExternalHostnames(entries []string, limit int) (hostnames []string) {
+	counter := 0
+
 	for _, uString := range entries {
 		u, err := url.ParseRequestURI(uString)
 		if err != nil {
@@ -34,6 +37,10 @@ func ExternalHostnames(entries []string) (hostnames []string) {
 			continue
 		}
 		if !isPossiblyInternal(u.Host) {
+			counter += 1
+			if limit > 0 && counter > limit {
+				return
+			}
 			hostnames = append(hostnames, u.Host)
 		}
 	}
