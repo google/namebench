@@ -26,12 +26,13 @@ const (
 )
 
 var (
-	indexTmpl = loadTemplate("ui/index.html")
+	indexTmpl = loadTemplate("ui/templates/index.html")
 )
 
 // RegisterHandler registers all known handlers.
 func RegisterHandlers() {
 	http.HandleFunc("/", Index)
+	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("ui/static"))))
 	http.HandleFunc("/submit", Submit)
 }
 
