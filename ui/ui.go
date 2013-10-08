@@ -30,7 +30,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := dnsqueue.StartQueue(QUEUE_LENGTH, WORKERS)
-	hostnames := history.ExternalHostnames(records, 64)
+	hostnames := history.Random(16, history.Uniq(history.ExternalHostnames(records)))
 
 	for _, record := range hostnames {
 		q.Add("8.8.8.8:53", "A", record+".")

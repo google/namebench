@@ -47,7 +47,7 @@ func Chrome(days int) (urls []string, err error) {
 		 LEFT JOIN urls ON visits.url = urls.id
 		 WHERE (visit_time - 11644473600000000 >
 			    strftime('%%s', date('now', '-%d day')) * 1000000)
-		 ORDER BY RANDOM();`, days)
+		 ORDER BY visit_time DESC`, days)
 
 	for _, p := range paths {
 		path := os.ExpandEnv(p)

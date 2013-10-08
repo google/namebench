@@ -4,6 +4,7 @@ package history
 import (
 	"code.google.com/p/go.net/publicsuffix"
 	"log"
+	"math/rand"
 	"net/url"
 	"regexp"
 )
@@ -26,8 +27,8 @@ func isPossiblyInternal(addr string) bool {
 	return false
 }
 
-// Filter out external hostnames from history, with a limit of X records (may be 0).
-func ExternalHostnames(entries []string, limit int) (hostnames []string) {
+// Filter out external hostnames from history
+func ExternalHostnames(entries []string) (hostnames []string) {
 	counter := 0
 
 	for _, uString := range entries {
@@ -38,11 +39,37 @@ func ExternalHostnames(entries []string, limit int) (hostnames []string) {
 		}
 		if !isPossiblyInternal(u.Host) {
 			counter += 1
-			if limit > 0 && counter > limit {
-				return
-			}
 			hostnames = append(hostnames, u.Host)
 		}
 	}
 	return
+}
+
+// Filter input array for unique entries.
+func Uniq(input []string) (output []string) {
+	last := ""
+	for _, i := range input {
+		if i != last {
+			output = append(output, i)
+		}
+	}
+	return
+}
+
+// Randomly select X number of entries.
+func Random(count int, input []string) (output []string) {
+	selected := make(map[int]bool)
+
+	for {
+		if len(selected) >= count {
+			return
+		}
+		index := rand.Intn(len(input))
+		// If we have already picked this number, re-roll.
+		if _, exists := selected[index]; exists == true {
+			continue
+		}
+		output = append(output, input[index])
+		selected[index] = true
+	}
 }
