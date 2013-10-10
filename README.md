@@ -34,7 +34,8 @@ Building requires Go 1.2 to be installed: http://golang.org/
 * Build it.
 
 ```
-    go build src/github.com/google/namebench/namebench.go
+    cd src/github.com/google/namebench
+    go build namebench.go
 ```
 
 You should have an executable named 'namebench' in the current directory.
