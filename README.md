@@ -22,6 +22,7 @@ Building requires Go 1.2 to be installed: http://golang.org/
 
 * Create a workspace directory, and cd into it.
 * Prepare your workspace directory:
+
 ```
     export GOPATH=`pwd`
     git clone https://github.com/google/namebench.git src/github.com/google/namebench
@@ -29,10 +30,13 @@ Building requires Go 1.2 to be installed: http://golang.org/
     go get code.google.com/p/go.net/publicsuffix
     go get github.com/miekg/dns
 ```
+
 * Build it.
+
 ```
     go build src/github.com/google/namebench/namebench.go
 ```
+
 You should have an executable named 'namebench' in the current directory.
 
 
