@@ -14,6 +14,7 @@ What can one expect in namebench 2.0?
 * Simpler interface
 * More comprehensive results
 * CDN benchmarking
+* DNSSEC support
 
 
 BUILDING:
