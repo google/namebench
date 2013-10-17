@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/namebench/dnschecks"
 	"github.com/google/namebench/dnsqueue"
 	"github.com/google/namebench/history"
 )
@@ -34,6 +35,7 @@ func RegisterHandlers() {
 	http.HandleFunc("/", Index)
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("ui/static"))))
 	http.HandleFunc("/submit", Submit)
+	http.HandleFunc("/dnssec", DnsSec)
 }
 
 // loadTemplate loads a set of templates.
@@ -52,6 +54,20 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	return
+}
+
+// DnsSec handles /dnssec
+func DnsSec(w http.ResponseWriter, r *http.Request) {
+	servers := []string{
+		"8.8.8.8:53",
+		"75.75.75.75:53",
+		"4.2.2.1:53",
+		"208.67.222.222:53",
+	}
+	for _, ip := range servers {
+		result, err := dnschecks.DnsSec(ip)
+		log.Printf("%s DNSSEC: %s (%s)", ip, result, err)
+	}
 }
 
 // Submit handles /submit

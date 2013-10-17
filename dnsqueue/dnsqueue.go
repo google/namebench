@@ -11,9 +11,10 @@ import (
 
 // Request contains data for making a DNS request
 type Request struct {
-	Destination string
-	RecordType  string
-	RecordName  string
+	Destination     string
+	RecordType      string
+	RecordName      string
+	VerifySignature bool
 
 	exit bool
 }
@@ -101,10 +102,14 @@ func SendQuery(request *Request) (result Result, err error) {
 	}
 
 	m := new(dns.Msg)
+	if request.VerifySignature == true {
+		log.Printf("SetEdns0 for %s", request.RecordName)
+		m.SetEdns0(4096, true)
+	}
 	m.SetQuestion(request.RecordName, record_type)
 	c := new(dns.Client)
 	in, rtt, err := c.Exchange(m, request.Destination)
-	log.Printf("Answer: %s [%s] %s", in, rtt, err)
+	// log.Printf("Answer: %s [%d] %s", in, rtt, err)
 
 	result.Duration = rtt
 	if err != nil {
