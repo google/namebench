@@ -2,7 +2,7 @@
 package history
 
 import (
-	"code.google.com/p/go.net/publicsuffix"
+	"golang.org/x/net/publicsuffix"
 	"log"
 	"math/rand"
 	"net/url"
