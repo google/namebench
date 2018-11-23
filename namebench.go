@@ -14,7 +14,7 @@ import (
 
 var nw_path = flag.String("nw_path", "/Applications/node-webkit.app/Contents/MacOS/node-webkit",
 	"Path to nodejs-webkit binary")
-var nw_package = flag.String("nw_package", "./ui/app.nw", "Path to nodejs-webkit package")
+var nw_package = flag.String("nw_package", "./ui/nodejs-webkit/app.nw", "Path to nodejs-webkit package")
 var port = flag.Int("port", 0, "Port to listen on")
 
 // openWindow opens a nodejs-webkit window, and points it at the given URL.
