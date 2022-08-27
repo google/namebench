@@ -5,6 +5,7 @@ import (
 	"fmt"
 	json "github.com/json-iterator/go"
 	"github.com/miekg/dns"
+	"namebench/model/namebench/record"
 	"namebench/util/logger"
 	"time"
 )
@@ -30,9 +31,9 @@ func (r *Request) String() string {
 
 // Answer contains a single answer returned by a DNS server.
 type Answer struct {
-	Ttl    uint32 `json:"ttl"`
-	Name   string `json:"name"`
-	String string `json:"string"`
+	Ttl    uint32        `json:"ttl"`
+	String string        `json:"string"`
+	Record record.Record `json:"record"`
 }
 
 // Result contains metadata relating to a set of DNS server results.
@@ -40,7 +41,7 @@ type Result struct {
 	Request  Request       `json:"request"`
 	Duration time.Duration `json:"duration"`
 	Answers  []Answer      `json:"answers"`
-	Error    string        `json:"error,omitempty"`
+	Error    error         `json:"error,omitempty"`
 }
 
 func (r *Result) ToJSON() []byte {
@@ -52,6 +53,28 @@ func (r *Result) String() string {
 	return string(r.ToJSON())
 }
 
+func (r *Result) ExtractRecords() []record.Record {
+	result := make([]record.Record, 0)
+	for _, a := range r.Answers {
+		result = append(result, a.Record)
+	}
+
+	return record.Unique(result)
+}
+
+type Results []Result
+
+func (rs *Results) ExtractRecords() *record.Records {
+	result := make(record.Records, 0)
+	
+	for _, r := range *rs {
+		result = append(result, r.ExtractRecords()...)
+	}
+	result = record.Unique(result)
+
+	return &result
+}
+
 // Queue contains methods and state for setting up a request queue.
 type Queue struct {
 	Requests    chan *Request
@@ -61,8 +84,8 @@ type Queue struct {
 }
 
 // StartQueue starts a new queue with max length of X with worker count Y.
-func StartQueue(size, workers int) (q *Queue) {
-	q = &Queue{
+func StartQueue(size, workers int) *Queue {
+	q := &Queue{
 		Requests:    make(chan *Request, size),
 		Results:     make(chan *Result, size),
 		WorkerCount: workers,
@@ -70,7 +93,8 @@ func StartQueue(size, workers int) (q *Queue) {
 	for i := 0; i < q.WorkerCount; i++ {
 		go startWorker(q.Requests, q.Results)
 	}
-	return
+
+	return q
 }
 
 // Add Queue.Add adds a request to the queue. Only blocks if queue is full.
@@ -117,8 +141,8 @@ func SendQuery(request *Request) (Result, error) {
 
 	recordType, ok := dns.StringToType[request.RecordType]
 	if !ok {
-		result.Error = fmt.Sprintf("Invalid type: %s", request.RecordType)
-		return result, fmt.Errorf(result.Error)
+		result.Error = fmt.Errorf("Invalid type: %s", request.RecordType)
+		return result, result.Error
 	}
 
 	m := new(dns.Msg)
@@ -133,13 +157,16 @@ func SendQuery(request *Request) (Result, error) {
 
 	result.Duration = rtt
 	if err != nil {
-		result.Error = err.Error()
+		result.Error = err
 	} else {
 		for _, rr := range in.Answer {
 			answer := Answer{
 				Ttl:    rr.Header().Ttl,
-				Name:   rr.Header().Name,
 				String: rr.String(),
+				Record: record.Record{
+					Type: dns.Type(rr.Header().Rrtype).String(),
+					Name: rr.Header().Name,
+				},
 			}
 			result.Answers = append(result.Answers, answer)
 		}

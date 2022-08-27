@@ -17,19 +17,20 @@ func isPossiblyInternal(addr string) bool {
 	// note: this happens to reject IPs and anything with a port at the end.
 	_, icann := publicsuffix.PublicSuffix(addr)
 	if !icann {
-		logger.L.Infof("%s does not have a public suffix", addr)
+		logger.L.Errorf("%s does not have a public suffix", addr)
 		return true
 	}
 	if internalRe.MatchString(addr) {
-		logger.L.Infof("%s may be internal.", addr)
+		logger.L.Warnf("%s may be internal.", addr)
 		return true
 	}
 	return false
 }
 
 // ExternalHostnames Filter out external hostnames from history
-func ExternalHostnames(entries []string) (hostnames []string) {
+func ExternalHostnames(entries []string) []string {
 	counter := 0
+	hostnames := make([]string, 0)
 
 	for _, uString := range entries {
 		u, err := url.ParseRequestURI(uString)
@@ -37,39 +38,50 @@ func ExternalHostnames(entries []string) (hostnames []string) {
 			logger.L.Errorf("Error parsing %s: %s", uString, err)
 			continue
 		}
-		if !isPossiblyInternal(u.Host) {
+		if !isPossiblyInternal(u.Hostname()) {
 			counter += 1
-			hostnames = append(hostnames, u.Host)
+			hostnames = append(hostnames, u.Hostname())
 		}
 	}
-	return
+
+	return hostnames
 }
 
 // Uniq Filter input array for unique entries.
-func Uniq(input []string) (output []string) {
-	last := ""
-	for _, i := range input {
-		if i != last {
-			output = append(output, i)
+func Uniq(input []string) []string {
+	inputMap := make(map[string]bool)
+	result := make([]string, 0)
+
+	for _, v := range input {
+		if _, e := inputMap[v]; !e {
+			result = append(result, v)
+			inputMap[v] = true
 		}
 	}
-	return
+	return result
 }
 
 // Random Randomly select X number of entries.
-func Random(count int, input []string) (output []string) {
-	selected := make(map[int]bool)
+func Random(count int, input []string) []string {
+	if count >= len(input) {
+		return input
+	}
 
-	for {
+	selected := make(map[int]bool)
+	result := make([]string, 0)
+
+	for i := 0; len(selected) < count && i < len(input); i++ {
 		if len(selected) >= count {
-			return
+			break
 		}
-		index := rand.Intn(len(input))
+		idx := rand.Intn(len(input))
 		// If we have already picked this number, re-roll.
-		if _, exists := selected[index]; exists == true {
+		if _, e := selected[idx]; e == true {
 			continue
 		}
-		output = append(output, input[index])
-		selected[index] = true
+		result = append(result, input[idx])
+		selected[idx] = true
 	}
+
+	return result
 }
