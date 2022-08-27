@@ -40,7 +40,7 @@ func main() {
 		logger.L.Infof("Listening at :%d", *port)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 		if err != nil {
-			log.Fatalf("Failed to listen on %d: %s", *port, err)
+			logger.L.Fatalf("Failed to listen on %d: %s", *port, err)
 		}
 	} else {
 		listener, err := net.Listen("tcp4", "127.0.0.1:0")
