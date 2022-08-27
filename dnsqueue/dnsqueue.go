@@ -110,7 +110,7 @@ func startWorker(queue <-chan *Request, results chan<- *Result) {
 // stores response details in Result object, otherwise, returns Result object
 // with an error string.
 func SendQuery(request *Request) (result Result, err error) {
-	logger.L.Infof("Sending query: %s", request)
+	logger.L.Debugf("Sending query: %s", request)
 	result.Request = *request
 
 	recordType, ok := dns.StringToType[request.RecordType]
@@ -121,7 +121,7 @@ func SendQuery(request *Request) (result Result, err error) {
 
 	m := new(dns.Msg)
 	if request.VerifySignature == true {
-		logger.L.Infof("SetEdns0 for %s", request.RecordName)
+		logger.L.Debugf("SetEdns0 for %s", request.RecordName)
 		m.SetEdns0(4096, true)
 	}
 	m.SetQuestion(request.RecordName, recordType)

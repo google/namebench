@@ -6,6 +6,7 @@ import (
 	"namebench/dnschecks"
 	"namebench/dnsqueue"
 	"namebench/history"
+	"namebench/util"
 	"namebench/util/logger"
 	"net/http"
 	"strings"
@@ -48,7 +49,7 @@ func loadTemplate(paths ...string) *template.Template {
 }
 
 // Index handles /
-func Index(w http.ResponseWriter, r *http.Request) {
+func Index(w http.ResponseWriter, _ *http.Request) {
 	if err := indexTmpl.ExecuteTemplate(w, "index.html", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -57,34 +58,31 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 // DnsSec handles /dnssec
 func DnsSec(w http.ResponseWriter, r *http.Request) {
-	servers := []string{
-		"8.8.8.8:53",
-		"8.8.4.4:53",
-		"75.75.75.75:53",
-		"4.2.2.1:53",
-		"208.67.222.222:53",
-		"208.67.222.220:53",
-		"168.126.63.1:53:53",
-		"168.126.63.2:53:53",
-		"210.220.163.82:53",
-		"219.250.36.130:53",
-		"61.41.153.2:53",
-		"1.214.68.2:53",
-		"164.124.101.2:53",
-		"203.248.252.2:53",
-		"180.182.54.1:53",
-		"180.182.54.2:53",
-		"9.9.9.9:53",
-		"149.112.112.112:53",
-		"194.242.2.2:53",
-		"193.19.108.2:53",
-		"185.222.222.222:53",
-		"45.11.45.11:53",
+	result := DoDnsSec()
+	result.Sort()
+
+	util.JSONHandler(w, r, *result, nil, http.StatusOK)
+}
+
+func DoDnsSec() *dnschecks.CheckResults {
+	dss := dnschecks.DnsServers
+	crs := make([]dnschecks.CheckResult, 0)
+
+	for i := range dss {
+		ds := dss[i]
+
+		cr, err := dnschecks.DnsSec(ds)
+		if err != nil {
+			logger.L.Errorf("%s DNSSEC: %t, took: %s (%s)", cr.DnsServer.Address(), cr.DnsSec, cr.Timer.Took.String(), err)
+		} else {
+			logger.L.Infof("%s DNSSEC: %t, took: %s", cr.DnsServer.Address(), cr.DnsSec, cr.Timer.Took.String())
+		}
+
+		crs = append(crs, *cr)
 	}
-	for _, ip := range servers {
-		result, err := dnschecks.DnsSec(ip)
-		logger.L.Infof("%s DNSSEC: %s (%s)", ip, result, err)
-	}
+
+	result := dnschecks.CheckResults(crs)
+	return &result
 }
 
 // Submit handles /submit
