@@ -2,7 +2,6 @@
 package dnsqueue
 
 import (
-	"errors"
 	"fmt"
 	json "github.com/json-iterator/go"
 	"github.com/miekg/dns"
@@ -117,7 +116,7 @@ func SendQuery(request *Request) (result Result, err error) {
 	recordType, ok := dns.StringToType[request.RecordType]
 	if !ok {
 		result.Error = fmt.Sprintf("Invalid type: %s", request.RecordType)
-		return result, errors.New(result.Error)
+		return result, fmt.Errorf(result.Error)
 	}
 
 	m := new(dns.Msg)
