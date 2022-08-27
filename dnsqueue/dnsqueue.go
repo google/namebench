@@ -74,11 +74,11 @@ func StartQueue(size, workers int) (q *Queue) {
 }
 
 // Add Queue.Add adds a request to the queue. Only blocks if queue is full.
-func (q *Queue) Add(dest, record_type, record_name string) {
+func (q *Queue) Add(dest, recordType, recordName string) {
 	q.Requests <- &Request{
 		Destination: dest,
-		RecordType:  record_type,
-		RecordName:  record_name,
+		RecordType:  recordType,
+		RecordName:  recordName,
 	}
 }
 
@@ -109,7 +109,9 @@ func startWorker(queue <-chan *Request, results chan<- *Result) {
 // SendQuery Send a DNS query via UDP, configured by a Request object. If successful,
 // stores response details in Result object, otherwise, returns Result object
 // with an error string.
-func SendQuery(request *Request) (result Result, err error) {
+func SendQuery(request *Request) (Result, error) {
+	result := Result{}
+
 	logger.L.Debugf("Sending query: %s", request)
 	result.Request = *request
 
