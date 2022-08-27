@@ -41,6 +41,14 @@ type CheckResult struct {
 	DnsSec    bool       `json:"dns_sec"`
 }
 
+func (cr *CheckResult) String() string {
+	if cr.DnsServer == nil || cr.Timer == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("Address: %s, DNSSEC: %t, Took: %s - %s", cr.DnsServer.Address(), cr.DnsSec, cr.Timer.Took.String(), cr.DnsServer.GetName())
+}
+
 type CheckResults []CheckResult
 
 func (crs *CheckResults) Sort() {
@@ -51,6 +59,22 @@ func (crs *CheckResults) Sort() {
 	sort.Slice(*crs, func(i, j int) bool {
 		return (*crs)[i].Timer.Took < (*crs)[j].Timer.Took
 	})
+}
+
+func (crs *CheckResults) String() string {
+	if crs == nil {
+		return ""
+	}
+	strs := make([]string, 0)
+
+	for i := range *crs {
+		cr := (*crs)[i]
+
+		crStr := fmt.Sprintf("[%d/%d] %s", i+1, len(*crs), cr.String())
+		strs = append(strs, crStr)
+	}
+
+	return strings.Join(strs, "\n")
 }
 
 func NewDnsServerWithValue(ip string, port int, name string, isPrimary bool) *DnsServer {
