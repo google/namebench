@@ -23,7 +23,7 @@ type DnsServer struct {
 }
 
 func (ds *DnsServer) Address() string {
-	return fmt.Sprintf("%s:%d", ds.IP, ds.Port)
+	return fmt.Sprintf("%s:%d", string(ds.IP), ds.Port)
 }
 
 func (ds *DnsServer) GetName() string {
@@ -41,12 +41,31 @@ type CheckResult struct {
 	DnsSec    bool       `json:"dns_sec"`
 }
 
+func (cr *CheckResult) DNSSEC() string {
+	if cr.DnsSec {
+		return "O"
+	}
+	return "X"
+}
+
 func (cr *CheckResult) String() string {
+	return cr.StringWith(" ")
+}
+
+func (cr *CheckResult) StringWith(joinStr string) string {
 	if cr.DnsServer == nil || cr.Timer == nil {
 		return ""
 	}
 
-	return fmt.Sprintf("Address: %s, DNSSEC: %t, Took: %s - %s", cr.DnsServer.Address(), cr.DnsSec, cr.Timer.Took.String(), cr.DnsServer.GetName())
+	strs := []string{
+		fmt.Sprintf("Address: %s,", cr.DnsServer.Address()),
+		fmt.Sprintf("DNSSEC: %s,", cr.DNSSEC()),
+		fmt.Sprintf("Took: %s", cr.Timer.Took.String()),
+		"-",
+		fmt.Sprintf("%s", cr.DnsServer.GetName()),
+	}
+
+	return strings.Join(strs, joinStr)
 }
 
 type CheckResults []CheckResult
@@ -62,6 +81,10 @@ func (crs *CheckResults) Sort() {
 }
 
 func (crs *CheckResults) String() string {
+	return crs.StringWith(" ")
+}
+
+func (crs *CheckResults) StringWith(joinStr string) string {
 	if crs == nil {
 		return ""
 	}
@@ -70,7 +93,7 @@ func (crs *CheckResults) String() string {
 	for i := range *crs {
 		cr := (*crs)[i]
 
-		crStr := fmt.Sprintf("[%d/%d] %s", i+1, len(*crs), cr.String())
+		crStr := fmt.Sprintf("[%d/%d] %s", i+1, len(*crs), cr.StringWith(joinStr))
 		strs = append(strs, crStr)
 	}
 
