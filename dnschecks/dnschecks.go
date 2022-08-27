@@ -153,6 +153,8 @@ var DnsServers = []*DnsServer{
 	NewDnsServerWithValue("45.11.45.11", 53, "DNS.SB", false, false),
 	NewDnsServerWithValue("182.172.225.180", 53, "DLive", true, true),
 	NewDnsServerWithValue("203.246.162.253", 53, "DLive", false, true),
+	NewDnsServerWithValue("1.1.1.1", 53, "Cloudflare DNS", true, false),
+	NewDnsServerWithValue("1.0.0.1", 53, "Cloudflare DNS", false, false),
 }
 
 type Timer struct {
