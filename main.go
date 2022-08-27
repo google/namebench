@@ -12,9 +12,9 @@ import (
 	"os/exec"
 )
 
-var nwPath = flag.String("nw_path", "/Applications/node-webkit.app/Contents/MacOS/node-webkit",
+var nwPath = flag.String("nw_path", "/Applications/nwjs.app/Contents/MacOS/nwjs",
 	"Path to nodejs-webkit binary")
-var nwPackage = flag.String("nw_package", "./ui/app.nw", "Path to nodejs-webkit package")
+var nwPackage = flag.String("nw_package", "./ui/app.nw", "Path to nw.js package")
 var port = flag.Int("port", 0, "Port to listen on")
 
 func init() {
