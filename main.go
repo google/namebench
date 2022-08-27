@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"namebench/ui"
+	"namebench/util"
 	"namebench/util/logger"
 	"net"
 	"net/http"
@@ -37,6 +38,9 @@ func openWindow(url string) error {
 func main() {
 	flag.Parse()
 	ui.RegisterHandlers()
+
+	// MARK: Unescape
+	*joinStr = util.UnescapeAllEscapingCharacters(*joinStr)
 
 	if *mode == "now" {
 		result := ui.DoDnsSec()

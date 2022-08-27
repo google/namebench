@@ -57,12 +57,26 @@ func (cr *CheckResult) StringWith(joinStr string) string {
 		return ""
 	}
 
+	addrStr := fmt.Sprintf("Address: %s,", cr.DnsServer.Address())
+	if len(addrStr) < 24 && joinStr == "\t" {
+		if len(addrStr) < 16 {
+			addrStr += "\t"
+		}
+		addrStr += "\t"
+	}
+	tookStr := fmt.Sprintf("Took: %s", cr.Timer.Took.String())
+	if len(tookStr) < 16 && joinStr == "\t" {
+		if len(tookStr) < 8 {
+			tookStr += "\t"
+		}
+		tookStr += "\t"
+	}
+
 	strs := []string{
-		fmt.Sprintf("Address: %s,", cr.DnsServer.Address()),
+		addrStr,
 		fmt.Sprintf("DNSSEC: %s,", cr.DNSSEC()),
-		fmt.Sprintf("Took: %s", cr.Timer.Took.String()),
-		"-",
-		fmt.Sprintf("%s", cr.DnsServer.GetName()),
+		tookStr,
+		fmt.Sprintf("- %s", cr.DnsServer.GetName()),
 	}
 
 	return strings.Join(strs, joinStr)
@@ -93,7 +107,7 @@ func (crs *CheckResults) StringWith(joinStr string) string {
 	for i := range *crs {
 		cr := (*crs)[i]
 
-		crStr := fmt.Sprintf("[%d/%d] %s", i+1, len(*crs), cr.StringWith(joinStr))
+		crStr := fmt.Sprintf("[%02d/%d] %s", i+1, len(*crs), cr.StringWith(joinStr))
 		strs = append(strs, crStr)
 	}
 
