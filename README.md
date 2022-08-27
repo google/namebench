@@ -39,5 +39,7 @@ You should have an executable named 'namebench' in the current directory.
 
 RUNNING:
 ========
+* CLI mode: (go run) namebench --mode now --join_string '\t' --dns_filter 0
+
 * End-user: run ./namebench, which should open up a UI window.
 * Developer, run ./namebench_dev_server.sh for an auto-reloading webserver at http://localhost:9080/
