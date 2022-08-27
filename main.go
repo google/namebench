@@ -14,11 +14,13 @@ import (
 
 var nwPath = flag.String("nw_path", "/Applications/nwjs.app/Contents/MacOS/nwjs",
 	"Path to nodejs-webkit binary")
-var nwPackage = flag.String("nw_package", "./ui/app.nw", "Path to nw.js package")
+var nwPackage *string
 var port = flag.Int("port", 0, "Port to listen on")
 
 func init() {
 	logger.Init()
+	wd, _ := os.Getwd()
+	nwPackage = flag.String("nw_package", wd+"/ui/app.nw", "Path to nw.js package")
 }
 
 // openWindow opens a nodejs-webkit window, and points it at the given URL.
