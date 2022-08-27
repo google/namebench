@@ -7,6 +7,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/miekg/dns v1.1.50
 	github.com/onsi/ginkgo v1.16.5
+	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.9.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
