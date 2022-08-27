@@ -59,7 +59,6 @@ func Index(w http.ResponseWriter, _ *http.Request) {
 // DnsSec handles /dnssec
 func DnsSec(w http.ResponseWriter, r *http.Request) {
 	result := DoDnsSec()
-	result.Sort()
 
 	util.JSONHandler(w, r, *result, nil, http.StatusOK)
 }
@@ -82,6 +81,8 @@ func DoDnsSec() *dnschecks.CheckResults {
 	}
 
 	result := dnschecks.CheckResults(crs)
+	result.Sort()
+
 	return &result
 }
 
