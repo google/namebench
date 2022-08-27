@@ -20,6 +20,7 @@ type DnsServer struct {
 	Port      int    `json:"port"`
 	Name      string `json:"name"`
 	IsPrimary bool   `json:"is_primary"`
+	IsISP     bool   `json:"is_isp"`
 }
 
 func (ds *DnsServer) Address() string {
@@ -30,6 +31,9 @@ func (ds *DnsServer) GetName() string {
 	pStr := Primary
 	if !ds.IsPrimary {
 		pStr = Secondary
+	}
+	if ds.IsISP {
+		pStr += ", ISP"
 	}
 
 	return fmt.Sprintf("%s(%s)", ds.Name, pStr)
@@ -114,40 +118,41 @@ func (crs *CheckResults) StringWith(joinStr string) string {
 	return strings.Join(strs, "\n")
 }
 
-func NewDnsServerWithValue(ip string, port int, name string, isPrimary bool) *DnsServer {
+func NewDnsServerWithValue(ip string, port int, name string, isPrimary bool, isISP bool) *DnsServer {
 	return &DnsServer{
 		IP:        []byte(ip),
 		Port:      port,
 		Name:      name,
 		IsPrimary: isPrimary,
+		IsISP:     isISP,
 	}
 }
 
 var DnsServers = []*DnsServer{
-	NewDnsServerWithValue("8.8.8.8", 53, "Google Public DNS", true),
-	NewDnsServerWithValue("8.8.4.4", 53, "Google Public DNS", false),
-	NewDnsServerWithValue("75.75.75.75", 53, "Comcast DNS", true),
-	NewDnsServerWithValue("4.2.2.1", 53, "Raytheon BBN DNS", true),
-	NewDnsServerWithValue("208.67.222.222", 53, "Cisco OpenDNS", true),
-	NewDnsServerWithValue("208.67.222.220", 53, "Cisco OpenDNS", false),
-	NewDnsServerWithValue("168.126.63.1:53", 53, "KT", true),
-	NewDnsServerWithValue("168.126.63.2:53", 53, "KT", false),
-	NewDnsServerWithValue("210.220.163.82", 53, "SK Broadband", true),
-	NewDnsServerWithValue("219.250.36.130", 53, "SK Broadband", false),
-	NewDnsServerWithValue("61.41.153.2", 53, "LG DACOM", true),
-	NewDnsServerWithValue("1.214.68.2", 53, "LG DACOM", false),
-	NewDnsServerWithValue("164.124.101.2", 53, "LG DACOM(ex-LG Powercomm)", true),
-	NewDnsServerWithValue("203.248.252.2", 53, "LG DACOM(ex-LG Powercomm)", false),
-	NewDnsServerWithValue("180.182.54.1", 53, "LG HelloVision Corp.", true),
-	NewDnsServerWithValue("180.182.54.2", 53, "LG HelloVision Corp.", false),
-	NewDnsServerWithValue("9.9.9.9", 53, "IBM Quad9", true),
-	NewDnsServerWithValue("149.112.112.112", 53, "IBM Quad9", false),
-	NewDnsServerWithValue("194.242.2.2", 53, "Mullvad VPN", true),
-	NewDnsServerWithValue("193.19.108.2", 53, "Mullvad VPN", false),
-	NewDnsServerWithValue("185.222.222.222", 53, "DNS.SB", true),
-	NewDnsServerWithValue("45.11.45.11", 53, "DNS.SB", false),
-	NewDnsServerWithValue("182.172.225.180", 53, "DLive", true),
-	NewDnsServerWithValue("203.246.162.253", 53, "DLive", false),
+	NewDnsServerWithValue("8.8.8.8", 53, "Google Public DNS", true, false),
+	NewDnsServerWithValue("8.8.4.4", 53, "Google Public DNS", false, false),
+	NewDnsServerWithValue("75.75.75.75", 53, "Comcast DNS", true, true),
+	NewDnsServerWithValue("4.2.2.1", 53, "Raytheon BBN DNS", true, false),
+	NewDnsServerWithValue("208.67.222.222", 53, "Cisco OpenDNS", true, false),
+	NewDnsServerWithValue("208.67.222.220", 53, "Cisco OpenDNS", false, false),
+	NewDnsServerWithValue("168.126.63.1:53", 53, "KT", true, true),
+	NewDnsServerWithValue("168.126.63.2:53", 53, "KT", false, true),
+	NewDnsServerWithValue("210.220.163.82", 53, "SK Broadband", true, true),
+	NewDnsServerWithValue("219.250.36.130", 53, "SK Broadband", false, true),
+	NewDnsServerWithValue("61.41.153.2", 53, "LG DACOM", true, true),
+	NewDnsServerWithValue("1.214.68.2", 53, "LG DACOM", false, true),
+	NewDnsServerWithValue("164.124.101.2", 53, "LG DACOM(ex-LG Powercomm)", true, true),
+	NewDnsServerWithValue("203.248.252.2", 53, "LG DACOM(ex-LG Powercomm)", false, true),
+	NewDnsServerWithValue("180.182.54.1", 53, "LG HelloVision Corp.", true, true),
+	NewDnsServerWithValue("180.182.54.2", 53, "LG HelloVision Corp.", false, true),
+	NewDnsServerWithValue("9.9.9.9", 53, "IBM Quad9", true, false),
+	NewDnsServerWithValue("149.112.112.112", 53, "IBM Quad9", false, false),
+	NewDnsServerWithValue("194.242.2.2", 53, "Mullvad VPN", true, false),
+	NewDnsServerWithValue("193.19.108.2", 53, "Mullvad VPN", false, false),
+	NewDnsServerWithValue("185.222.222.222", 53, "DNS.SB", true, false),
+	NewDnsServerWithValue("45.11.45.11", 53, "DNS.SB", false, false),
+	NewDnsServerWithValue("182.172.225.180", 53, "DLive", true, true),
+	NewDnsServerWithValue("203.246.162.253", 53, "DLive", false, true),
 }
 
 type Timer struct {

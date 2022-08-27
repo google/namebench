@@ -19,6 +19,7 @@ var nwPackage = flag.String("nw_package", "./ui/nw/app.nw", "Path to nw.js packa
 var port = flag.Int("port", 0, "Port to listen on")
 var mode = flag.String("mode", "", "Use for testing immediately, put '-mode now' or '--mode now'")
 var joinStr = flag.String("join_string", " ", "Use with '-mode now'. default value is ' '")
+var dnsFilter = flag.Int("dns_filter", 0, "0: All, 1: Non-ISP Only, 2: ISP Only")
 
 func init() {
 	logger.Init()
@@ -43,7 +44,7 @@ func main() {
 	*joinStr = util.UnescapeAllEscapingCharacters(*joinStr)
 
 	if *mode == "now" {
-		result := ui.DoDnsSec()
+		result := ui.DoDnsSec(*dnsFilter)
 		fmt.Println(result.StringWith(*joinStr))
 		return
 	}

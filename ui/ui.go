@@ -24,6 +24,10 @@ const (
 
 	// HistoryDays How far back to reach into browser history
 	HistoryDays = 30
+
+	FilterAll        = 0
+	FilterNonISPOnly = 1
+	FilterISPOnly    = 2
 )
 
 var (
@@ -58,17 +62,23 @@ func Index(w http.ResponseWriter, _ *http.Request) {
 
 // DnsSec handles /dnssec
 func DnsSec(w http.ResponseWriter, r *http.Request) {
-	result := DoDnsSec()
+	result := DoDnsSec(0)
 
 	util.JSONHandler(w, r, *result, nil, http.StatusOK)
 }
 
-func DoDnsSec() *dnschecks.CheckResults {
+func DoDnsSec(filter int) *dnschecks.CheckResults {
 	dss := dnschecks.DnsServers
 	crs := make([]dnschecks.CheckResult, 0)
 
 	for i := range dss {
 		ds := dss[i]
+		if filter == FilterISPOnly && !ds.IsISP {
+			continue
+		}
+		if filter == FilterNonISPOnly && ds.IsISP {
+			continue
+		}
 
 		cr, err := dnschecks.DnsSec(ds)
 		if err != nil {
