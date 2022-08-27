@@ -37,7 +37,7 @@ func main() {
 	flag.Parse()
 	ui.RegisterHandlers()
 
-	if *mode != "now" {
+	if *mode == "now" {
 		result := ui.DoDnsSec()
 		fmt.Println(result.String())
 		return
