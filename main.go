@@ -4,13 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"namebench/ui"
 	"namebench/util/logger"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-
-	"github.com/google/namebench/ui"
 )
 
 var nwPath = flag.String("nw_path", "/Applications/node-webkit.app/Contents/MacOS/node-webkit",
