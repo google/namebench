@@ -17,6 +17,7 @@ var nwPath = flag.String("nw_path", "/Applications/nwjs.app/Contents/MacOS/nwjs"
 var nwPackage = flag.String("nw_package", "./ui/nw/app.nw", "Path to nw.js package")
 var port = flag.Int("port", 0, "Port to listen on")
 var mode = flag.String("mode", "", "Use for testing immediately, put '-mode now' or '--mode now'")
+var joinStr = flag.String("join_string", " ", "Use with '-mode now'. default value is ' '")
 
 func init() {
 	logger.Init()
@@ -39,7 +40,7 @@ func main() {
 
 	if *mode == "now" {
 		result := ui.DoDnsSec()
-		fmt.Println(result.String())
+		fmt.Println(result.StringWith(*joinStr))
 		return
 	}
 
