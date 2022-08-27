@@ -23,14 +23,14 @@ func init() {
 }
 
 // openWindow opens a nodejs-webkit window, and points it at the given URL.
-func openWindow(url string) (err error) {
+func openWindow(url string) error {
 	os.Setenv("APP_URL", url)
 	cmd := exec.Command(*nwPath, *nwPackage)
-	if err = cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil {
 		logger.L.Errorf("error running %s %s: %s", *nwPath, *nwPackage, err)
-		return
+		return err
 	}
-	return
+	return nil
 }
 
 func main() {
