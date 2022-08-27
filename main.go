@@ -16,7 +16,7 @@ var nwPath = flag.String("nw_path", "/Applications/nwjs.app/Contents/MacOS/nwjs"
 	"Path to nodejs-webkit binary")
 var nwPackage = flag.String("nw_package", "./ui/nw/app.nw", "Path to nw.js package")
 var port = flag.Int("port", 0, "Port to listen on")
-var mode = flag.String("mode", "", "Use for testing immediately, put '--mode now'")
+var mode = flag.String("mode", "", "Use for testing immediately, put '-mode now' or '--mode now'")
 
 func init() {
 	logger.Init()
