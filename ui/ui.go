@@ -3,12 +3,15 @@ package ui
 
 import (
 	"html/template"
-	"namebench/dnschecks"
-	"namebench/dnsqueue"
-	"namebench/history"
+	"namebench/model/namebench/record"
+	"namebench/service/dnschecks"
+	"namebench/service/dnsqueue"
+	history2 "namebench/service/history"
 	"namebench/util"
+	"namebench/util/apiError"
 	"namebench/util/logger"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -23,7 +26,7 @@ const (
 	COUNT = 50
 
 	// HistoryDays How far back to reach into browser history
-	HistoryDays = 30
+	HistoryDays = 90
 
 	FilterAll        = 0
 	FilterNonISPOnly = 1
@@ -40,6 +43,7 @@ func RegisterHandlers() {
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("ui/static"))))
 	http.HandleFunc("/submit", Submit)
 	http.HandleFunc("/dnssec", DnsSec)
+	http.HandleFunc("/submit_and_run", SubmitAndRun)
 }
 
 // loadTemplate loads a set of templates.
@@ -57,17 +61,22 @@ func Index(w http.ResponseWriter, _ *http.Request) {
 	if err := indexTmpl.ExecuteTemplate(w, "index.html", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	return
 }
 
 // DnsSec handles /dnssec
 func DnsSec(w http.ResponseWriter, r *http.Request) {
-	result := DoDnsSec(0)
+	q := r.URL.Query()
+	qFilter, err := strconv.Atoi(q.Get("filter"))
+	if err != nil || qFilter < 0 || qFilter > 2 {
+		util.ErrorHandler(w, r, apiError.BadRequestError("filter"))
+		return
+	}
+	result := DoDnsSec(qFilter)
 
 	util.JSONHandler(w, r, *result, nil, http.StatusOK)
 }
 
-func DoDnsSec(filter int) *dnschecks.CheckResults {
+func DoDnsSec(filter int, records ...*record.Record) *dnschecks.CheckResults {
 	dss := dnschecks.DnsServers
 	crs := make([]dnschecks.CheckResult, 0)
 
@@ -80,7 +89,7 @@ func DoDnsSec(filter int) *dnschecks.CheckResults {
 			continue
 		}
 
-		cr, err := dnschecks.DnsSec(ds)
+		cr, err := dnschecks.DnsSec(ds, records...)
 		if err != nil {
 			logger.L.Errorf("%s DNSSEC: %t, took: %s (%s)", cr.DnsServer.Address(), cr.DnsSec, cr.Timer.Took.String(), err)
 		} else {
@@ -98,27 +107,93 @@ func DoDnsSec(filter int) *dnschecks.CheckResults {
 
 // Submit handles /submit
 func Submit(w http.ResponseWriter, r *http.Request) {
-	records, err := history.Chrome(HistoryDays)
+	drs, err := DoSubmit()
 	if err != nil {
-		panic(err)
+		util.ErrorHandler(w, r, apiError.InternalServerError(err))
+		return
+	}
+
+	util.JSONHandler(w, r, drs, nil, http.StatusOK)
+}
+
+func DoSubmit() (*dnsqueue.Results, error) {
+	records, err := history2.Chrome(HistoryDays)
+	if err != nil {
+		logger.L.Errorln("history2.Chrome(HistoryDays)", err)
+		return nil, err
 	}
 
 	q := dnsqueue.StartQueue(QueueLength, WORKERS)
-	hostnames := history.Random(COUNT, history.Uniq(history.ExternalHostnames(records)))
+	extHostnames := history2.ExternalHostnames(records)
+	extUniqHostnames := history2.Uniq(extHostnames)
+	hostnames := history2.Random(COUNT, extUniqHostnames)
 
 	for _, record := range hostnames {
 		q.Add("8.8.8.8:53", "A", record+".")
-		logger.L.Infof("Added %s", record)
+		//logger.L.Infof("Added %s", record)
 	}
 	q.SendCompletionSignal()
-	answered := 0
-	for {
-		if answered == len(hostnames) {
-			break
+
+	result := make([]dnsqueue.Result, 0)
+	for answered := 0; answered < len(hostnames); answered++ {
+		cResult := <-q.Results
+		//logger.L.Infof("cResult => %s", cResult)
+		if cResult.Error != nil {
+			continue
 		}
-		result := <-q.Results
-		answered += 1
-		logger.L.Infof("%s", result)
+
+		result = append(result, *cResult)
 	}
-	return
+	resp := dnsqueue.Results(result)
+	return &resp, nil
+}
+
+type SubmitAndRunData struct {
+	Record  *record.Record          `json:"record,omitempty"`
+	Results *dnschecks.CheckResults `json:"results,omitempty"`
+}
+
+// SubmitAndRun handles /submit_and_run
+func SubmitAndRun(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	qFilter, err := strconv.Atoi(q.Get("filter"))
+	if err != nil || qFilter < 0 || qFilter > 2 {
+		util.ErrorHandler(w, r, apiError.BadRequestError("filter"))
+		return
+	}
+	dataType := q.Get("data_type")
+	if dataType != "" && dataType != "array" && dataType != "map" {
+		util.ErrorHandler(w, r, apiError.BadRequestError("data_type"))
+		return
+	}
+
+	drs, err := DoSubmit()
+	if err != nil {
+		util.ErrorHandler(w, r, apiError.InternalServerError(err))
+		return
+	}
+
+	records := drs.ExtractRecords()
+
+	sards := make([]SubmitAndRunData, 0)
+	for _, rec := range *records {
+		checkResults := DoDnsSec(qFilter, &rec)
+
+		cResult := &SubmitAndRunData{
+			Record:  &rec,
+			Results: checkResults,
+		}
+
+		sards = append(sards, *cResult)
+	}
+
+	if dataType == "map" {
+		resultMap := make(map[string]SubmitAndRunData)
+		for _, sard := range sards {
+			resultMap[sard.Record.Name] = sard
+		}
+		util.JSONHandler(w, r, resultMap, nil, http.StatusOK)
+		return
+	}
+	util.JSONHandler(w, r, sards, nil, http.StatusOK)
 }

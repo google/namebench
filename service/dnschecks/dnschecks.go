@@ -2,7 +2,8 @@ package dnschecks
 
 import (
 	"fmt"
-	"namebench/dnsqueue"
+	"namebench/model/namebench/record"
+	"namebench/service/dnsqueue"
 	"namebench/util/logger"
 	"net"
 	"sort"
@@ -40,9 +41,10 @@ func (ds *DnsServer) GetName() string {
 }
 
 type CheckResult struct {
-	DnsServer *DnsServer `json:"dns_server"`
-	Timer     *Timer     `json:"timer"`
-	DnsSec    bool       `json:"dns_sec"`
+	DnsServer *DnsServer     `json:"dns_server"`
+	Timer     *Timer         `json:"timer"`
+	DnsSec    bool           `json:"dns_sec"`
+	Record    *record.Record `json:"record,omitempty"`
 }
 
 func (cr *CheckResult) DNSSEC() string {
@@ -192,13 +194,18 @@ func NewTimer() *Timer {
 	}
 }
 
-func DnsSec(ds *DnsServer) (*CheckResult, error) {
+func DnsSec(ds *DnsServer, records ...*record.Record) (*CheckResult, error) {
 	t := NewTimer()
+
+	rec := record.Default
+	if len(records) > 0 {
+		rec = records[0]
+	}
 
 	r := &dnsqueue.Request{
 		Destination:     ds.Address(),
-		RecordType:      "A",
-		RecordName:      "www.dnssec-failed.org.",
+		RecordType:      rec.Type,
+		RecordName:      rec.Name,
 		VerifySignature: true,
 	}
 	result, err := dnsqueue.SendQuery(r)
