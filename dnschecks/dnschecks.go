@@ -2,7 +2,7 @@ package dnschecks
 
 import (
 	"github.com/google/namebench/dnsqueue"
-	"log"
+	"namebench/util/logger"
 	"strings"
 )
 
@@ -17,10 +17,10 @@ func DnsSec(ip string) (ok bool, err error) {
 	for _, answer := range result.Answers {
 		// TODO(tstromberg): Implement properly.
 		if strings.Contains(answer.String, "RRSIG") {
-			log.Printf("DnsSec for %s: true", ip)
+			logger.L.Infof("DnsSec for %s: true", ip)
 			return true, err
 		}
 	}
-	log.Printf("DnsSec for %s: false", ip)
+	logger.L.Infof("DnsSec for %s: false", ip)
 	return false, err
 }

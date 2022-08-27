@@ -1,37 +1,56 @@
-// dnsqueue is a library for queueing up a large number of DNS requests.
+// Package dnsqueue is a library for queueing up a large number of DNS requests.
 package dnsqueue
 
 import (
 	"errors"
 	"fmt"
+	json "github.com/json-iterator/go"
 	"github.com/miekg/dns"
-	"log"
+	"namebench/util/logger"
 	"time"
 )
 
 // Request contains data for making a DNS request
 type Request struct {
-	Destination     string
-	RecordType      string
-	RecordName      string
-	VerifySignature bool
+	Destination     string `json:"destination"`
+	RecordType      string `json:"record_type"`
+	RecordName      string `json:"record_name"`
+	VerifySignature bool   `json:"verify_signature"`
 
 	exit bool
 }
 
+func (r *Request) ToJSON() []byte {
+	bs, _ := json.Marshal(r)
+	return bs
+}
+
+func (r *Request) String() string {
+	return string(r.ToJSON())
+}
+
 // Answer contains a single answer returned by a DNS server.
 type Answer struct {
-	Ttl    uint32
-	Name   string
-	String string
+	Ttl    uint32 `json:"ttl"`
+	Name   string `json:"name"`
+	String string `json:"string"`
 }
 
 // Result contains metadata relating to a set of DNS server results.
 type Result struct {
-	Request  Request
-	Duration time.Duration
-	Answers  []Answer
-	Error    string
+	Request  Request       `json:"request"`
+	Duration time.Duration `json:"duration"`
+	Answers  []Answer      `json:"answers"`
+	Error    string        `json:"error,omitempty"`
+}
+
+func (r *Result) ToJSON() []byte {
+	bs, _ := json.Marshal(r)
+	return bs
+}
+
+func (r *Result) String() string {
+	return string(r.ToJSON())
 }
 
 // Queue contains methods and state for setting up a request queue.
@@ -55,7 +74,7 @@ func StartQueue(size, workers int) (q *Queue) {
 	return
 }
 
-// Queue.Add adds a request to the queue. Only blocks if queue is full.
+// Add Queue.Add adds a request to the queue. Only blocks if queue is full.
 func (q *Queue) Add(dest, record_type, record_name string) {
 	q.Requests <- &Request{
 		Destination: dest,
@@ -64,9 +83,9 @@ func (q *Queue) Add(dest, record_type, record_name string) {
 	}
 }
 
-// Queue.SendDieSignal sends a signal to the workers that they can go home now.
+// SendCompletionSignal Queue.SendDieSignal sends a signal to the workers that they can go home now.
 func (q *Queue) SendCompletionSignal() {
-	log.Printf("Sending completion signal...")
+	logger.L.Infof("Sending completion signal...")
 	for i := 0; i < q.WorkerCount; i++ {
 		q.Requests <- &Request{exit: true}
 	}
@@ -76,26 +95,26 @@ func (q *Queue) SendCompletionSignal() {
 func startWorker(queue <-chan *Request, results chan<- *Result) {
 	for request := range queue {
 		if request.exit {
-			log.Printf("Completion received, worker is done.")
+			logger.L.Infof("Completion received, worker is done.")
 			return
 		}
 		result, err := SendQuery(request)
 		if err != nil {
-			log.Printf("Error sending query: %s", err)
+			logger.L.Errorf("Error sending query: %s", err)
 		}
-		log.Printf("Sending back result: %s", result)
+		logger.L.Infof("Sending back result: %s", result.String())
 		results <- &result
 	}
 }
 
-// Send a DNS query via UDP, configured by a Request object. If successful,
+// SendQuery Send a DNS query via UDP, configured by a Request object. If successful,
 // stores response details in Result object, otherwise, returns Result object
 // with an error string.
 func SendQuery(request *Request) (result Result, err error) {
-	log.Printf("Sending query: %s", request)
+	logger.L.Infof("Sending query: %s", request)
 	result.Request = *request
 
-	record_type, ok := dns.StringToType[request.RecordType]
+	recordType, ok := dns.StringToType[request.RecordType]
 	if !ok {
 		result.Error = fmt.Sprintf("Invalid type: %s", request.RecordType)
 		return result, errors.New(result.Error)
@@ -103,10 +122,10 @@ func SendQuery(request *Request) (result Result, err error) {
 
 	m := new(dns.Msg)
 	if request.VerifySignature == true {
-		log.Printf("SetEdns0 for %s", request.RecordName)
+		logger.L.Infof("SetEdns0 for %s", request.RecordName)
 		m.SetEdns0(4096, true)
 	}
-	m.SetQuestion(request.RecordName, record_type)
+	m.SetQuestion(request.RecordName, recordType)
 	c := new(dns.Client)
 	in, rtt, err := c.Exchange(m, request.Destination)
 	// log.Printf("Answer: %s [%d] %s", in, rtt, err)

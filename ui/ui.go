@@ -1,36 +1,35 @@
-// The ui package contains methods for handling UI URL's.
+// Package ui The ui package contains methods for handling UI URL's.
 package ui
 
 import (
 	"html/template"
-	"log"
+	"namebench/dnschecks"
+	"namebench/dnsqueue"
+	"namebench/history"
+	"namebench/util/logger"
 	"net/http"
 	"strings"
-
-	"github.com/google/namebench/dnschecks"
-	"github.com/google/namebench/dnsqueue"
-	"github.com/google/namebench/history"
 )
 
 const (
-	// How many requests/responses can be queued at once
-	QUEUE_LENGTH = 65535
+	// QueueLength How many requests/responses can be queued at once
+	QueueLength = 65535
 
-	// Number of workers (same as Chrome's DNS prefetch queue)
+	// WORKERS Number of workers (same as Chrome's DNS prefetch queue)
 	WORKERS = 8
 
-	// Number of tests to run
+	// COUNT Number of tests to run
 	COUNT = 50
 
-	// How far back to reach into browser history
-	HISTORY_DAYS = 30
+	// HistoryDays How far back to reach into browser history
+	HistoryDays = 30
 )
 
 var (
 	indexTmpl = loadTemplate("ui/templates/index.html")
 )
 
-// RegisterHandler registers all known handlers.
+// RegisterHandlers registers all known handlers.
 func RegisterHandlers() {
 	http.HandleFunc("/", Index)
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("ui/static"))))
@@ -66,23 +65,23 @@ func DnsSec(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, ip := range servers {
 		result, err := dnschecks.DnsSec(ip)
-		log.Printf("%s DNSSEC: %s (%s)", ip, result, err)
+		logger.L.Infof("%s DNSSEC: %s (%s)", ip, result, err)
 	}
 }
 
 // Submit handles /submit
 func Submit(w http.ResponseWriter, r *http.Request) {
-	records, err := history.Chrome(HISTORY_DAYS)
+	records, err := history.Chrome(HistoryDays)
 	if err != nil {
 		panic(err)
 	}
 
-	q := dnsqueue.StartQueue(QUEUE_LENGTH, WORKERS)
+	q := dnsqueue.StartQueue(QueueLength, WORKERS)
 	hostnames := history.Random(COUNT, history.Uniq(history.ExternalHostnames(records)))
 
 	for _, record := range hostnames {
 		q.Add("8.8.8.8:53", "A", record+".")
-		log.Printf("Added %s", record)
+		logger.L.Infof("Added %s", record)
 	}
 	q.SendCompletionSignal()
 	answered := 0
@@ -92,7 +91,7 @@ func Submit(w http.ResponseWriter, r *http.Request) {
 		}
 		result := <-q.Results
 		answered += 1
-		log.Printf("%s", result)
+		logger.L.Infof("%s", result)
 	}
 	return
 }
