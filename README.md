@@ -19,24 +19,19 @@ What can one expect in namebench 2.0?
 
 BUILDING:
 =========
-Building requires Go 1.2 to be installed: http://golang.org/
+Building requires Go 1.19 to be installed: http://golang.org/
 
 * Create a workspace directory, and cd into it.
 * Prepare your workspace directory:
 
-```
-    export GOPATH=`pwd`
-    git clone https://github.com/google/namebench.git src/github.com/google/namebench
-    go get github.com/mattn/go-sqlite3
-    go get golang.org/x/net/publicsuffix
-    go get github.com/miekg/dns
+```shell
+    go get
 ```
 
 * Build it.
 
-```
-    cd src/github.com/google/namebench
-    go build namebench.go
+```shell
+    go build namebench
 ```
 
 You should have an executable named 'namebench' in the current directory.
@@ -44,5 +39,7 @@ You should have an executable named 'namebench' in the current directory.
 
 RUNNING:
 ========
+* CLI mode: (go run) namebench --mode now --join_string '\t' --dns_filter 0
+
 * End-user: run ./namebench, which should open up a UI window.
 * Developer, run ./namebench_dev_server.sh for an auto-reloading webserver at http://localhost:9080/
