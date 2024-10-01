@@ -1,0 +1,44 @@
+name: Build Test
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    name: Build check - dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup go with cache
+        uses: magnetikonline/action-golang-cache@v5
+        with:
+          go-version-file: go.mod
+      - run: go version
+      - name: Extract build target module name.
+        run: echo "BUILD_FILE_NAME=$(head -n1 go.mod | cut -d ' ' -f2)" >> $GITHUB_ENV
+      - name: Fetch Dependencies
+        run: go get
+      - name: Build test
+        run: go build -v ${{ env.BUILD_FILE_NAME }}
+      - name: if fail
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{github.token}}
+          script: |
+            const ref = "${{github.ref}}"
+            const pull_number = Number(ref.split("/")[2])
+            await github.pulls.createReview({
+              ...context.repo,
+              pull_number,
+              body:"Failed to build. ",
+              event: "REQUEST_CHANGES"
+            })
+            await github.pulls.update({
+              ...context.repo,
+              pull_number,
+              state: "open"
+            })
+        if: failure()
